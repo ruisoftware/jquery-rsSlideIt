@@ -1,0 +1,201 @@
+#Div1,
+#slideIt {
+	border: 1px solid black;
+	width: 701px;
+	height: 501px;
+	overflow: hidden;
+	position: relative;
+	left: 342px;
+	top: 6px;
+	opacity: 0.7;
+}
+
+#Div1 {
+	width: 1000px;
+	height: 700px;
+	top: 600px;
+}
+
+#e {
+	width: 450px;
+	height: 250px;
+	overflow: auto;
+	position: absolute;
+	left: 0px;
+	top: 300px;	
+}
+
+#youtube {
+    -webkit-transform: rotate(-90deg);
+    -moz-transform: rotate(-90deg);
+    -o-transform: rotate(-90deg);
+    -ms-transform: rotate(-90deg);
+    transform: rotate(-90deg);
+    
+    width: 110px;
+    height: 55px;
+    filter: progid:DXImageTransform.Microsoft.Matrix(M11=0, M12=1, M21=-1, M22=0, SizingMethod = "auto expand");
+}
+
+#i0, #dyoutube {
+    -webkit-transform: rotate(30deg);
+    -moz-transform: rotate(30deg);
+    -o-transform: rotate(30deg);
+    -ms-transform: rotate(30deg);
+    transform: rotate(30deg);
+}
+
+#youtube2 {
+    -webkit-transform: rotate(-300deg);
+    -moz-transform: rotate(-300deg);
+    -o-transform: rotate(-300deg);
+    -ms-transform: rotate(-300deg);
+    transform: rotate(-300deg);
+}
+
+
+#_cristine {
+    -webkit-transform: rotate(-45deg);
+    -moz-transform: rotate(-45deg);
+    -o-transform: rotate(-45deg);
+    -ms-transform: rotate(-45deg);
+    transform: rotate(-45deg)
+}
+#__cristine {
+	margin-left: 50px;
+}
+
+#p1 {
+	background-color: Yellow;
+}
+
+#slideIt img {
+	margin: 2px;
+	padding: 10px;
+	border: 1px red solid;
+	background-color: Blue;
+	z-index: 0;
+	opacity: 0.2;
+}
+
+#slideIt p {
+    display: none;
+}
+
+#caption {
+    opacity: 0.4;
+    color: black;
+    background-color: gray;
+    position: absolute;
+    z-index: 10;
+    top: 250px;
+    left: 10px;
+    width: 300px;
+    height: 50px;
+}
+
+#detail1 {
+    position: absolute;
+    visibility: hidden;
+    left: 190px;
+    top: 180px;
+    width: 200px;
+    height: 350px;
+}
+
+#detail2 {
+    position: absolute;
+    visibility: hidden;
+    left: 560px;
+    top: 355px;
+    width: 115px;
+    height: 45px;
+}
+
+#out {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    width: 350px;
+    height: 100%;
+    background-color: #ffe;
+    font-size: 0.8em;
+    
+    display: none;
+}
+
+#__shade {
+    position: absolute;
+	width: 450px;
+	height: 250px;
+	left: 0px;
+	top: 300px;
+	/*-moz-box-shadow: inset 0 0 20px #222;
+    -webkit-box-shadow: inset 0 0 20px #222;
+*/    
+box-shadow: inset 0 0 20px 5px #333;
+}
+
+#__ce {
+background:url(http://www.w3schools.com/css3/img_flwr.gif);
+background-size:80px 60px;
+background-repeat:repeat;
+}
+
+
+
+
+#overviewDiv {
+    position: absolute;
+    width: 120px;
+    height: 59px;
+    left: 550px;
+    top: 600px;
+    border: 1px dotted gray;
+}
+
+#overviewDiv .content,
+#overviewDiv .viewport {
+    position: absolute;
+}
+
+#overviewDiv .content {
+    border: 1px dotted Orange;
+	cursor: crosshair;
+}
+
+#overviewDiv .viewport {
+    background-color: blue;
+    
+    filter: alpha(opacity=50);
+	-moz-opacity: 0.5;
+	-khtml-opacity: 0.5;
+	opacity: 0.5;
+	
+	cursor: move;
+	z-index: 1;
+}
+
+#back {
+    background-color: Black;
+    position: absolute;
+}
+
+#cover {
+    width: 450px;
+    height: 250px;
+    position: absolute;
+	left: 0px;
+	top: 300px;
+	background-image: url(cover.png);
+	z-index: -100;
+}
+
+
+#ce > div {
+    border: 5px dotted black;
+}
+
+#btnYoutube2 {
+-webkit-appearance: media-play-button;
+}
