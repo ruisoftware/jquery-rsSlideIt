@@ -415,7 +415,7 @@
                                         zoomUtil.doZoom(0, 0, zoomFactor, true);
                                     }
                                     renderUtil.renderSlides();
-                                    
+
                                     var centerRot = [step.x * zoomFactor + container.pad.x, step.y * zoomFactor + container.pad.y];
                                     renderUtil.rotation.cssOrigin(centerRot);
                                     if (renderUtil.rotation.needed) {
@@ -435,7 +435,7 @@
                                             }
                                         }
                                     }
-                                    
+
                                     $elem.
                                         scrollLeft(centerRot[0] - elementCenter.x).
                                         scrollTop(centerRot[1] - elementCenter.y);
@@ -957,16 +957,13 @@
                         var fit = [
                             elementCenter.x * 2 / (slideData[gotoSlideIdx].padding[3] + slideData[gotoSlideIdx].slideSizeNoRotation.x + slideData[gotoSlideIdx].padding[1]),
                             elementCenter.y * 2 / (slideData[gotoSlideIdx].padding[0] + slideData[gotoSlideIdx].slideSizeNoRotation.y + slideData[gotoSlideIdx].padding[2])
-                        ],
-                        fitSlide = [elementCenter.x * 2 / slideData[gotoSlideIdx].slideSizeNoRotation.x, elementCenter.y * 2 / slideData[gotoSlideIdx].slideSizeNoRotation.y];
+                        ];
                         switch (zDest) {
                             case 'current': return this.zoom;
                             case 'fitWidth': return fit[0];
                             case 'fitHeight': return fit[1];
                             case 'fit': return Math.min(fit[0], fit[1]);
-                            case 'fitSlideWidth': return fitSlide[0];
-                            case 'fitSlideHeight': return fitSlide[1];
-                            case 'fitSlide': return Math.min(fitSlide[0], fitSlide[1]);
+                            case 'cover': return Math.max(elementCenter.x * 2 / slideData[gotoSlideIdx].slideSizeNoRotation.x, elementCenter.y * 2 / slideData[gotoSlideIdx].slideSizeNoRotation.y);
                             default: return this.zoom;
                         }
                     }
@@ -1373,7 +1370,7 @@
             onDblClickSlide: function (event, $elem, $slide, slideIndex) {
                 $elem.rsSlideIt('transitionTo', {
                     goto: slideIndex,
-                    zoomDest: 'fit',
+                    zoomDest: 'cover',
                     zoomVertex: 'linear',
                     duration: 'normal'
                 });
@@ -1389,7 +1386,7 @@
     $.fn.rsSlideIt.defaultsTransitions = {
         goto: 'next',       // positive integer or 'prev' or 'first' or 'last'
         duration: 600,      // positive integer 
-        zoomDest: 1,        // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'fitSlideWidth' or 'fitSlideHeight' or 'fitSlide'
+        zoomDest: 1,        // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'cover'
         zoomVertex: 1,      // positive number or 'autoOut' or 'autoIn' or 'linear'
         onStart: null,      // event handler called when this transition starts to run
         onComplete: null    // event handler called when this transition is completed
@@ -1398,7 +1395,7 @@
     $.fn.rsSlideIt.defaultsSequence = {
         sequence: 'next',   // array of positive integers or 'prev' or 'next'
         delayOnSlide: 2000, // positive integer or an array of positive integers
-        zoomDest: 1,        // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'fitSlideWidth' or 'fitSlideHeight' or 'fitSlide' or an arrays of positive real numbers and strings
+        zoomDest: 1,        // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'cover' or an arrays of positive real numbers and strings
         zoomVertex: 1,      // positive real number or 'autoOut' or 'autoIn' or 'linear' or an arrays of positive real numbers and strings
         duration: 600,      // positive integer or array of positive integers
         repeat: 'forever',  // positive integer or 'forever',
