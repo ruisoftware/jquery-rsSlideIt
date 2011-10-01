@@ -18,11 +18,11 @@
 *
 */
 (function ($) {
-    var SlideItClass = function ($element, opts) {
-        var $elementAndTops = $element.add($(opts.selector.elementsOnTop)),
+    var SlideItClass = function ($elem, opts) {
+        var $elemAndTops = $elem.add($(opts.selector.elementsOnTop)),
             elementCenter = {
-                x: $element.width() / 2,
-                y: $element.height() / 2
+                x: $elem.width() / 2,
+                y: $elem.height() / 2
             },
 
             container = {    // container is the first DIV element inside the slideIt element
@@ -58,8 +58,8 @@
                     this.size.y = Math.max(this.size.y, height);
                 },
                 init: function () {
-                    $element.wrapInner('<div />');
-                    this.$paddingDiv = $("div:eq(0)", $element);
+                    $elem.wrapInner('<div />');
+                    this.$paddingDiv = $("div:eq(0)", $elem);
                     this.$paddingDiv.wrapInner('<div />');
                     this.$zoomDiv = $("div:eq(0)", this.$paddingDiv);
                     this.$slides = $(opts.selector.slide, this.$zoomDiv);
@@ -195,23 +195,13 @@
 
                 renderSlides: function () {
                     container.$zoomDiv.css('zoom', zoomUtil.zoom);
-                    /*
-                    var scale = 'scale(1.1)'; //' + zoomUtil.zoom + ')';
-                    container.$zoomDiv.css({
-                        '-webkit-transform': scale,
-                        '-moz-transform': scale,
-                        '-o-transform': scale,
-                        '-ms-transform': scale,
-                        'transform': scale
-                    });
-                    */
                     var newSize = [zoomUtil.scale(container.size.x), zoomUtil.scale(container.size.y)];
                     container.$paddingDiv.css({
                         'width': newSize[0] + 'px',
                         'height': newSize[1] + 'px'
                     });
                     if (opts.events.onChangeSize) {
-                        opts.events.onChangeSize($element, newSize, {
+                        opts.events.onChangeSize($elem, newSize, {
                             x: container.pad.x,
                             y: container.pad.y
                         });
@@ -246,8 +236,8 @@
                         $minSlide = null,
                         minDist = minIdx = -1,
                         offset = this.rotation.getCenter();
-                    offset[0] -= $element.scrollLeft();
-                    offset[1] -= $element.scrollTop();
+                    offset[0] -= $elem.scrollLeft();
+                    offset[1] -= $elem.scrollTop();
                     // could be done with each(), but the core for(;;) is faster
                     for (var i = len - 1; i > -1; i--) {
                         var $slide = container.$slides.eq(i),
@@ -272,11 +262,11 @@
                     var newActiveSlide = renderUtil.getNearestSlide();
                     if (forceSel || activeSlide.index != newActiveSlide.index) {
                         if (opts.events.onUnselectSlide && activeSlide.$slide && activeSlide.index != newActiveSlide.index) {
-                            opts.events.onUnselectSlide($element, activeSlide.$slide, activeSlide.index);
+                            opts.events.onUnselectSlide($elem, activeSlide.$slide, activeSlide.index);
                         }
                         activeSlide = newActiveSlide;
                         if (opts.events.onSelectSlide) {
-                            opts.events.onSelectSlide($element, activeSlide.$slide, activeSlide.index, slideData[newActiveSlide.index].caption);
+                            opts.events.onSelectSlide($elem, activeSlide.$slide, activeSlide.index, slideData[newActiveSlide.index].caption);
                         }
                     }
                 },
@@ -292,8 +282,8 @@
 
                     var zoomDest = zoomUtil.checkZoomBounds(zoomUtil.getZoomDest(optsTrans.zoomDest, this.gotoSlideIdx)),
                     fromPos = {
-                        x: zoomUtil.unscale(elementCenter.x - container.pad.x + $element.scrollLeft()),
-                        y: zoomUtil.unscale(elementCenter.y - container.pad.y + $element.scrollTop())
+                        x: zoomUtil.unscale(elementCenter.x - container.pad.x + $elem.scrollLeft()),
+                        y: zoomUtil.unscale(elementCenter.y - container.pad.y + $elem.scrollTop())
                     },
 
                     toPos = {
@@ -381,7 +371,7 @@
                         this.calcRotInfo([toPos.x, toPos.y]);
                         if (this.rotation.needed) {
                             if (opts.events.onStartRotation) {
-                                opts.events.onStartRotation($element,
+                                opts.events.onStartRotation($elem,
                                     this.rotation.currAngle * 180 / Math.PI,
                                     this.rotation.getCenter(), [
                                         zoomUtil.scale(container.size.x),
@@ -396,7 +386,7 @@
                         events.unbindEvents();
 
                         // set the initial values for scrAnimX and scrAnimY
-                        $element.animate({
+                        $elem.animate({
                             scrAnimX: fromPos.x,
                             scrAnimY: fromPos.y
                         }, {
@@ -407,7 +397,7 @@
                             optsTrans.onStart();
                         }
                         // now animate
-                        $element.animate({
+                        $elem.animate({
                             scrAnimX: toPos.x,
                             scrAnimY: toPos.y
                         }, {
@@ -417,7 +407,6 @@
                             step: function (now, fx) {
                                 if (isSteppingX) {
                                     step.x = now;
-                                    isSteppingX = false; // next call to step function will process Y
                                 } else {
                                     step.y = now;
                                     var zoomFactor = util.getQuadraticValue(coefsZoom, maxDeltaIsX ? step.x : step.y);
@@ -425,8 +414,8 @@
                                     if (needToZoom) {
                                         zoomUtil.doZoom(0, 0, zoomFactor, true);
                                     }
-
                                     renderUtil.renderSlides();
+                                    
                                     var centerRot = [step.x * zoomFactor + container.pad.x, step.y * zoomFactor + container.pad.y];
                                     renderUtil.rotation.cssOrigin(centerRot);
                                     if (renderUtil.rotation.needed) {
@@ -436,7 +425,7 @@
                                         if (opts.events.onRotation) {
                                             if (Math.abs(rotValue - lastTriggeredRotation) >= triggerRotEveryRad) {
                                                 lastTriggeredRotation = rotValue;
-                                                opts.events.onRotation($element, rotValue * 180 / Math.PI, centerRot, [
+                                                opts.events.onRotation($elem, rotValue * 180 / Math.PI, centerRot, [
                                                     container.size.x * zoomFactor,
                                                     container.size.y * zoomFactor
                                                 ], {
@@ -446,15 +435,16 @@
                                             }
                                         }
                                     }
-                                    $element.
-                                        scrollLeft(step.x * zoomFactor + container.pad.x - elementCenter.x).
-                                        scrollTop(step.y * zoomFactor + container.pad.y - elementCenter.y);
-                                    isSteppingX = true; // next call to step function will process X
+                                    
+                                    $elem.
+                                        scrollLeft(centerRot[0] - elementCenter.x).
+                                        scrollTop(centerRot[1] - elementCenter.y);
                                 }
+                                isSteppingX = !isSteppingX;
                             },
                             complete: function () {
                                 renderUtil.rotation.currAngle = -slideData[renderUtil.gotoSlideIdx].rotation;
-                                $element.
+                                $elem.
                                     scrollLeft(toPos.x * zoomDest + container.pad.x - elementCenter.x).
                                     scrollTop(toPos.y * zoomDest + container.pad.y - elementCenter.y);
                                 var centerRot = [toPos.x * zoomDest + container.pad.x, toPos.y * zoomDest + container.pad.y];
@@ -463,7 +453,7 @@
                                     renderUtil.rotation.cssRotate(renderUtil.rotation.currAngle);
                                     renderUtil.rotation.cssMargin([0, 0]);
                                     if (opts.events.onEndRotation) {
-                                        opts.events.onEndRotation($element, renderUtil.rotation.currAngle * 180 / Math.PI, centerRot, [
+                                        opts.events.onEndRotation($elem, renderUtil.rotation.currAngle * 180 / Math.PI, centerRot, [
                                             container.size.x * zoomDest,
                                             container.size.y * zoomDest
                                         ], {
@@ -741,11 +731,11 @@
 
                     loadSlideData();
                     setSlidePos();
-                    $element.bind('transition.rsSlideIt', events.onTransition);
-                    $element.bind('sequence.rsSlideIt', events.onSequence);
-                    $element.bind('stop.rsSlideIt', events.onStop);
-                    $element.bind('getter.rsSlideIt', events.onGetter);
-                    $element.bind('setter.rsSlideIt', events.onSetter);
+                    $elem.bind('transition.rsSlideIt', events.onTransition);
+                    $elem.bind('sequence.rsSlideIt', events.onSequence);
+                    $elem.bind('stop.rsSlideIt', events.onStop);
+                    $elem.bind('getter.rsSlideIt', events.onGetter);
+                    $elem.bind('setter.rsSlideIt', events.onSetter);
                     container.$slides.bind('click.rsSlideIt', events.onClick);
                 },
                 initSlideForRotation: function (slide) {
@@ -895,9 +885,9 @@
                 doZoom: function (X, Y, newZoom, animating) {
                     var posData;
                     if (!animating) {
-                        var $elementPos = $element.position(),
-                            scr = [$element.scrollLeft(), $element.scrollTop()],
-                            coords = [X - $elementPos.left, Y - $elementPos.top], // offset relative to the top left border
+                        var $elemPos = $elem.position(),
+                            scr = [$elem.scrollLeft(), $elem.scrollTop()],
+                            coords = [X - $elemPos.left, Y - $elemPos.top], // offset relative to the top left border
                             unscaledPos = [
                                 coords[0] + scr[0] - container.pad.x,
                                 coords[1] + scr[1] - container.pad.y
@@ -935,16 +925,16 @@
                             this.scale(orig[1]) + container.pad.y
                         ]);
                         if (unscaledPos[0] > 0) {
-                            $element.scrollLeft(this.scale(unscaledPos[0]) + container.pad.x - coords[0]);
+                            $elem.scrollLeft(this.scale(unscaledPos[0]) + container.pad.x - coords[0]);
                         }
                         if (unscaledPos[1] > 0) {
-                            $element.scrollTop(this.scale(unscaledPos[1]) + container.pad.y - coords[1]);
+                            $elem.scrollTop(this.scale(unscaledPos[1]) + container.pad.y - coords[1]);
                         }
                         renderUtil.renderSlides();
                     }
 
                     if (prevZoom != this.zoom && opts.events.onChangeZoom) {
-                        opts.events.onChangeZoom($element, this.zoom);
+                        opts.events.onChangeZoom($elem, this.zoom);
                     }
                 },
                 setZoomVertex: function (optsTrans, idx1, idx2, zoomDest) {
@@ -986,17 +976,17 @@
                     this.zoom = zMin;
                     this.zoom = this.checkZoomBounds(this.getZoomDest(z, slideIdx));
                     if (opts.events.onChangeZoom) {
-                        opts.events.onChangeZoom($element, this.zoom);
+                        opts.events.onChangeZoom($elem, this.zoom);
                     }
                 },
                 setterZoom: function (newZoom) {
-                    var $pos = $element.position(),
-                        prev = [$element.scrollLeft() / this.zoom, $element.scrollTop() / this.zoom];
+                    var $pos = $elem.position(),
+                        prev = [$elem.scrollLeft() / this.zoom, $elem.scrollTop() / this.zoom];
                     this.doZoom(
                         $pos.left + elementCenter.x,
                         $pos.top + elementCenter.y,
                         this.checkZoomBounds(newZoom), false);
-                    $element.scrollLeft(prev[0] * this.zoom).scrollTop(prev[1] * this.zoom);
+                    $elem.scrollLeft(prev[0] * this.zoom).scrollTop(prev[1] * this.zoom);
                 }
             },
 
@@ -1033,7 +1023,7 @@
                         }
                     },
                     getCoords: function () {
-                        var scrPos = [$element.scrollLeft(), $element.scrollTop()];
+                        var scrPos = [$elem.scrollLeft(), $elem.scrollTop()];
                         this.value.x = scrPos[0] - (this.lastPt.x == -1 ? scrPos[0] : this.lastPt.x);
                         this.value.y = scrPos[1] - (this.lastPt.y == -1 ? scrPos[1] : this.lastPt.y);
                         this.lastPt.x = scrPos[0];
@@ -1060,9 +1050,9 @@
                         }
                     },
                     smoothStop: function () {
-                        $element.
-                            scrollLeft($element.scrollLeft() + (panUtil.speed.value.x > 0 ? --panUtil.speed.value.x : (panUtil.speed.value.x < 0 ? ++panUtil.speed.value.x : 0))).
-                            scrollTop($element.scrollTop() + (panUtil.speed.value.y > 0 ? --panUtil.speed.value.y : (panUtil.speed.value.y < 0 ? ++panUtil.speed.value.y : 0)));
+                        $elem.
+                            scrollLeft($elem.scrollLeft() + (panUtil.speed.value.x > 0 ? --panUtil.speed.value.x : (panUtil.speed.value.x < 0 ? ++panUtil.speed.value.x : 0))).
+                            scrollTop($elem.scrollTop() + (panUtil.speed.value.y > 0 ? --panUtil.speed.value.y : (panUtil.speed.value.y < 0 ? ++panUtil.speed.value.y : 0)));
                         if (panUtil.speed.value.x > 1) panUtil.speed.value.x--;
                         if (panUtil.speed.value.x < -1) panUtil.speed.value.x++;
                         if (panUtil.speed.value.y > 1) panUtil.speed.value.y--;
@@ -1109,13 +1099,13 @@
                 },
                 onStartPanning: function (event) {
                     event.preventDefault();
-                    panUtil.startPos.x = event.clientX + $element.scrollLeft();
-                    panUtil.startPos.y = event.clientY + $element.scrollTop();
+                    panUtil.startPos.x = event.clientX + $elem.scrollLeft();
+                    panUtil.startPos.y = event.clientY + $elem.scrollTop();
                     panUtil.mousedown();
                 },
                 onPanning: function (event) {
                     if (panUtil.isPanning) {
-                        $element.
+                        $elem.
                             scrollLeft(panUtil.startPos.x - event.clientX).
                             scrollTop(panUtil.startPos.y - event.clientY);
                     }
@@ -1166,7 +1156,7 @@
                                 trans.duration = qt.durations == 0 ? optsSequence.duration : optsSequence.duration[i % qt.durations];
                                 trans.zoomDest = qt.zoomDests == 0 ? optsSequence.zoomDest : optsSequence.zoomDest[i % qt.zoomDests];
                                 trans.zoomVertex = qt.zoomVertexes == 0 ? optsSequence.zoomVertex : optsSequence.zoomVertex[i % qt.zoomVertexes];
-                                $element.trigger('transition.rsSlideIt', [trans]).
+                                $elem.trigger('transition.rsSlideIt', [trans]).
                                     delay(qt.delays == 0 ? optsSequence.delayOnSlide : optsSequence.delayOnSlide[i % qt.delays]);
                                 ++i;
                             } else {
@@ -1192,22 +1182,22 @@
                     renderUtil.doTransition(event, optsTrans);
                 },
                 unbindEvents: function () {
-                    $elementAndTops.unbind('scroll.rsSlideIt');
+                    $elemAndTops.unbind('scroll.rsSlideIt');
                     if (opts.behaviour.zoomOnMouseWheel) {
-                        $elementAndTops.unbind('mousewheel.rsSlideIt');
+                        $elemAndTops.unbind('mousewheel.rsSlideIt');
                     }
                     if (opts.behaviour.panOnMouseDrag.enabled) {
-                        $elementAndTops.unbind('mousedown.rsSlideIt mousemove.rsSlideIt mouseup.rsSlideIt');
+                        $elemAndTops.unbind('mousedown.rsSlideIt mousemove.rsSlideIt mouseup.rsSlideIt');
                         $("body, html").unbind('mouseup.rsSlideIt');
                     }
                 },
                 bindEvents: function () {
-                    $elementAndTops.bind('scroll.rsSlideIt', this.onScroll);
+                    $elemAndTops.bind('scroll.rsSlideIt', this.onScroll);
                     if (opts.behaviour.zoomOnMouseWheel) {
-                        $elementAndTops.bind('mousewheel.rsSlideIt', this.onMouseWheel);
+                        $elemAndTops.bind('mousewheel.rsSlideIt', this.onMouseWheel);
                     }
                     if (opts.behaviour.panOnMouseDrag.enabled) {
-                        $elementAndTops.
+                        $elemAndTops.
                             bind('mousedown.rsSlideIt', this.onStartPanning).
                             bind('mousemove.rsSlideIt', this.onPanning).
                             bind('mouseup.rsSlideIt', this.onEndPanning);
@@ -1272,11 +1262,11 @@
                             setTimeout(function () {
                                 if (events.click_dblClickUtil.qtClicks === 1) {
                                     if (opts.events.onClickSlide) {
-                                        opts.events.onClickSlide(event, $element, events.click_dblClickUtil.$slide, container.$slides.index(events.click_dblClickUtil.$slide[0]));
+                                        opts.events.onClickSlide(event, $elem, events.click_dblClickUtil.$slide, container.$slides.index(events.click_dblClickUtil.$slide[0]));
                                     }
                                 } else {
                                     if (opts.events.onDblClickSlide) {
-                                        opts.events.onDblClickSlide(event, $element, events.click_dblClickUtil.$slide, container.$slides.index(events.click_dblClickUtil.$slide[0]));
+                                        opts.events.onDblClickSlide(event, $elem, events.click_dblClickUtil.$slide, container.$slides.index(events.click_dblClickUtil.$slide[0]));
                                     }
                                 }
                                 events.click_dblClickUtil.qtClicks = 0;
@@ -1417,4 +1407,5 @@
         onCompleteTransition: null, // event handler called when the transition within the sequence is completed
         onCompleteSequence: null    // event handler called when the whole sequence is completed (only if repeat is not 'forever')
     };
+
 })(jQuery);
