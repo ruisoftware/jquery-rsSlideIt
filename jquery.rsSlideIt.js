@@ -375,66 +375,37 @@
                             y: zoomUtil.scale(fromPos.y) + container.pad.y
                         }) : [0, 0],
                         maxDeltaIsX = Math.abs(maxDelta - delta.x) < 0.00005,
-                        // starting point (x, y) = (initialPosition.x or y depending on the max delta, current zoom level)
-                        startPnt = {
-                            x: maxDeltaIsX ? fromPos.x : fromPos.y,
-                            y: zoomUtil.zoom
-                        },
-                        // ending point (x, y) = (endPosition.x or y depending on the max delta, destination zoom level)
-                        endPnt = {
-                            x: maxDeltaIsX ? toPos.x : toPos.y,
-                            y: zoomDest
-                        };
+                        startAnim = maxDeltaIsX ? fromPos.x : fromPos.y,
+                        endAnim = maxDeltaIsX ? toPos.x : toPos.y;
 
                         // medium (x, y) = (x=unknown for now, y=optsTrans.zoomVertex= min or max zoom represented by y-coordinate 
                         // that corresponds to minimum or maximun the function takes)
                         zoomUtil.setZoomVertex(optsTrans, activeSlide.index, this.gotoSlideIdx, zoomDest);
 
-                        // get the coefficients [a, b, c] of a quadractic function that interpolates the following 3 points: 
-                        var coefsZoom = util.getQuadratic2PntsVertex(
-                            startPnt,
-                            endPnt,
-                            typeof optsTrans.zoomVertex == 'string' && optsTrans.zoomVertex == 'linear' ? 'linear' : zoomUtil.zoomVertex
-                        ),
-
-                        isSteppingX = true,
-                        scrAnimX,
-                        scrAnimY,
-                        step = {
-                            x: 0,
-                            y: 0
+                        var coefs = {
+                            pan: util.getLinear({ x: startAnim, y: maxDeltaIsX ? fromPos.y : fromPos.x }, { x: endAnim, y: maxDeltaIsX ? toPos.y : toPos.x }),
+                             
+                            // get the coefficients [a, b, c] of a quadratic function that interpolates the following 3 points: 
+                            zoom: util.getQuadratic2PntsVertex(
+                                        { x: startAnim, y: zoomUtil.zoom }, { x: endAnim, y: zoomDest },
+                                        typeof optsTrans.zoomVertex == 'string' && optsTrans.zoomVertex == 'linear' ? 'linear' : zoomUtil.zoomVertex
+                                    ),
+                        
+                            // coefficients [a, b, c] used during rotation to smooth transitions from image A to B
+                            rotation: {
+                                // transition between A's angle and B's angle
+                                angle: util.getLinear({ x: startAnim, y: this.rotation.currAngle }, { x: endAnim, y: -slideData[this.gotoSlideIdx].rotation }),
+                                margin: [
+                                    util.getLinear({ x: startAnim, y: rotMargin[0] }, { x: endAnim, y: 0 }),
+                                    util.getLinear({ x: startAnim, y: rotMargin[1] }, { x: endAnim, y: 0 })
+                                ]
+                            }
                         },
-                        // zoom only happens if coefficient a (coefsZoom[0]) is not zero (parabolic animation) or
+
+                        scrAnim,
+                        // zoom only happens if coefficient a (coefs.zoom[0]) is not zero (parabolic animation) or
                         // if a is 0 (linear animation) and current zoom and destination zoom are not the same
-                        needToZoom = coefsZoom[0] != 0 || Math.abs(zoomUtil.zoom - zoomDest) > 0.0005,
-
-                        // coefficients [a, b, c] used during rotation to smooth transitions from image A to B
-                        coefsRotation = {
-                            // transition between A's angle and B's angle
-                            angle: util.getLinear({
-                                x: startPnt.x,
-                                y: this.rotation.currAngle
-                            }, {
-                                x: endPnt.x,
-                                y: -slideData[this.gotoSlideIdx].rotation
-                            }),
-                            margin: [
-                                util.getLinear({
-                                    x: startPnt.x,
-                                    y: rotMargin[0]
-                                }, {
-                                    x: endPnt.x,
-                                    y: 0
-                                }),
-                                util.getLinear({
-                                    x: startPnt.x,
-                                    y: rotMargin[1]
-                                }, {
-                                    x: endPnt.x,
-                                    y: 0
-                                })
-                            ]
-                        },
+                        needToZoom = coefs.zoom[0] != 0 || Math.abs(zoomUtil.zoom - zoomDest) > 0.0005,
                         lastTriggeredRotation = this.rotation.currAngle,
                         triggerRotEveryRad = opts.events.triggerOnRotationEvery * Math.PI / 180;
 
@@ -455,10 +426,9 @@
                         }
                         events.unbindEvents();
 
-                        // set the initial values for scrAnimX and scrAnimY
+                        // set the initial values for scrAnim
                         $elem.animate({
-                            scrAnimX: fromPos.x,
-                            scrAnimY: fromPos.y
+                            scrAnim: startAnim
                         }, {
                             duration: 0
                         });
@@ -468,50 +438,42 @@
                         }
                         // now animate
                         $elem.animate({
-                            scrAnimX: toPos.x,
-                            scrAnimY: toPos.y
+                            scrAnim: endAnim
                         }, {
                             duration: optsTrans.duration,
                             easing: opts.behaviour.easing,
-                            // step function called for the scrAnimX and scrAnimY (in this order)
                             step: function (now, fx) {
-                                if (isSteppingX) {
-                                    step.x = now;
-                                } else {
-                                    step.y = now;
-                                    var zoomFactor = util.getQuadraticValue(coefsZoom, maxDeltaIsX ? step.x : step.y);
+                                var panPnt = [now, now],
+                                    zoomFactor = util.getQuadraticValue(coefs.zoom, now);
+                                panPnt[maxDeltaIsX ? 1 : 0] = util.getQuadraticValue(coefs.pan, now);
 
-                                    if (needToZoom) {
-                                        zoomUtil.doZoom(0, 0, zoomFactor, true);
-                                        core.cssZoom();
-                                    }
+                                if (needToZoom) {
+                                    zoomUtil.doZoom(0, 0, zoomFactor, true);
+                                    core.cssZoom();
+                                }
 
-                                    var centerRot = [step.x * zoomFactor + container.pad.x, step.y * zoomFactor + container.pad.y];
-                                    core.rotation.cssOrigin(centerRot);
-                                    if (core.rotation.needed) {
-                                        core.rotation.cssMargin([util.getQuadraticValue(coefsRotation.margin[0], maxDeltaIsX ? step.x : step.y), util.getQuadraticValue(coefsRotation.margin[1], maxDeltaIsX ? step.x : step.y)]);
-                                        var rotValue = util.getQuadraticValue(coefsRotation.angle, maxDeltaIsX ? step.x : step.y);
-                                        core.rotation.cssRotate(rotValue);
-                                        if (opts.events.onRotation) {
-                                            if (Math.abs(rotValue - lastTriggeredRotation) >= triggerRotEveryRad) {
-                                                lastTriggeredRotation = rotValue;
-                                                opts.events.onRotation($elem, rotValue * 180 / Math.PI, centerRot, [
-                                                    container.size.x * zoomFactor,
-                                                    container.size.y * zoomFactor
-                                                ], {
-                                                    x: container.pad.x,
-                                                    y: container.pad.y
-                                                });
-                                            }
+                                var centerRot = [panPnt[0] * zoomFactor + container.pad.x, panPnt[1] * zoomFactor + container.pad.y];
+                                core.rotation.cssOrigin(centerRot);
+                                if (core.rotation.needed) {
+                                    core.rotation.cssMargin([util.getQuadraticValue(coefs.rotation.margin[0], now), util.getQuadraticValue(coefs.rotation.margin[1], now)]);
+                                    var rotValue = util.getQuadraticValue(coefs.rotation.angle, now);
+                                    core.rotation.cssRotate(rotValue);
+                                    if (opts.events.onRotation) {
+                                        if (Math.abs(rotValue - lastTriggeredRotation) >= triggerRotEveryRad) {
+                                            lastTriggeredRotation = rotValue;
+                                            opts.events.onRotation($elem, rotValue * 180 / Math.PI, centerRot, [
+                                                container.size.x * zoomFactor,
+                                                container.size.y * zoomFactor
+                                            ], {
+                                                x: container.pad.x,
+                                                y: container.pad.y
+                                            });
                                         }
                                     }
-
-                                    $elem.
-                                        scrollLeft(centerRot[0] - elementCenter.x).
-                                        scrollTop(centerRot[1] - elementCenter.y);
                                 }
-                                isSteppingX = !isSteppingX;
+                                $elem.scrollLeft(centerRot[0] - elementCenter.x).scrollTop(centerRot[1] - elementCenter.y);
                             },
+
                             complete: function () {
                                 core.rotation.currAngle = -slideData[core.gotoSlideIdx].rotation;
                                 $elem.
