@@ -228,7 +228,7 @@
                                 
                                 var newCenter = { 
                                         x: orig.x - zoomUtil.scale(orig.x - fromPos.x),
-                                        y: orig.y + zoomUtil.scale(fromPos.y - orig.y),
+                                        y: orig.y + zoomUtil.scale(fromPos.y - orig.y)
                                     },
                                     topLeftOld = core.IE.getContainerRect(orig, container.IEorigSize, core.rotation.currAngle, zoomUtil.zoom, false).topLeft,
                                     topLeftNew = core.IE.getContainerRect(newCenter, container.IEorigSize, core.rotation.currAngle, zoomUtil.zoom, false).topLeft;
@@ -395,7 +395,7 @@
                             bottomRight: {
                                 x: Math.max(lt.x, Math.max(rt.x, Math.max(rb.x, lb.x))),
                                 y: Math.max(lt.y, Math.max(rt.y, Math.max(rb.y, lb.y)))
-                            },
+                            }
                         };
                     },
 
@@ -1764,6 +1764,6 @@
         PLAYING: 2, // sequence of transitions are running and user is locked from navigating around
         PAUSING: 3, // button Play/Pause was pressed and slider will pause as soon current transition finishes
         PAUSED: 4  // sequence is paused and another click to Play/Pause button will resume the sequence from the current point. User can navigate around
-    }
+    };
 
 })(jQuery);
