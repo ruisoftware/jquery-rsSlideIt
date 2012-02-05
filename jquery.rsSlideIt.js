@@ -28,15 +28,14 @@
                 $paddingDiv: null,
                 $zoomDiv: null,
                 $slides: null, // set with all slide elements
-                size: {x: 0, y: 0},
-                IEorigSize: {x: 0, y: 0}, // IE needs to compute based on unscaled (original) container size
-                IEpad: {x: 0, y: 0},
-                pad: {x: 0, y: 0},
+                size: { x: 0, y: 0 },
+                IEorigSize: { x: 0, y: 0 }, // IE needs to compute based on unscaled (original) container size
+                pad: { x: 0, y: 0 },
                 setPad: function (usesRotation) {
-                    this.IEpad.x = this.pad.x = elementCenter.x;
-                    this.IEpad.y = this.pad.y = elementCenter.y;
+                    this.pad.x = elementCenter.x;
+                    this.pad.y = elementCenter.y;
                     if (usesRotation) {
-                        this.IEpad.x = this.IEpad.y = this.pad.x = this.pad.y = Math.max(this.IEpad.x, this.IEpad.y);
+                        this.pad.x = this.pad.y = Math.max(this.pad.x, this.pad.y);
                     }
                     this.$paddingDiv.css({
                         'padding-top': this.pad.y + 'px',
@@ -71,7 +70,7 @@
                 index: -1
             },
 
-            seqData = { // data for the whole slideshow currently running
+            seqData = { // data for the whole slide show currently running
                 idx: 0,      // current active slide while sequence runs
                 repeat: 0,   // how many cycles a sequence runs
                 qt: null,    // quantities of all sequence input parameters
@@ -102,11 +101,11 @@
                         }
                     }
                     this.qt = {
-                        sequences: (typeof optsSequence.sequence == 'object') ? optsSequence.sequence.length : (isPrevOrNext ? slideData.length : 0),
-                        delays: (typeof optsSequence.delayOnSlide == 'object') ? optsSequence.delayOnSlide.length : 0,
-                        zoomDests: (typeof optsSequence.zoomDest == 'object') ? optsSequence.zoomDest.length : 0,
-                        zoomVertexes: (typeof optsSequence.zoomVertex == 'object') ? optsSequence.zoomVertex.length : 0,
-                        durations: (typeof optsSequence.duration == 'object') ? optsSequence.duration.length : 0
+                        sequences: (typeof optsSequence.sequence === 'object') ? optsSequence.sequence.length : (isPrevOrNext ? slideData.length : 0),
+                        delays: (typeof optsSequence.delayOnSlide === 'object') ? optsSequence.delayOnSlide.length : 0,
+                        zoomDests: (typeof optsSequence.zoomDest === 'object') ? optsSequence.zoomDest.length : 0,
+                        zoomVertexes: (typeof optsSequence.zoomVertex === 'object') ? optsSequence.zoomVertex.length : 0,
+                        durations: (typeof optsSequence.duration === 'object') ? optsSequence.duration.length : 0
                     };
                 }
             },
@@ -169,8 +168,8 @@
                         // optimization
                         if (Math.abs(Math.sin(elemAngle)) < 0.000005) {
                             return {
-                                topLeft: {x: 0, y: 0},
-                                bottomRight: {x: size[0], y: size[1]}
+                                topLeft: { x: 0, y: 0 },
+                                bottomRight: { x: size[0], y: size[1] }
                             };
                         }
 
@@ -210,12 +209,12 @@
                             var orig = container.$paddingDiv.css('-webkit-transform-origin');
                             if (orig != null) {
                                 var origV = orig.split(" ");
-                                this.currOrigin = {x: util.toInt(origV[0]), y: util.toInt(origV[1])};
+                                this.currOrigin = { x: util.toInt(origV[0]), y: util.toInt(origV[1]) };
                             } else {
-                                this.currOrigin = {x: container.$paddingDiv.width() / 2, y: container.$paddingDiv.height() / 2};
+                                this.currOrigin = { x: container.$paddingDiv.width() / 2, y: container.$paddingDiv.height() / 2 };
                             }
                         }
-                        return {x: this.currOrigin.x, y: this.currOrigin.y};
+                        return { x: this.currOrigin.x, y: this.currOrigin.y };
                     },
                     // when transform-origin is changed to an element that is rotated, that element shifts to another position.
                     // To make the element appear in the same position, need to apply a top left margin to compensate the element shifting.
@@ -225,45 +224,45 @@
                             if (core.isIE8orBelow) {
                                 orig.x = zoomUtil.unscale(orig.x - container.pad.x);
                                 orig.y = zoomUtil.unscale(orig.y - container.pad.y);
-                                
-                                var newCenter = { 
-                                        x: orig.x - zoomUtil.scale(orig.x - fromPos.x),
-                                        y: orig.y + zoomUtil.scale(fromPos.y - orig.y)
-                                    },
+
+                                var newCenter = {
+                                    x: orig.x - zoomUtil.scale(orig.x - fromPos.x),
+                                    y: orig.y + zoomUtil.scale(fromPos.y - orig.y)
+                                },
                                     topLeftOld = core.IE.getContainerRect(orig, container.IEorigSize, core.rotation.currAngle, zoomUtil.zoom, false).topLeft,
                                     topLeftNew = core.IE.getContainerRect(newCenter, container.IEorigSize, core.rotation.currAngle, zoomUtil.zoom, false).topLeft;
                                 return {
-                                    x: zoomUtil.unscale(topLeftOld.x - topLeftNew.x), 
+                                    x: zoomUtil.unscale(topLeftOld.x - topLeftNew.x),
                                     y: zoomUtil.unscale(topLeftOld.y - topLeftNew.y)
                                 };
-                                
+
                             } else {
-                            
-                                var newCenter = { 
+
+                                var newCenter = {
                                     x: zoomUtil.scale(fromPos.x) + container.pad.x,
                                     y: zoomUtil.scale(fromPos.y) + container.pad.y
                                 };
 
                                 if (newCenter.x != Math.floor(orig.x) || newCenter.y != Math.floor(orig.y)) {
-                                    var pntTopRight1 = this.getTopRight(orig, {x: zoomUtil.scale(slideData[slideIdx].center.x), y: -zoomUtil.scale(slideData[slideIdx].center.y)}),
+                                    var pntTopRight1 = this.getTopRight(orig, { x: zoomUtil.scale(slideData[slideIdx].center.x), y: -zoomUtil.scale(slideData[slideIdx].center.y) }),
                                         pntTopRight2 = this.getTopRight(newCenter, {
                                             x: container.pad.x + zoomUtil.scale(slideData[slideIdx].pos.x + slideData[slideIdx].slideOuterSizeNoRotation.x) - newCenter.x,
                                             y: container.pad.y + zoomUtil.scale(slideData[slideIdx].pos.y) - newCenter.y
                                         });
                                     return {
-                                        x: pntTopRight1.x - pntTopRight2.x, 
+                                        x: pntTopRight1.x - pntTopRight2.x,
                                         y: pntTopRight1.y - pntTopRight2.y
                                     };
                                 }
                             }
                         }
-                        return {x: 0, y: 0};
+                        return { x: 0, y: 0 };
                     },
                     getTopRight: function (center, size) {
                         var h = Math.sqrt(size.x * size.x + size.y * size.y),
                             angleBox = Math.acos(size.x / h),
                             totalAngle = (size.y > 0 ? -angleBox : angleBox) - this.currAngle;
-                        return {x: h * Math.cos(totalAngle) + center.x, y: -h * Math.sin(totalAngle) + center.y};
+                        return { x: h * Math.cos(totalAngle) + center.x, y: -h * Math.sin(totalAngle) + center.y };
                     },
                     cssRotate: function (rot, m) {
                         var rotation = 'rotate(' + rot + 'rad)';
@@ -279,7 +278,7 @@
                     },
                     cssOrigin: function (origin) {
                         if (this.currOrigin == null) {
-                            this.currOrigin = {x: origin.x, y: origin.y};
+                            this.currOrigin = { x: origin.x, y: origin.y };
                         } else {
                             this.currOrigin.x = origin.x;
                             this.currOrigin.y = origin.y;
@@ -359,10 +358,10 @@
                         // |             |                               |
                         // LB-------------------------------------------RB
                         // before rotating/scaling, get the angles for each of the four vertices relatively to the center point
-                        var lt = $.extend({}, {x: 0, y: 0}, this.getHorizAngleTwoPntsAndDistance(center, {x: 0, y: 0})),
-                            rt = $.extend({}, {x: size.x, y: 0}, this.getHorizAngleTwoPntsAndDistance(center, {x: size.x, y: 0})),
+                        var lt = $.extend({}, { x: 0, y: 0 }, this.getHorizAngleTwoPntsAndDistance(center, { x: 0, y: 0 })),
+                            rt = $.extend({}, { x: size.x, y: 0 }, this.getHorizAngleTwoPntsAndDistance(center, { x: size.x, y: 0 })),
                             rb = $.extend({}, size, this.getHorizAngleTwoPntsAndDistance(center, size)),
-                            lb = $.extend({}, {x: 0, y: size.y}, this.getHorizAngleTwoPntsAndDistance(center, {x: 0, y: size.y}));
+                            lb = $.extend({}, { x: 0, y: size.y }, this.getHorizAngleTwoPntsAndDistance(center, { x: 0, y: size.y }));
 
                         // now scale and rotate
                         lt.h *= toScale;
@@ -373,15 +372,15 @@
                         rt = $.extend({}, rt, this.rotatePnt(center, rt.angle - toAngle, rt.h));
                         rb = $.extend({}, rb, this.rotatePnt(center, rb.angle - toAngle, rb.h));
                         lb = $.extend({}, lb, this.rotatePnt(center, lb.angle - toAngle, lb.h));
-                        
+
                         if (calcCenters) {
                             // also apply transformations to all slide's center point
                             for (var i = slideData.length - 1; i > -1; --i) {
                                 var angleData = this.getHorizAngleTwoPntsAndDistance(center, {
-                                    x: slideData[i].pos.x + slideData[i].center.x, 
+                                    x: slideData[i].pos.x + slideData[i].center.x,
                                     y: slideData[i].pos.y + slideData[i].center.y
                                 }),
-                                    pointData = this.rotatePnt(center, angleData.angle - toAngle, angleData.h*toScale);
+                                    pointData = this.rotatePnt(center, angleData.angle - toAngle, angleData.h * toScale);
                                 slideData[i].centerTrans.x = pointData.x + container.pad.x;
                                 slideData[i].centerTrans.y = pointData.y + container.pad.y;
                             }
@@ -402,12 +401,12 @@
                     setPaddings: function (padding) {
                         container.$paddingDiv.css({
                             'padding-left': (padding.x > 0 ? padding.x : 0) + 'px',
-                            'padding-top': (padding.y  > 0 ? padding.y : 0) + 'px',
-                            
+                            'padding-top': (padding.y > 0 ? padding.y : 0) + 'px',
+
                             // negative paddings do not work in IE, so need to "move" these negative paddings
                             // to margins and if they are positive just ignore them (use zero)
-                            'margin-left': (padding.x  > 0 ? 0 : padding.x) + 'px',
-                            'margin-top': (padding.y  > 0 ? 0 : padding.y) + 'px'
+                            'margin-left': (padding.x > 0 ? 0 : padding.x) + 'px',
+                            'margin-top': (padding.y > 0 ? 0 : padding.y) + 'px'
                         });
                     },
 
@@ -417,7 +416,7 @@
                             'width': zoomUtil.scale(container.IEorigSize.x) + 'px',
                             'height': zoomUtil.scale(container.IEorigSize.y) + 'px'
                         });
-                        
+
                         container.$zoomDiv.css('filter', core.IE.getMatrix(rad, zoomUtil.zoom));
                         var topLeft = this.getContainerRect(center, container.IEorigSize, rad, zoomUtil.zoom, calcCenters).topLeft,
                             padding = {
@@ -426,7 +425,7 @@
                             };
                         this.setPaddings(padding);
                     },
-                    
+
                     convertToMatrix: function (msFilter) {
                         var lookup = "progid:dximagetransform.microsoft.matrix(",
                             pos = msFilter.toLowerCase().indexOf(lookup);
@@ -447,21 +446,21 @@
                         // could be done with each(), but the core for(;;) is faster
                         for (var i = len - 1; i > -1; i--) {
                             var dist = util.getDistanceTwoPnts({
-                                    x: slideData[i].centerTrans.x - $elem.scrollLeft(), 
-                                    y: slideData[i].centerTrans.y - $elem.scrollTop()
-                                }, elementCenter);
+                                x: slideData[i].centerTrans.x - $elem.scrollLeft(),
+                                y: slideData[i].centerTrans.y - $elem.scrollTop()
+                            }, elementCenter);
 
                             if (dist < minDist || i === len - 1) {
                                 minDist = dist;
                                 minIdx = i;
                             }
                         }
-                        return { $slide: minIdx === -1? null : container.$slides.eq(minIdx), index: minIdx };
+                        return { $slide: minIdx === -1 ? null : container.$slides.eq(minIdx), index: minIdx };
                     }
                 },
 
                 cssZoom: function () {
-                    var newSize = {x: zoomUtil.scale(container.size.x), y: zoomUtil.scale(container.size.y)};
+                    var newSize = { x: zoomUtil.scale(container.size.x), y: zoomUtil.scale(container.size.y) };
                     if (!core.isIE8orBelow) {
                         container.$zoomDiv.css({
                             '-moz-transform-origin': '0px 0px',
@@ -489,14 +488,12 @@
                             util.getDistanceTwoPnts({
                                 x: slideData[i].pos.x + slideData[i].center.x,
                                 y: slideData[i].pos.y + slideData[i].center.y
-                            }, {
-                                x: centerRot[0],
-                                y: centerRot[1]
-                            });
+                            }, centerRot
+                        );
 
                         if (slideData[i].radius > 0.005) {
-                            slideData[i].angleToCenter = Math.acos((slideData[i].pos.x + slideData[i].center.x - centerRot[0]) / slideData[i].radius);
-                            if (slideData[i].pos.y + slideData[i].center.y > centerRot[1]) {
+                            slideData[i].angleToCenter = Math.acos((slideData[i].pos.x + slideData[i].center.x - centerRot.x) / slideData[i].radius);
+                            if (slideData[i].pos.y + slideData[i].center.y > centerRot.y) {
                                 slideData[i].angleToCenter = -slideData[i].angleToCenter;
                             }
                         } else {
@@ -516,31 +513,30 @@
                     // could be done with each(), but the core for(;;) is faster
                     for (var i = len - 1; i > -1; i--) {
                         var dist = util.getDistanceTwoPnts({
-                                x: zoomUtil.scale(slideData[i].radius) * Math.cos(this.rotation.currAngle - slideData[i].angleToCenter) + offset.x,
-                                y: zoomUtil.scale(slideData[i].radius) * Math.sin(this.rotation.currAngle - slideData[i].angleToCenter) + offset.y
-                            }, {
-                                x: elementCenter.x,
-                                y: elementCenter.y
-                            });
+                            x: zoomUtil.scale(slideData[i].radius) * Math.cos(this.rotation.currAngle - slideData[i].angleToCenter) + offset.x,
+                            y: zoomUtil.scale(slideData[i].radius) * Math.sin(this.rotation.currAngle - slideData[i].angleToCenter) + offset.y
+                        }, {
+                            x: elementCenter.x,
+                            y: elementCenter.y
+                        });
 
                         if (dist < minDist || i === len - 1) {
                             minDist = dist;
                             minIdx = i;
                         }
                     }
-                    return { $slide: minIdx === -1? null : container.$slides.eq(minIdx), index: minIdx };
+                    return { $slide: minIdx === -1 ? null : container.$slides.eq(minIdx), index: minIdx };
                 },
 
                 selectSlide: function (forceSel) {
-                    var newActiveSlide = core.isIE8orBelow? core.IE.getNearestSlide() : core.getNearestSlide();
+                    var newActiveSlide = core.isIE8orBelow ? core.IE.getNearestSlide() : core.getNearestSlide();
                     if (forceSel || activeSlide.index != newActiveSlide.index) {
                         if (opts.events.onUnselectSlide && activeSlide.$slide && activeSlide.index != newActiveSlide.index) {
                             opts.events.onUnselectSlide($elem, activeSlide.$slide, activeSlide.index);
                         }
                         activeSlide = newActiveSlide;
                         if (opts.events.onSelectSlide) {
-                            return opts.events.onSelectSlide($elem, activeSlide.$slide, activeSlide.index, 
-                                slideData[newActiveSlide.index].caption, Math.abs(slideData[newActiveSlide.index].rotation + core.rotation.currAngle) > 0.005);
+                            return opts.events.onSelectSlide($elem, activeSlide.$slide, activeSlide.index, slideData[newActiveSlide.index].caption);
                         }
                     }
                     return true;
@@ -556,12 +552,12 @@
                     var prevGotoSlideIdx = this.gotoSlideIdx;
                     this.gotoSlideIdx = util.getSlideIdx(optsTrans.slide);
                     var zoomDest = zoomUtil.checkZoomBounds(zoomUtil.getZoomDest(optsTrans.zoomDest, this.gotoSlideIdx)),
-                        // animation will run from the current viewport's center point...
+                    // animation will run from the current viewport's center point...
                         fromPos = {
                             x: elementCenter.x - container.pad.x + $elem.scrollLeft(),
                             y: elementCenter.y - container.pad.y + $elem.scrollTop()
                         },
-                        // ... to the target slide's center point
+                    // ... to the target slide's center point
                         toPos = {
                             x: slideData[this.gotoSlideIdx].pos.x + slideData[this.gotoSlideIdx].center.x,
                             y: slideData[this.gotoSlideIdx].pos.y + slideData[this.gotoSlideIdx].center.y
@@ -575,11 +571,15 @@
                     var delta = {
                         x: Math.abs(fromPos.x - toPos.x),
                         y: Math.abs(fromPos.y - toPos.y)
-                    }, runAnimation = !$.fx.off;
-                    
+                    }, runAnimation = !$.fx.off,
+                        isLinearZoom = typeof optsTrans.zoomVertex === 'string' && optsTrans.zoomVertex == 'linear',
+                        needToZoom = !isLinearZoom || Math.abs(zoomUtil.zoom - zoomDest) > 0.0005,
+                        needToRotate = this.rotation.needed && Math.abs(this.rotation.currAngle + slideData[this.gotoSlideIdx].rotation) > 0.0005;
+
+
                     if (runAnimation && delta.x < 1 && delta.y < 1) { // fromPos and toPos are the same (no translation will be done)
                         // but if zoom or rotation will change, then
-                        if (zoomDest != zoomUtil.zoom || Math.abs(this.rotation.currAngle + slideData[this.gotoSlideIdx].rotation) > 0.005)  {
+                        if (zoomDest != zoomUtil.zoom || needToRotate) {
                             // need to add an artificial offset, that will not make a translation movement (not even for one pixel)
                             // this is required, because animation is based on translation, so start and end point need to be different
                             delta.x = delta.y = 0.9;
@@ -589,64 +589,61 @@
                             runAnimation = false; // no translation, no zoom and no rotation will happen, so nothing needs to animate
                         }
                     }
-                    
-                    if (runAnimation) {
-                        var rotMargin = this.rotation.adjustRotOrigin(prevGotoSlideIdx, fromPos),
-                            maxDeltaIsX = delta.x > delta.y,
-                            startAnim = maxDeltaIsX ? fromPos.x : fromPos.y,
-                            endAnim = maxDeltaIsX ? toPos.x : toPos.y;
 
+                    if (runAnimation) {
                         // medium (x, y) = (x=unknown for now, y=optsTrans.zoomVertex= min or max zoom represented by y-coordinate 
                         // that corresponds to minimum or maximun the function takes)
                         zoomUtil.setZoomVertex(optsTrans, activeSlide.index, this.gotoSlideIdx, zoomDest);
 
-                        var coefs = {
-                            pan: util.getLinear({ x: startAnim, y: maxDeltaIsX ? fromPos.y : fromPos.x }, { x: endAnim, y: maxDeltaIsX ? toPos.y : toPos.x }),
+                        var rotMargin = this.rotation.adjustRotOrigin(prevGotoSlideIdx, fromPos),
+                            maxDeltaIsX = delta.x > delta.y,
+                            startAnim = maxDeltaIsX ? fromPos.x : fromPos.y,
+                            endAnim = maxDeltaIsX ? toPos.x : toPos.y,
+                            coefs = {
+                                pan: util.getLinear({ x: startAnim, y: maxDeltaIsX ? fromPos.y : fromPos.x }, { x: endAnim, y: maxDeltaIsX ? toPos.y : toPos.x }),
 
-                            // get the coefficients [a, b, c] of a quadratic function that interpolates the following 3 points: 
-                            zoom: util.getQuadratic2PntsVertex(
-                                    { x: startAnim, y: zoomUtil.zoom }, { x: endAnim, y: zoomDest },
-                                    typeof optsTrans.zoomVertex == 'string' && optsTrans.zoomVertex == 'linear' ? 'linear' : zoomUtil.zoomVertex
-                                  ),
+                                // get the coefficients [a, b, c] of a quadratic function that interpolates the following 3 points: 
+                                zoom: util.getQuadratic2PntsVertex(
+                                        { x: startAnim, y: zoomUtil.zoom }, { x: endAnim, y: zoomDest },
+                                        isLinearZoom ? 'linear' : zoomUtil.zoomVertex
+                                      ),
 
-                            // coefficients [a, b, c] used during rotation to smooth transitions from slide A to B
-                            rotation: {
-                                // transition between A's angle and B's angle
-                                angle: util.getLinear({ x: startAnim, y: this.rotation.currAngle }, { x: endAnim, y: -slideData[this.gotoSlideIdx].rotation }),
-                                margin: {
-                                    x: util.getLinear({ x: startAnim, y: rotMargin.x }, { x: endAnim, y: 0 }),
-                                    y: util.getLinear({ x: startAnim, y: rotMargin.y }, { x: endAnim, y: 0 })
+                                // coefficients [a, b, c] used during rotation to smooth transitions from slide A to B
+                                rotation: {
+                                    // transition between A's angle and B's angle
+                                    angle: util.getLinear({ x: startAnim, y: this.rotation.currAngle }, { x: endAnim, y: -slideData[this.gotoSlideIdx].rotation }),
+                                    margin: {
+                                        x: util.getLinear({ x: startAnim, y: rotMargin.x }, { x: endAnim, y: 0 }),
+                                        y: util.getLinear({ x: startAnim, y: rotMargin.y }, { x: endAnim, y: 0 })
+                                    }
                                 }
-                            }
-                        },
+                            },
+                            scrAnim,
+                            lastTriggeredRotation = this.rotation.currAngle,
+                            triggerRotEveryRad = util.degToRad(opts.events.triggerOnRotationEvery);
 
-                        scrAnim,
-                        // zoom only happens if coefficient a (coefs.zoom.a) is not zero (parabolic animation) or
-                        // if a is 0 (linear animation) and current zoom and destination zoom are not the same
-                        needToZoom = coefs.zoom.a != 0 || Math.abs(zoomUtil.zoom - zoomDest) > 0.0005,
-                        lastTriggeredRotation = this.rotation.currAngle,
-                        triggerRotEveryRad = opts.events.triggerOnRotationEvery * Math.PI / 180;
+                        this.calcRotInfo(toPos);
 
-                        this.calcRotInfo([toPos.x, toPos.y]);
+                        events.unbindEvents();
 
-                        if (this.rotation.needed) {
+                        if (optsTrans.onStart) {
+                            optsTrans.onStart();
+                        }
+
+                        if (needToRotate) {
                             if (opts.events.onStartRotation) {
                                 opts.events.onStartRotation($elem,
-                                    this.rotation.currAngle * 180 / Math.PI,
+                                    util.radToDeg(-this.rotation.currAngle),
                                     this.rotation.getCenter(), {
                                         width: zoomUtil.scale(container.size.x),
                                         height: zoomUtil.scale(container.size.y)
                                     }, {
                                         x: container.pad.x,
                                         y: container.pad.y
-                                    }
+                                    },
+                                    util.radToDeg(slideData[this.gotoSlideIdx].rotation)
                                 );
                             }
-                        }
-                        events.unbindEvents();
-
-                        if (optsTrans.onStart) {
-                            optsTrans.onStart();
                         }
 
                         //////////////////////////////////////////////
@@ -669,66 +666,63 @@
                                     core.cssZoom();
                                 }
 
-                                var centerRot = {x: panPnt[0] * zoomFactor + container.pad.x, y: panPnt[1] * zoomFactor + container.pad.y},
+                                var centerRot = { x: panPnt[0] * zoomFactor + container.pad.x, y: panPnt[1] * zoomFactor + container.pad.y },
                                     rotValue = 0;
                                 if (core.rotation.needed) {
                                     rotValue = util.getQuadraticValue(coefs.rotation.angle, now);
                                 }
                                 core.rotation.cssOrigin(centerRot);
-                                
+
                                 if (core.isIE8orBelow) {
-                                    core.IE.doRotateScale(rotValue, {x: panPnt[0], y: panPnt[1]}, false, {
+                                    core.IE.doRotateScale(rotValue, { x: panPnt[0], y: panPnt[1] }, false, {
                                         marginX: util.getQuadraticValue(coefs.rotation.margin.x, now),
                                         marginY: util.getQuadraticValue(coefs.rotation.margin.y, now)
                                     });
-                                    
                                     $elem.scrollLeft(panPnt[0] + container.pad.x - elementCenter.x).scrollTop(panPnt[1] + container.pad.y - elementCenter.y);
-                                    // todo: add rotation event below
                                 } else {
                                     if (core.rotation.needed) {
                                         core.rotation.cssRotate(rotValue, {
-                                            marginX: util.getQuadraticValue(coefs.rotation.margin.x, now), 
+                                            marginX: util.getQuadraticValue(coefs.rotation.margin.x, now),
                                             marginY: util.getQuadraticValue(coefs.rotation.margin.y, now)
                                         });
-
-                                        if (opts.events.onRotation) {
-                                            if (Math.abs(rotValue - lastTriggeredRotation) >= triggerRotEveryRad) {
-                                                lastTriggeredRotation = rotValue;
-                                                opts.events.onRotation($elem, rotValue * 180 / Math.PI, centerRot, {
-                                                    width: container.size.x * zoomFactor,
-                                                    height: container.size.y * zoomFactor
-                                                }, {
-                                                    x: container.pad.x,
-                                                    y: container.pad.y
-                                                });
-                                            }
-                                        }
                                     }
                                     $elem.scrollLeft(centerRot.x - elementCenter.x).scrollTop(centerRot.y - elementCenter.y);
+                                }
+
+                                if (needToRotate && opts.events.onRotation && Math.abs(rotValue - lastTriggeredRotation) >= triggerRotEveryRad) {
+                                    lastTriggeredRotation = rotValue;
+                                    opts.events.onRotation($elem, util.radToDeg(-rotValue), centerRot, {
+                                        width: container.size.x * zoomFactor,
+                                        height: container.size.y * zoomFactor
+                                    }, {
+                                        x: container.pad.x,
+                                        y: container.pad.y
+                                    });
                                 }
                             },
                             complete: function () {
                                 core.rotation.currAngle = -slideData[core.gotoSlideIdx].rotation;
-                                var centerRot = {x: toPos.x * zoomDest + container.pad.x, y: toPos.y * zoomDest + container.pad.y};
+                                var centerRot = { x: toPos.x * zoomDest + container.pad.x, y: toPos.y * zoomDest + container.pad.y };
                                 core.rotation.cssOrigin(centerRot);
-                                
+
                                 if (core.isIE8orBelow) {
-                                    core.IE.doRotateScale(core.rotation.currAngle, toPos, true, {marginX: 0, marginY: 0});
+                                    core.IE.doRotateScale(core.rotation.currAngle, toPos, true, { marginX: 0, marginY: 0 });
                                     $elem.scrollLeft(toPos.x + container.pad.x - elementCenter.x).scrollTop(toPos.y + container.pad.y - elementCenter.y);
                                 } else {
                                     if (core.rotation.needed) {
-                                        core.rotation.cssRotate(core.rotation.currAngle, {marginX: 0, marginY: 0});
-                                        if (opts.events.onEndRotation) {
-                                            opts.events.onEndRotation($elem, core.rotation.currAngle * 180 / Math.PI, centerRot, {
-                                                width: container.size.x * zoomDest,
-                                                height: container.size.y * zoomDest
-                                            }, {
-                                                x: container.pad.x,
-                                                y: container.pad.y
-                                            });
-                                        }
+                                        core.rotation.cssRotate(core.rotation.currAngle, { marginX: 0, marginY: 0 });
                                     }
                                     $elem.scrollLeft(centerRot.x - elementCenter.x).scrollTop(centerRot.y - elementCenter.y);
+                                }
+
+                                if (needToRotate && opts.events.onEndRotation) {
+                                    opts.events.onEndRotation($elem, util.radToDeg(-core.rotation.currAngle), centerRot, {
+                                        width: container.size.x * zoomDest,
+                                        height: container.size.y * zoomDest
+                                    }, {
+                                        x: container.pad.x,
+                                        y: container.pad.y
+                                    });
                                 }
                                 events.bindEvents();
                                 transData.finished(optsTrans.onComplete);
@@ -740,7 +734,7 @@
                     }
                 },
 
-                doSequence: function (event) {
+                doSlideshow: function (event) {
                     var runTransition = function () {
                         transData.onComplete = function () {
                             if (transData.onEndTransition) {
@@ -841,7 +835,15 @@
                                 value = value.replace(/(matrix\(| )/gi, ''); // remove occurences of "matrix(" and " "
                                 var coefs = value.split(','),
                                     matrix11 = parseFloat(coefs[0]),
-                                    matrix12 = parseFloat(coefs[1]);
+                                    matrix12 = parseFloat(coefs[1]),
+                                // unfortunately, some browsers return coefficients greater
+                                // than 1 (ie, 1.0000001) or lesser than -1 (ie, -1.0000001)
+                                    fixCoef = function (coef) {
+                                        return coef > 1.0 ? 1.0 : (coef < -1.0 ? -1.0 : coef);
+                                    };
+
+                                matrix11 = fixCoef(matrix11);
+                                matrix12 = fixCoef(matrix12);
                                 if (Math.abs(matrix11 - Math.round(matrix11)) < 0.00005) {
                                     // some browsers like Opera, return an integer when in reality should be other value near to integer.
                                     // in this case, calculate angle by using the second matrix12
@@ -887,7 +889,7 @@
                     },
                     changeRow = function (col) {
                         if (opts.layout.cols != null) {
-                            if (typeof opts.layout.cols == 'object') {
+                            if (typeof opts.layout.cols === 'object') {
                                 return col % opts.layout.cols[row % opts.layout.cols.length] == 0;
                             }
                             return col % opts.layout.cols == 0;
@@ -932,17 +934,17 @@
                                 ++row;
                             }
                             if (contRectOuter.topLeft.x < 0) {
-                                contRectOuter.topLeft.x = - contRectOuter.topLeft.x;
+                                contRectOuter.topLeft.x = -contRectOuter.topLeft.x;
                                 contRectOuter.bottomRight.x += 2 * contRectOuter.topLeft.x;
                             }
                             if (contRectOuter.topLeft.y < 0) {
-                                contRectOuter.topLeft.y = - contRectOuter.topLeft.y;
+                                contRectOuter.topLeft.y = -contRectOuter.topLeft.y;
                                 contRectOuter.bottomRight.y += 2 * contRectOuter.topLeft.y;
                             }
                             slideData.push({
                                 // pos and centerTrans are computed later
-                                pos: {x: 0, y: 0},
-                                centerTrans: {x: 0, y: 0}, // same as center (see below) but with transformations applied
+                                pos: { x: 0, y: 0 },
+                                centerTrans: { x: 0, y: 0 }, // same as center (see below) but with transformations applied
                                 size: { // outer size includes margin + border + padding
                                     x: contRectOuter.bottomRight.x - contRectOuter.topLeft.x,
                                     y: contRectOuter.bottomRight.y - contRectOuter.topLeft.y
@@ -977,7 +979,7 @@
                                 radius: 0, // radius between center of rotation and slide center point (to be computed later)
                                 angleToCenter: 0 // angle between X axis and segment that connects this slide center with the center of rotation (to be computed later)
                             });
-                            core.rotation.needed = core.rotation.needed || Math.abs(rotAngle) < 0.00001;
+                            core.rotation.needed = core.rotation.needed || Math.abs(rotAngle) > 0.00001;
 
                             if (slideData[i].slideSizeNoRotation.x == 0 || slideData[i].slideSizeNoRotation.y == 0) {
                                 throw {
@@ -1067,7 +1069,7 @@
                                 }
 
                                 if (opts.layout.cols != null) {
-                                    var ieOffset = {topLeft: {x: 0, y: 0}, bottomRight: {x: 0, y: 0} };
+                                    var ieOffset = { topLeft: { x: 0, y: 0 }, bottomRight: { x: 0, y: 0} };
                                     if (core.isIE8orBelow) {
                                         ieOffset = core.rotation.getContainerRectCenter(slideData[i].rotation, [slideData[i].slideSizeNoRotation.x, slideData[i].slideSizeNoRotation.y]);
                                     }
@@ -1108,22 +1110,37 @@
                     slide = slide < 0 ? 0 : (slide >= container.$slides.length ? container.$slides.length - 1 : slide);
                     activeSlide.index = slide;
                     activeSlide.$slide = container.$slides.eq(slide);
-                    this.calcRotInfo([
-                        slideData[slide].pos.x + slideData[slide].center.x,
-                        slideData[slide].pos.y + slideData[slide].center.y
-                    ]);
+                    this.calcRotInfo({
+                        x: slideData[slide].pos.x + slideData[slide].center.x,
+                        y: slideData[slide].pos.y + slideData[slide].center.y
+                    });
                 },
                 gotoSlide: function (slide, zoomValue) {
+                    var zoomDest = zoomUtil.checkZoomBounds(zoomUtil.getZoomDest(zoomValue, slide));
+                    core.rotation.cssOrigin({
+                        x: (slideData[slide].pos.x + slideData[slide].center.x) * zoomDest + container.pad.x,
+                        y: (slideData[slide].pos.y + slideData[slide].center.y) * zoomDest + container.pad.y
+                    });
+
                     core.doTransition(null, {
                         slide: slide,
                         duration: 0,
-                        zoomDest: zoomUtil.checkZoomBounds(zoomUtil.getZoomDest(zoomValue, slide))
+                        zoomDest: zoomDest
                     });
                     core.selectSlide(true);
                 }
             },
 
             util = {
+                radToDeg: function (rad) {
+                    var deg = rad * 180 / Math.PI;
+                    return deg < 0 ? 360 + deg : deg;
+                },
+
+                degToRad: function (deg) {
+                    return deg * Math.PI / 180;
+                },
+
                 toInt: function (str) {
                     return str == null || str == undefined || str == 'auto' || str == '' ? 0 : parseInt(str, 10);
                 },
@@ -1191,7 +1208,7 @@
                 // this function interpolates a quadratic function.
                 // It might need to make further approximations for the resulting f(x) reach the targeted yVertex
                 getQuadratic2PntsVertex: function (p1, p3, yVertex) {
-                    if (typeof yVertex == 'string' && yVertex == 'linear') {
+                    if (typeof yVertex === 'string' && yVertex == 'linear') {
                         return this.getLinear(p1, p3);
                     } else {
                         return this.getQuadraticAprox(p1, { x: (p1.x + p3.x) / 2, y: yVertex }, p3);
@@ -1252,10 +1269,10 @@
                 doZoom: function (X, Y, newZoom, animating) {
                     if (!animating) {
                         var $elemPos = $elem.position(),
-                            scr = {x: $elem.scrollLeft(), y: $elem.scrollTop()},
-                            offset = {x: X - $elemPos.left, y: Y - $elemPos.top}, // offset relative to the top left corner
-                            unscaledPos = {x: 0, y: 0};
-                            
+                            scr = { x: $elem.scrollLeft(), y: $elem.scrollTop() },
+                            offset = { x: X - $elemPos.left, y: Y - $elemPos.top }, // offset relative to the top left corner
+                            unscaledPos = { x: 0, y: 0 };
+
                         if (!core.isIE8orBelow) {
                             unscaledPos.x = offset.x + scr.x - container.pad.x;
                             unscaledPos.y = offset.y + scr.y - container.pad.y;
@@ -1291,9 +1308,9 @@
                             x: this.scale(orig.x) + container.pad.x,
                             y: this.scale(orig.y) + container.pad.y
                         });
-                        
+
                         if (core.isIE8orBelow) {
-                            core.IE.doRotateScale(core.rotation.currAngle, orig, true, {marginX: 0, marginY: 0});
+                            core.IE.doRotateScale(core.rotation.currAngle, orig, true, { marginX: 0, marginY: 0 });
                             var scrollOffset = {
                                 x: this.scale(this.unscale((offset.x + scr.x - container.pad.x) - orig.x, prevZoom)),
                                 y: this.scale(this.unscale((offset.y + scr.y - container.pad.y) - orig.y, prevZoom))
@@ -1301,7 +1318,7 @@
                             $elem.
                                 scrollLeft(orig.x + container.pad.x - offset.x + scrollOffset.x).
                                 scrollTop(orig.y + container.pad.y - offset.y + scrollOffset.y);
-                                
+
                         } else {
                             if (unscaledPos.x > 0) {
                                 $elem.scrollLeft(this.scale(unscaledPos.x) + container.pad.x - offset.x);
@@ -1318,7 +1335,7 @@
                     }
                 },
                 setZoomVertex: function (optsTrans, idx1, idx2, zoomDest) {
-                    if (typeof optsTrans.zoomVertex == 'string') {
+                    if (typeof optsTrans.zoomVertex === 'string') {
                         switch (optsTrans.zoomVertex) {
                             case 'out':
                                 var delta = Math.min(this.zoom, zoomDest) - opts.zoomMin;
@@ -1333,7 +1350,7 @@
                     }
                 },
                 getZoomDest: function (zDest, gotoSlideIdx) {
-                    if (typeof zDest == 'string') {
+                    if (typeof zDest === 'string') {
                         var fit = [
                             elementCenter.x * 2 / (slideData[gotoSlideIdx].padding[3] + slideData[gotoSlideIdx].slideSizeNoRotation.x + slideData[gotoSlideIdx].padding[1]),
                             elementCenter.y * 2 / (slideData[gotoSlideIdx].padding[0] + slideData[gotoSlideIdx].slideSizeNoRotation.y + slideData[gotoSlideIdx].padding[2])
@@ -1373,8 +1390,8 @@
                     y: 0
                 },
 
-                // speed records the mouse speed while user is dragging the images
-                speed: {
+                // speed records the mouse speed while user is dragging the slides
+                mouseSpeed: {
                     value: {
                         x: 0,
                         y: 0
@@ -1387,7 +1404,7 @@
                     id: 0,
                     startTimer: function () {
                         this.id = window.setInterval(function () {
-                            panUtil.speed.getCoords();
+                            panUtil.mouseSpeed.getCoords();
                         }, 20);
                         this.isRunning = true;
                     },
@@ -1400,16 +1417,16 @@
                         }
                     },
                     getCoords: function () {
-                        var scrPos = [$elem.scrollLeft(), $elem.scrollTop()];
-                        this.value.x = scrPos[0] - (this.lastPt.x == -1 ? scrPos[0] : this.lastPt.x);
-                        this.value.y = scrPos[1] - (this.lastPt.y == -1 ? scrPos[1] : this.lastPt.y);
-                        this.lastPt.x = scrPos[0];
-                        this.lastPt.y = scrPos[1];
+                        var scrPos = { x: $elem.scrollLeft(), y: $elem.scrollTop() };
+                        this.value.x = scrPos.x - (this.lastPt.x == -1 ? scrPos.x : this.lastPt.x);
+                        this.value.y = scrPos.y - (this.lastPt.y == -1 ? scrPos.y : this.lastPt.y);
+                        this.lastPt.x = scrPos.x;
+                        this.lastPt.y = scrPos.y;
                     }
                 },
 
                 // timer that starts on mouseup and stops some moments later (until scrolls stops)
-                // its is used to make a smooth scroll animation after panning with the mouse.
+                // its is used to make a smooth scroll deceleration after panning with the mouse.
                 // this feature is available when useAcceleration is true
                 timerSmoothStop: {
                     isRunning: false,
@@ -1428,37 +1445,52 @@
                     },
                     smoothStop: function () {
                         $elem.
-                            scrollLeft($elem.scrollLeft() + (panUtil.speed.value.x > 0 ? --panUtil.speed.value.x : (panUtil.speed.value.x < 0 ? ++panUtil.speed.value.x : 0))).
-                            scrollTop($elem.scrollTop() + (panUtil.speed.value.y > 0 ? --panUtil.speed.value.y : (panUtil.speed.value.y < 0 ? ++panUtil.speed.value.y : 0)));
-                        if (panUtil.speed.value.x > 1) panUtil.speed.value.x--;
-                        if (panUtil.speed.value.x < -1) panUtil.speed.value.x++;
-                        if (panUtil.speed.value.y > 1) panUtil.speed.value.y--;
-                        if (panUtil.speed.value.y < -1) panUtil.speed.value.y++;
-                        if (panUtil.speed.value.x == 0 && panUtil.speed.value.y == 0) this.stopTimer();
+                            scrollLeft($elem.scrollLeft() + (panUtil.mouseSpeed.value.x > 0 ? --panUtil.mouseSpeed.value.x : (panUtil.mouseSpeed.value.x < 0 ? ++panUtil.mouseSpeed.value.x : 0))).
+                            scrollTop($elem.scrollTop() + (panUtil.mouseSpeed.value.y > 0 ? --panUtil.mouseSpeed.value.y : (panUtil.mouseSpeed.value.y < 0 ? ++panUtil.mouseSpeed.value.y : 0)));
+                        if (panUtil.mouseSpeed.value.x > 1) panUtil.mouseSpeed.value.x--;
+                        if (panUtil.mouseSpeed.value.x < -1) panUtil.mouseSpeed.value.x++;
+                        if (panUtil.mouseSpeed.value.y > 1) panUtil.mouseSpeed.value.y--;
+                        if (panUtil.mouseSpeed.value.y < -1) panUtil.mouseSpeed.value.y++;
+                        if (panUtil.mouseSpeed.value.x == 0 && panUtil.mouseSpeed.value.y == 0) this.stopTimer();
                     }
                 },
 
                 isPanning: false,
 
-                mousedown: function () {
+                startPan: function (event) {
+                    this.startPos.x = event.clientX + $elem.scrollLeft();
+                    this.startPos.y = event.clientY + $elem.scrollTop();
                     this.isPanning = true;
                     if (opts.behaviour.panOnMouseDrag.useAcceleration) {
+                        // if still decelerating from last pan operation, then stop immediatelly
                         this.timerSmoothStop.stopTimer();
 
-                        if (!this.speed.isRunning) {
-                            this.speed.lastPt.x = this.speed.lastPt.y = -1;
-                            this.speed.lastPt.x = this.speed.lastPt.y = -1;
-                            this.speed.value.x = this.speed.value.y = 0;
-                            this.speed.isRunning = true;
-                            this.speed.startTimer();
+                        if (!this.mouseSpeed.isRunning) {
+                            this.mouseSpeed.lastPt.x = this.mouseSpeed.lastPt.y = -1;
+                            this.mouseSpeed.value.x = this.mouseSpeed.value.y = 0;
+                            this.mouseSpeed.isRunning = true;
+                            this.mouseSpeed.startTimer();
                         }
                     }
                 },
-
-                mouseup: function (useSmoothStop) {
+                mousemove: function (event) {
+                    if (event.which == 1) { // mouse is moving while button is being pressed down?
+                        if (!this.isPanning) {
+                            this.startPan(event);
+                        }
+                        $elem.
+                            scrollLeft(panUtil.startPos.x - event.clientX).
+                            scrollTop(panUtil.startPos.y - event.clientY);
+                    } else {
+                        if (this.isPanning) {
+                            this.stopPan(event);
+                        }
+                    }
+                },
+                stopPan: function (useSmoothStop) {
                     this.isPanning = false;
                     if (opts.behaviour.panOnMouseDrag.useAcceleration) {
-                        this.speed.stopTimer();
+                        this.mouseSpeed.stopTimer();
                         if (useSmoothStop && !this.timerSmoothStop.isRunning) {
                             this.timerSmoothStop.startTimer();
                         }
@@ -1474,24 +1506,8 @@
                     event.preventDefault(); // prevents scrolling
                     zoomUtil.doZoom(event.clientX, event.clientY, zoomUtil.zoom + deltaY * opts.zoomStep, false);
                 },
-                onStartPanning: function (event) {
-                    event.preventDefault();
-                    panUtil.startPos.x = event.clientX + $elem.scrollLeft();
-                    panUtil.startPos.y = event.clientY + $elem.scrollTop();
-                    panUtil.mousedown();
-                },
                 onPanning: function (event) {
-                    if (panUtil.isPanning) {
-                        $elem.
-                            scrollLeft(panUtil.startPos.x - event.clientX).
-                            scrollTop(panUtil.startPos.y - event.clientY);
-                    }
-                },
-                onEndPanning: function (event) {
-                    panUtil.mouseup(true);
-                },
-                onEndPanningFromBody: function (event) {
-                    panUtil.mouseup(false);
+                    panUtil.mousemove(event);
                 },
                 onTransition: function (event, optsTrans) {
                     core.doTransition(event, optsTrans);
@@ -1504,13 +1520,13 @@
                             seqData.state = $.fn.rsSlideIt.states.STOPPED;
                         }
                         if (seqData.state == $.fn.rsSlideIt.states.STOPPED && !transData.animating) {
-                            seqData.init(optsSequence, (typeof optsSequence.sequence == 'string') && (optsSequence.sequence == 'prev' || optsSequence.sequence == 'next'));
+                            seqData.init(optsSequence, (typeof optsSequence.sequence === 'string') && (optsSequence.sequence == 'prev' || optsSequence.sequence == 'next'));
                         }
                         if (seqData.state == $.fn.rsSlideIt.states.PAUSED) {
                             seqData.state = $.fn.rsSlideIt.states.PLAYING;
                         }
                         if (seqData.state == $.fn.rsSlideIt.states.PLAYING) {
-                            core.doSequence(event);
+                            core.doSlideshow(event);
                         }
                     }
                 },
@@ -1533,12 +1549,7 @@
                         $elemAndTops.bind('mousewheel.rsSlideIt', this.onMouseWheel);
                     }
                     if (opts.behaviour.panOnMouseDrag.enabled) {
-                        $elemAndTops.
-                            bind('mousedown.rsSlideIt', this.onStartPanning).
-                            bind('mousemove.rsSlideIt', this.onPanning).
-                            bind('mouseup.rsSlideIt', this.onEndPanning);
-                        // the mouseup event might happen outside the plugin, so to make sure the unbind always runs, it must be done on body level
-                        $("body, html").bind('mouseup.rsSlideIt', this.onEndPanningFromBody);
+                        $elemAndTops.bind('mousemove.rsSlideIt', this.onPanning);
                     }
                     core.selectSlide(false);
                 },
@@ -1549,9 +1560,9 @@
                         case 'zoomStep': return opts.zoomStep;
                         case 'zoomMax': return opts.zoomMax;
                         case 'activeSlide': return activeSlide.index;
-                        case 'rotation': return core.rotation.currAngle * 180 / Math.PI;
+                        case 'rotation': return util.radToDeg(core.rotation.currAngle);
                         case 'center': return core.rotation.getCenter();
-                        case 'padding': return [container.pad.x, container.pad.y];
+                        case 'padding': return { x: container.pad.x, y: container.pad.y };
                         case 'state': return seqData.state;
                     }
                     return null;
@@ -1643,7 +1654,7 @@
             });
         },
         playPause = function (optionsSequence) {
-            var optsSequence = $.extend({}, $.fn.rsSlideIt.defaultsSequence, optionsSequence);
+            var optsSequence = $.extend({}, $.fn.rsSlideIt.defaultsSlideshow, optionsSequence);
 
             return this.each(function () {
                 $(this).trigger('playPause.rsSlideIt', [optsSequence]);
@@ -1655,7 +1666,7 @@
             });
         },
         option = function (options) {
-            if (typeof arguments[0] == 'string') {
+            if (typeof arguments[0] === 'string') {
                 var op = arguments.length == 1 ? 'getter' : (arguments.length == 2 ? 'setter' : null);
                 if (op != null) {
                     return this.eq(0).triggerHandler(op + '.rsSlideIt', arguments);
@@ -1663,7 +1674,7 @@
             }
         };
 
-        if (typeof options == 'string') {
+        if (typeof options === 'string') {
             var otherArgs = Array.prototype.slice.call(arguments, 1);
             switch (options) {
                 case 'goto': return transitionTo.apply(this, otherArgs);
@@ -1693,7 +1704,7 @@
         initialSlide: 0,
         initialZoom: 1,
         layout: {
-            cols: null,             // null for images in a single row, integer or array of integers
+            cols: null,             // null for slides in a single row, integer or array of integers
             slideAlignX: 'default', // or 'left', 'center', 'right' 
             slideAlignY: 'default'  // or 'top', 'center', 'bottom'
         },
@@ -1714,7 +1725,7 @@
         events: {
             onChangeSize: null,     // function ($elem, size, containerSize)
             onChangeZoom: null,     // function ($elem, zoom)
-            onStartRotation: null,  // function ($elem, degrees, centerRot, size, padding)
+            onStartRotation: null,  // function ($elem, startDegrees, centerRot, size, padding, endDegrees)
             onRotation: null,       // function ($elem, degrees, centerRot, size, padding)
             onEndRotation: null,    // function ($elem, degrees, centerRot, size, padding)
             triggerOnRotationEvery: 2, // minimum angle offset in degrees that triggers the onRotation event.
@@ -1722,7 +1733,7 @@
             // onRotation is called 6 times during rotation (when angle is 0, 5, 10, 15, 20, 22).
             // The event is always called on the first and last rotation angle.
             onUnselectSlide: null,    // function ($elem, $slide, slideIndex)
-            onSelectSlide: null,      // function ($elem, $slide, slideIndex, caption, autoRotate)
+            onSelectSlide: null,      // function ($elem, $slide, slideIndex, caption)
             onClickSlide: null,       // function ($elem, $slide, slideIndex)
             onDblClickSlide: function (event, $elem, $slide, slideIndex) {
                 $elem.rsSlideIt('goto', {
@@ -1744,7 +1755,7 @@
         onComplete: null    // event handler called when this transition is completed
     };
 
-    $.fn.rsSlideIt.defaultsSequence = {
+    $.fn.rsSlideIt.defaultsSlideshow = {
         sequence: 'next',   // array of positive integers or 'prev' or 'next'
         delayOnSlide: 2000, // positive integer or an array of positive integers
         zoomDest: 1,        // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'cover' or an arrays of positive real numbers and strings
