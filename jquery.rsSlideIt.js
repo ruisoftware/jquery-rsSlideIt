@@ -71,25 +71,17 @@
             },
 
             seqData = { // data for the whole slide show currently running
+                $animObj: null,
                 idx: 0,      // current active slide while sequence runs
                 repeat: 0,   // how many cycles a sequence runs
                 qt: null,    // quantities of all sequence input parameters
-                state: $.fn.rsSlideIt.states.STOPPED,
-                setCompleteState: function () {
-                    switch (this.state) {
-                        case $.fn.rsSlideIt.states.PLAYING:
-                        case $.fn.rsSlideIt.states.STOPPING:
-                            this.state = $.fn.rsSlideIt.states.STOPPED;
-                            break;
-                        case $.fn.rsSlideIt.states.PAUSING:
-                            this.state = $.fn.rsSlideIt.states.PAUSED;
-                    }
-                },
+                state: $.fn.rsSlideIt.state.STOP,
                 init: function (optsSequence, isPrevOrNext) {
                     this.idx = 0;
-                    this.state = $.fn.rsSlideIt.states.PLAYING;
+                    this.state = $.fn.rsSlideIt.state.PLAY;
                     transData.reset();
-                    transData.onStart = optsSequence.onStartTransition;
+                    transData.onBegin = optsSequence.onBeginTrans;
+                    transData.onEnd = optsSequence.onEndTrans;
                     transData.inputOpts = optsSequence;
                     transData.isPrevOrNext = isPrevOrNext;
 
@@ -114,14 +106,15 @@
                 duration: null,
                 zoomDest: null,
                 zoomVertex: null,
-                onStart: null,
+                onBegin: null,
+                onEnd: null,                    // user event for complete transition
                 onComplete: null,               // internal event for complete transition
-                onEndTransition: null,          // user event for complete transition
                 inputOpts: null,
                 isPrevOrNext: false,
                 animating: false,
+                stopAnimation: false,
                 reset: function () {
-                    this.slide = this.duration = this.zoomDest = this.zoomVertex = this.onComplete = this.onEndTransition = null;
+                    this.slide = this.duration = this.zoomDest = this.zoomVertex = this.onComplete = null;
                 },
                 setupNextTrans: function () {
                     this.slide = this.isPrevOrNext ? this.inputOpts.sequence : this.inputOpts.sequence[seqData.idx % seqData.qt.sequences];
@@ -149,8 +142,20 @@
                         done();
                     } else {
                         // transition that ran integrated in a sequence
+                        if (this.onEnd) { // transition
+                            this.onEnd();
+                        }
                         setTimeout(done, seqData.qt.delays == 0 ? transData.inputOpts.delayOnSlide : transData.inputOpts.delayOnSlide[seqData.idx % seqData.qt.delays]);
                     }
+                },
+                onStopAnimation: function (center) {
+                    core.calcRotInfo(center);
+                    if (core.isIE8orBelow) {
+                        core.IE.calcRotCenters(center, core.rotation.currAngle, zoomUtil.zoom);
+                    }
+                    this.stopAnimation = false;
+                    events.bindEvents();
+                    this.finished(null);
                 }
             },
 
@@ -337,6 +342,17 @@
                         return "progid:DXImageTransform.Microsoft.Matrix(M11=" + coefs[0] + ", M12=" + coefs[1] + ", M21=" + coefs[2] + ", M22=" + coefs[3] + ", DX=" + coefs[4] + ", Dy=" + coefs[5] + ", SizingMethod='auto expand');";
                     },
 
+                    calcRotCenters: function (center, toAngle, toScale) {
+                        for (var i = slideData.length - 1; i > -1; --i) {
+                            var angleData = this.getHorizAngleTwoPntsAndDistance(center, {
+                                x: slideData[i].pos.x + slideData[i].center.x,
+                                y: slideData[i].pos.y + slideData[i].center.y
+                            }), pointData = this.rotatePnt(center, angleData.angle - toAngle, angleData.h * toScale);
+                            slideData[i].centerTrans.x = pointData.x + container.pad.x;
+                            slideData[i].centerTrans.y = pointData.y + container.pad.y;
+                        }
+                    },
+
                     // given an $elem and their rotation angle (with an arbitrary rotation center), 
                     // returns the top left and the bottom right points of the rotated rectangle 
                     getContainerRect: function (center, size, toAngle, toScale, calcCenters) {
@@ -374,16 +390,7 @@
                         lb = $.extend({}, lb, this.rotatePnt(center, lb.angle - toAngle, lb.h));
 
                         if (calcCenters) {
-                            // also apply transformations to all slide's center point
-                            for (var i = slideData.length - 1; i > -1; --i) {
-                                var angleData = this.getHorizAngleTwoPntsAndDistance(center, {
-                                    x: slideData[i].pos.x + slideData[i].center.x,
-                                    y: slideData[i].pos.y + slideData[i].center.y
-                                }),
-                                    pointData = this.rotatePnt(center, angleData.angle - toAngle, angleData.h * toScale);
-                                slideData[i].centerTrans.x = pointData.x + container.pad.x;
-                                slideData[i].centerTrans.y = pointData.y + container.pad.y;
-                            }
+                            this.calcRotCenters(center, toAngle, toScale);
                         }
 
                         return {
@@ -620,14 +627,15 @@
                             },
                             scrAnim,
                             lastTriggeredRotation = this.rotation.currAngle,
-                            triggerRotEveryRad = util.degToRad(opts.events.triggerOnRotationEvery);
+                            triggerRotEveryRad = util.degToRad(opts.events.triggerOnRotationEvery),
+                            panPnt = { x: 0, y: 0 };
 
                         this.calcRotInfo(toPos);
 
                         events.unbindEvents();
 
-                        if (optsTrans.onStart) {
-                            optsTrans.onStart();
+                        if (optsTrans.onBegin) {
+                            optsTrans.onBegin();
                         }
 
                         if (needToRotate) {
@@ -648,40 +656,43 @@
 
                         //////////////////////////////////////////////
                         // now animate
-                        $({
-                            scrAnim: startAnim
-                        }).animate({
+                        seqData.$animObj = $({ scrAnim: startAnim });
+                        seqData.$animObj.animate({
                             scrAnim: endAnim
                         }, {
                             duration: optsTrans.duration,
                             easing: opts.behaviour.easing,
                             step: function (now, fx) {
-                                var panPnt = [now, now],
-                                    zoomFactor = util.getQuadraticValue(coefs.zoom, now);
+                                var zoomFactor = util.getQuadraticValue(coefs.zoom, now);
 
-                                panPnt[maxDeltaIsX ? 1 : 0] = util.getQuadraticValue(coefs.pan, now);
+                                if (maxDeltaIsX) {
+                                    panPnt.x = now;
+                                    panPnt.y = util.getQuadraticValue(coefs.pan, now);
+                                } else {
+                                    panPnt.x = util.getQuadraticValue(coefs.pan, now);
+                                    panPnt.y = now;
+                                }
 
                                 if (needToZoom) {
                                     zoomUtil.doZoom(0, 0, zoomFactor, true);
                                     core.cssZoom();
                                 }
 
-                                var centerRot = { x: panPnt[0] * zoomFactor + container.pad.x, y: panPnt[1] * zoomFactor + container.pad.y },
-                                    rotValue = 0;
+                                var centerRot = { x: panPnt.x * zoomFactor + container.pad.x, y: panPnt.y * zoomFactor + container.pad.y };
                                 if (core.rotation.needed) {
-                                    rotValue = util.getQuadraticValue(coefs.rotation.angle, now);
+                                    core.rotation.currAngle = util.getQuadraticValue(coefs.rotation.angle, now);
                                 }
                                 core.rotation.cssOrigin(centerRot);
 
                                 if (core.isIE8orBelow) {
-                                    core.IE.doRotateScale(rotValue, { x: panPnt[0], y: panPnt[1] }, false, {
+                                    core.IE.doRotateScale(core.rotation.currAngle, panPnt, false, {
                                         marginX: util.getQuadraticValue(coefs.rotation.margin.x, now),
                                         marginY: util.getQuadraticValue(coefs.rotation.margin.y, now)
                                     });
-                                    $elem.scrollLeft(panPnt[0] + container.pad.x - elementCenter.x).scrollTop(panPnt[1] + container.pad.y - elementCenter.y);
+                                    $elem.scrollLeft(panPnt.x + container.pad.x - elementCenter.x).scrollTop(panPnt.y + container.pad.y - elementCenter.y);
                                 } else {
                                     if (core.rotation.needed) {
-                                        core.rotation.cssRotate(rotValue, {
+                                        core.rotation.cssRotate(core.rotation.currAngle, {
                                             marginX: util.getQuadraticValue(coefs.rotation.margin.x, now),
                                             marginY: util.getQuadraticValue(coefs.rotation.margin.y, now)
                                         });
@@ -689,15 +700,19 @@
                                     $elem.scrollLeft(centerRot.x - elementCenter.x).scrollTop(centerRot.y - elementCenter.y);
                                 }
 
-                                if (needToRotate && opts.events.onRotation && Math.abs(rotValue - lastTriggeredRotation) >= triggerRotEveryRad) {
-                                    lastTriggeredRotation = rotValue;
-                                    opts.events.onRotation($elem, util.radToDeg(-rotValue), centerRot, {
+                                if (needToRotate && opts.events.onRotation && Math.abs(core.rotation.currAngle - lastTriggeredRotation) >= triggerRotEveryRad) {
+                                    lastTriggeredRotation = core.rotation.currAngle;
+                                    opts.events.onRotation($elem, util.radToDeg(-core.rotation.currAngle), centerRot, {
                                         width: container.size.x * zoomFactor,
                                         height: container.size.y * zoomFactor
                                     }, {
                                         x: container.pad.x,
                                         y: container.pad.y
                                     });
+                                }
+                                if (transData.stopAnimation) {
+                                    seqData.$animObj.stop();
+                                    transData.onStopAnimation(panPnt);
                                 }
                             },
                             complete: function () {
@@ -725,49 +740,46 @@
                                     });
                                 }
                                 events.bindEvents();
-                                transData.finished(optsTrans.onComplete);
+                                transData.finished(optsTrans.onComplete ? optsTrans.onComplete : optsTrans.onEnd);
                             }
                         });
                         //////////////////////////////////////////////
                     } else {
-                        transData.finished(optsTrans.onComplete);
+                        transData.finished(optsTrans.onComplete ? optsTrans.onComplete : optsTrans.onEnd);
                     }
                 },
 
                 doSlideshow: function (event) {
                     var runTransition = function () {
                         transData.onComplete = function () {
-                            if (transData.onEndTransition) {
-                                transData.onEndTransition();
-                            }
-                            if (seqData.state == $.fn.rsSlideIt.states.PLAYING && (seqData.idx % seqData.qt.sequences > 0 || seqData.repeat == -1 || seqData.repeat-- > 0)) {
+                            if (seqData.state == $.fn.rsSlideIt.state.PLAY && (seqData.idx % seqData.qt.sequences > 0 || seqData.repeat == -1 || seqData.repeat-- > 0)) {
                                 if (transData.setupNextTrans()) {
                                     $elem.trigger('goto.rsSlideIt', [transData]);
                                 }
                             } else {
-                                seqData.setCompleteState();
+
                                 switch (seqData.state) {
-                                    case $.fn.rsSlideIt.states.STOPPED:
-                                        if (transData.inputOpts.onStoppedSequence) {
-                                            transData.inputOpts.onStoppedSequence();
+                                    case $.fn.rsSlideIt.state.PLAY:
+                                        seqData.state = $.fn.rsSlideIt.state.STOP; // no break here
+                                    case $.fn.rsSlideIt.state.STOP:
+                                        if (transData.inputOpts.onStop) {
+                                            transData.inputOpts.onStop();
                                         }
                                         break;
-                                    case $.fn.rsSlideIt.states.PAUSED:
-                                        if (transData.inputOpts.onPausedSequence) {
-                                            transData.inputOpts.onPausedSequence();
+                                    case $.fn.rsSlideIt.state.PAUSE:
+                                        if (transData.inputOpts.onPause) {
+                                            transData.inputOpts.onPause();
                                         }
                                 }
                             }
                         };
-                        transData.onEndTransition = null;
                         transData.onComplete();
-                        transData.onEndTransition = transData.inputOpts.onEndTransition;
                     };
 
-                    if (transData.inputOpts.onPlaySequence) {
-                        transData.inputOpts.onPlaySequence();
+                    if (transData.inputOpts.onPlay) {
+                        transData.inputOpts.onPlay();
                     }
-                    seqData.state = $.fn.rsSlideIt.states.PLAYING;
+                    seqData.state = $.fn.rsSlideIt.state.PLAY;
                     runTransition();
                 },
 
@@ -1099,6 +1111,7 @@
                     loadSlideData();
                     setSlidePos();
                     $elem.
+                        bind('gotoSingle.rsSlideIt', events.onSingleTransition).
                         bind('goto.rsSlideIt', events.onTransition).
                         bind('playPause.rsSlideIt', events.onPlayPause).
                         bind('stop.rsSlideIt', events.onStop).
@@ -1509,29 +1522,32 @@
                 onPanning: function (event) {
                     panUtil.mousemove(event);
                 },
+                onSingleTransition: function (event, optsTrans) {
+                    seqData.qt = null;
+                    core.doTransition(event, optsTrans);
+                },
                 onTransition: function (event, optsTrans) {
                     core.doTransition(event, optsTrans);
                 },
                 onPlayPause: function (event, optsSequence) {
-                    if (seqData.state == $.fn.rsSlideIt.states.PLAYING) {
-                        seqData.state = $.fn.rsSlideIt.states.PAUSING;
+                    if (seqData.state == $.fn.rsSlideIt.state.PLAY) {
+                        seqData.state = $.fn.rsSlideIt.state.PAUSE;
+                        transData.stopAnimation = true;
                     } else {
-                        if (seqData.state == $.fn.rsSlideIt.states.STOPPING) {
-                            seqData.state = $.fn.rsSlideIt.states.STOPPED;
-                        }
-                        if (seqData.state == $.fn.rsSlideIt.states.STOPPED && !transData.animating) {
+                        if (seqData.state == $.fn.rsSlideIt.state.STOP && !transData.animating) {
                             seqData.init(optsSequence, (typeof optsSequence.sequence === 'string') && (optsSequence.sequence == 'prev' || optsSequence.sequence == 'next'));
                         }
-                        if (seqData.state == $.fn.rsSlideIt.states.PAUSED) {
-                            seqData.state = $.fn.rsSlideIt.states.PLAYING;
+                        if (seqData.state == $.fn.rsSlideIt.state.PAUSE) {
+                            seqData.state = $.fn.rsSlideIt.state.PLAY;
                         }
-                        if (seqData.state == $.fn.rsSlideIt.states.PLAYING) {
+                        if (seqData.state == $.fn.rsSlideIt.state.PLAY) {
                             core.doSlideshow(event);
                         }
                     }
                 },
                 onStop: function (event) {
-                    seqData.state = $.fn.rsSlideIt.states.STOPPING;
+                    seqData.state = $.fn.rsSlideIt.state.STOP;
+                    transData.stopAnimation = true;
                 },
                 unbindEvents: function () {
                     $elemAndTops.unbind('scroll.rsSlideIt');
@@ -1650,7 +1666,7 @@
             var optsGoto = $.extend({}, $.fn.rsSlideIt.defaultsGoto, optionsGoto);
 
             return this.each(function () {
-                $(this).trigger('goto.rsSlideIt', [optsGoto]);
+                $(this).trigger('gotoSingle.rsSlideIt', [optsGoto]);
             });
         },
         playPause = function (optionsSequence) {
@@ -1723,7 +1739,7 @@
             elementsOnTop: null
         },
         events: {
-            onChangeSize: null,     // function ($elem, size, containerSize)
+            onChangeSize: null,     // function ($elem, size, containerPad)
             onChangeZoom: null,     // function ($elem, zoom)
             onStartRotation: null,  // function ($elem, startDegrees, centerRot, size, padding, endDegrees)
             onRotation: null,       // function ($elem, degrees, centerRot, size, padding)
@@ -1751,8 +1767,8 @@
         duration: 600,      // positive integer 
         zoomDest: 1,        // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'cover'
         zoomVertex: 1,      // positive number or 'out' or 'in' or 'linear'
-        onStart: null,      // event handler called when this transition starts to run
-        onComplete: null    // event handler called when this transition is completed
+        onBegin: null,      // event handler called when this transition starts to run
+        onEnd: null         // event handler called when this transition is completed
     };
 
     $.fn.rsSlideIt.defaultsSlideshow = {
@@ -1762,19 +1778,17 @@
         zoomVertex: 1,      // positive real number or 'out' or 'in' or 'linear' or an arrays of positive real numbers and strings
         duration: 600,      // positive integer or array of positive integers
         repeat: 'forever',  // positive integer or 'forever',
-        onPlaySequence: null,       // event handler called when the sequence starts to run
-        onPausedSequence: null,      // event handler called when the sequence pauses in a specific slide
-        onStartTransition: null,    // event handler called when the transition within the sequence starts to run
-        onEndTransition: null, // event handler called when the transition within the sequence is completed
-        onStoppedSequence: null        // event handler called when the whole sequence is completed (only if repeat is not 'forever')
+        onPlay: null,       // event handler called when the sequence starts to run
+        onPause: null,      // event handler called when the sequence pauses in a specific slide
+        onStop: null,       // event handler called when the whole sequence is completed (only if repeat is not 'forever')
+        onBeginTrans: null, // event handler called when the transition within the sequence starts to run
+        onEndTrans: null    // event handler called when the transition within the sequence is completed
     };
 
-    $.fn.rsSlideIt.states = {
-        STOPPING: 0, // button Stop was pressed and slider will stop as soon current transition finishes
-        STOPPED: 1, // no transitions are currently running and user is free to navigate around
-        PLAYING: 2, // sequence of transitions are running and user is locked from navigating around
-        PAUSING: 3, // button Play/Pause was pressed and slider will pause as soon current transition finishes
-        PAUSED: 4  // sequence is paused and another click to Play/Pause button will resume the sequence from the current point. User can navigate around
+    $.fn.rsSlideIt.state = {
+        STOP: 0, // no transitions are currently running and user is free to navigate around
+        PLAY: 1, // slide show is running and user is locked from navigating around
+        PAUSE: 2 // sequence is paused and another click to Play/Pause button will resume the sequence from the current point. User can navigate around
     };
 
 })(jQuery);
