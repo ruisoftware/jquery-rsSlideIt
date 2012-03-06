@@ -4,7 +4,7 @@
 *
 * Licensed under The MIT License
 * 
-* @version   0.1
+* @version   1
 * @since     01.11.2011
 * @author    Jose Rui Santos
 *
@@ -19,7 +19,8 @@
 */
 (function ($) {
     var SlideItClass = function ($elem, opts) {
-        var $elemAndTops = $elem.add($(opts.selector.elementsOnTop)),
+        var $elemsOnTop = $(opts.selector.elementsOnTop),
+            $elemAndTops = $elem.add($elemsOnTop),
             elementCenter = { x: 0, y: 0 },
             slideData = [],
             activeSlide = {
@@ -55,11 +56,9 @@
                     this.size.y = Math.max(this.size.y, height);
                 },
                 init: function () {
-                    if (opts.layout) {
-                        if (!!opts.layout.width && opts.layout.width !== 'css') { $elem.css('width', opts.layout.width); }
-                        if (!!opts.layout.height && opts.layout.height !== 'css') { $elem.css('height', opts.layout.height); }
-                        if (!!opts.layout.overflow && opts.layout.overflow !== 'css') { $elem.css('overflow', opts.layout.overflow); }
-                    }
+                    if (!!opts.layout.width) { $elem.css('width', opts.layout.width); }
+                    if (!!opts.layout.height) { $elem.css('height', opts.layout.height); }
+                    if (!!opts.layout.overflow) { $elem.css('overflow', opts.layout.overflow); }
                     elementCenter.x = $elem.width() / 2;
                     elementCenter.y = $elem.height() / 2;
                     $elem.wrapInner('<div />');
@@ -78,28 +77,29 @@
                 state: $.fn.rsSlideIt.state.STOP,
                 timeoutId: null,
                 pauseOnSlide: false,
-                init: function (optsSequence, isPrevOrNext) {
+                userInteract: true,
+                init: function (optsSequence) {
                     this.idx = 0;
                     this.state = $.fn.rsSlideIt.state.PLAY;
                     transData.reset();
                     transData.onBegin = optsSequence.onBeginTrans;
                     transData.onEnd = optsSequence.onEndTrans;
                     transData.inputOpts = optsSequence;
-                    transData.isPrevOrNext = isPrevOrNext;
-
+                    transData.isPrevOrNext = (typeof optsSequence.sequence === 'string') && (optsSequence.sequence == 'prev' || optsSequence.sequence == 'next');
+                    this.userInteract = optsSequence.userInteract;
                     this.repeat = optsSequence.repeat == 'forever' ? -1 : optsSequence.repeat;
                     if (this.repeat != -1) {
-                        if (isPrevOrNext || optsSequence.sequence[0] != activeSlide.index) {
+                        if (transData.isPrevOrNext || optsSequence.sequence[0] != activeSlide.index) {
                             this.repeat++; // when user clicks the play button, first need to go to first slide to start the sequence from there
                             // this first step of moving to first slide consumes one repetition, therefore the need to increment it by one
                         }
                     }
                     this.qt = {
-                        sequences: (typeof optsSequence.sequence === 'object') ? optsSequence.sequence.length : (isPrevOrNext ? slideData.length : 0),
+                        sequences: (typeof optsSequence.sequence === 'object') ? optsSequence.sequence.length : (transData.isPrevOrNext ? slideData.length : 0),
                         delays: (typeof optsSequence.delayOnSlide === 'object') ? optsSequence.delayOnSlide.length : 0,
                         zoomDests: (typeof optsSequence.zoomDest === 'object') ? optsSequence.zoomDest.length : 0,
                         zoomVertexes: (typeof optsSequence.zoomVertex === 'object') ? optsSequence.zoomVertex.length : 0,
-                        degrees: (typeof optsSequence.degrees === 'object') ? optsSequence.degrees.length : 0,
+                        degrees: (optsSequence.degrees !== null && typeof optsSequence.degrees === 'object') ? optsSequence.degrees.length : 0,
                         durations: (typeof optsSequence.duration === 'object') ? optsSequence.duration.length : 0
                     };
                 },
@@ -138,37 +138,37 @@
                 },
                 setupNextTrans: function () {
                     this.slide = this.isPrevOrNext ? this.inputOpts.sequence : this.inputOpts.sequence[seqData.idx % seqData.qt.sequences];
-                    if (!this.isPrevOrNext && this.slide == activeSlide.index && !seqData.pauseOnSlide) {
-                        ++seqData.idx;
-                        this.onEndTransSlideShow();
-                        return false;
-                    }
                     this.duration = seqData.qt.durations == 0 ? this.inputOpts.duration : this.inputOpts.duration[seqData.idx % seqData.qt.durations];
                     this.zoomDest = seqData.qt.zoomDests == 0 ? this.inputOpts.zoomDest : this.inputOpts.zoomDest[seqData.idx % seqData.qt.zoomDests];
                     this.zoomVertex = seqData.qt.zoomVertexes == 0 ? this.inputOpts.zoomVertex : this.inputOpts.zoomVertex[seqData.idx % seqData.qt.zoomVertexes];
                     this.degrees = seqData.qt.degrees == 0 ? this.inputOpts.degrees : this.inputOpts.degrees[seqData.idx % seqData.qt.degrees];
-                    return true;
                 },
                 finished: function (transOnComplete) {
                     var done = function () {
                         seqData.timeoutId = null;
                         transData.animating = false;
                         if (transOnComplete) {
-                            transOnComplete();
                             ++seqData.idx;
+                            transOnComplete();
                         }
                     };
 
-                    if (this.isThisPartOfSlideShow() && seqData.state === $.fn.rsSlideIt.state.PLAY) {
+                    if (this.isThisPartOfSlideShow()) {
                         // transition that ran integrated in a sequence
-                        if (this.onEnd) { // transition
-                            this.onEnd();
+                        if (seqData.state === $.fn.rsSlideIt.state.PLAY) {
+                            if (this.onEnd) { // transition
+                                this.onEnd();
+                            }
+                            seqData.timeoutId = setTimeout(done, seqData.qt.delays == 0 ? transData.inputOpts.delayOnSlide : transData.inputOpts.delayOnSlide[seqData.idx % seqData.qt.delays]);
+                        } else {
+                            done();
+                            if (seqData.state === $.fn.rsSlideIt.state.PLAY) {
+                                seqData.state = $.fn.rsSlideIt.state.STOP;
+                            }
                         }
-                        seqData.timeoutId = setTimeout(done, seqData.qt.delays == 0 ? transData.inputOpts.delayOnSlide : transData.inputOpts.delayOnSlide[seqData.idx % seqData.qt.delays]);
                     } else {
                         // standalone transition
                         done();
-                        seqData.state = $.fn.rsSlideIt.state.STOP;
                     }
                 },
                 onStopAnimation: function (center) {
@@ -179,7 +179,11 @@
                     this.animating = this.stopAnimation = false;
                     seqData.firePauseStopEvents();
                     events.bindEvents();
+                    core.selectSlide(false);
                     this.finished(null);
+                    if (seqData.state === $.fn.rsSlideIt.state.STOP) {
+                        transData.reset();
+                    }
                 }
             },
 
@@ -191,19 +195,19 @@
                     // given an $elem and their rotation angle (with rotation center on element's center point),
                     // it returns the [left, top, right, bottom] of the rectangle that outlines the rotated $elem 
                     getContainerRectCenter: function (elemAngle, size) {
-                        var center = [size[0] / 2, size[1] / 2];
+                        var center = { x: size.x / 2, y: size.y / 2 };
 
                         // optimization
                         if (Math.abs(Math.sin(elemAngle)) < 0.000005) {
                             return {
                                 topLeft: { x: 0, y: 0 },
-                                bottomRight: { x: size[0], y: size[1] }
+                                bottomRight: { x: size.x, y: size.y }
                             };
                         }
 
                         // LT: Left Top, RT: Right Top, RB: Right Bottom, LB: Left Bottom
-                        var h = Math.sqrt(center[0] * center[0] + center[1] * center[1]),
-                            angle = Math.acos(center[0] / h),
+                        var h = Math.sqrt(center.x * center.x + center.y * center.y),
+                            angle = Math.acos(center.x / h),
                             angleLT = Math.PI - angle,
                             angleRT = angle,
                             angleRB = -angleRT,
@@ -212,23 +216,23 @@
                         angleRT -= elemAngle;
                         angleRB -= elemAngle;
                         angleLB -= elemAngle;
-                        var xLT = center[0] + h * Math.cos(angleLT),
-                            xRT = center[0] + h * Math.cos(angleRT),
-                            xRB = center[0] + h * Math.cos(angleRB),
-                            xLB = center[0] + h * Math.cos(angleLB),
+                        var xLT = center.x + h * Math.cos(angleLT),
+                            xRT = center.x + h * Math.cos(angleRT),
+                            xRB = center.x + h * Math.cos(angleRB),
+                            xLB = center.x + h * Math.cos(angleLB),
 
-                            yLT = center[1] - h * Math.sin(angleLT),
-                            yRT = center[1] - h * Math.sin(angleRT),
-                            yRB = center[1] - h * Math.sin(angleRB),
-                            yLB = center[1] - h * Math.sin(angleLB);
+                            yLT = center.y - h * Math.sin(angleLT),
+                            yRT = center.y - h * Math.sin(angleRT),
+                            yRB = center.y - h * Math.sin(angleRB),
+                            yLB = center.y - h * Math.sin(angleLB);
                         return {
                             topLeft: {
                                 x: Math.min(xLT, Math.min(xRT, Math.min(xLB, Math.min(0, xRB)))),
                                 y: Math.min(yLT, Math.min(yRT, Math.min(yLB, Math.min(0, yRB))))
                             },
                             bottomRight: {
-                                x: Math.max(xLT, Math.max(xRT, Math.max(xLB, Math.max(size[0], xRB)))),
-                                y: Math.max(yLT, Math.max(yRT, Math.max(yLB, Math.max(size[1], yRB))))
+                                x: Math.max(xLT, Math.max(xRT, Math.max(xLB, Math.max(size.x, xRB)))),
+                                y: Math.max(yLT, Math.max(yRT, Math.max(yLB, Math.max(size.y, yRB))))
                             }
                         };
                     },
@@ -247,44 +251,43 @@
                     // when transform-origin is changed to an element that is rotated, that element shifts to another position.
                     // To make the element appear back to the same position, need to apply a top left margin to compensate the element shifting.
                     adjustRotOrigin: function (slideIdx, fromPos) {
-                        if (Math.abs(this.currAngle) > 0.005) {
-                            var orig = this.getCenter();
-                            if (core.isIE8orBelow) {
-                                orig.x = zoomUtil.unscale(orig.x - container.pad.x);
-                                orig.y = zoomUtil.unscale(orig.y - container.pad.y);
+                        var orig = this.getCenter();
+                        if (core.isIE8orBelow) {
+                            orig.x = zoomUtil.unscale(orig.x - container.pad.x);
+                            orig.y = zoomUtil.unscale(orig.y - container.pad.y);
 
-                                var newCenter = {
-                                    x: orig.x - zoomUtil.scale(orig.x - fromPos.x),
-                                    y: orig.y + zoomUtil.scale(fromPos.y - orig.y)
-                                },
-                                    topLeftOld = core.IE.getContainerRect(orig, container.IEorigSize, core.rotation.currAngle, zoomUtil.zoom, false).topLeft,
-                                    topLeftNew = core.IE.getContainerRect(newCenter, container.IEorigSize, core.rotation.currAngle, zoomUtil.zoom, false).topLeft;
+                            var newCenter = {
+                                x: orig.x - zoomUtil.scale(orig.x - fromPos.x),
+                                y: orig.y + zoomUtil.scale(fromPos.y - orig.y)
+                            },
+                                topLeftOld = core.IE.getContainerRect(orig, container.IEorigSize, core.rotation.currAngle, zoomUtil.zoom, false).topLeft,
+                                topLeftNew = core.IE.getContainerRect(newCenter, container.IEorigSize, core.rotation.currAngle, zoomUtil.zoom, false).topLeft;
+                            return {
+                                x: zoomUtil.unscale(topLeftOld.x - topLeftNew.x),
+                                y: zoomUtil.unscale(topLeftOld.y - topLeftNew.y)
+                            };
+
+                        } else {
+
+                            var newCenter = {
+                                x: zoomUtil.scale(fromPos.x) + container.pad.x,
+                                y: zoomUtil.scale(fromPos.y) + container.pad.y
+                            };
+
+                            if (newCenter.x != Math.floor(orig.x) || newCenter.y != Math.floor(orig.y)) {
+                                var pntTopRight1 = this.getTopRight(orig, { x: zoomUtil.scale(slideData[slideIdx].center.x), y: -zoomUtil.scale(slideData[slideIdx].center.y) }),
+                                    pntTopRight2 = this.getTopRight(newCenter, {
+                                        x: container.pad.x + zoomUtil.scale(slideData[slideIdx].pos.x + slideData[slideIdx].slideOuterSizeNoRotation.x) - newCenter.x,
+                                        y: container.pad.y + zoomUtil.scale(slideData[slideIdx].pos.y) - newCenter.y
+                                    });
                                 return {
-                                    x: zoomUtil.unscale(topLeftOld.x - topLeftNew.x),
-                                    y: zoomUtil.unscale(topLeftOld.y - topLeftNew.y)
+                                    x: pntTopRight1.x - pntTopRight2.x,
+                                    y: pntTopRight1.y - pntTopRight2.y
                                 };
-
                             } else {
-
-                                var newCenter = {
-                                    x: zoomUtil.scale(fromPos.x) + container.pad.x,
-                                    y: zoomUtil.scale(fromPos.y) + container.pad.y
-                                };
-
-                                if (newCenter.x != Math.floor(orig.x) || newCenter.y != Math.floor(orig.y)) {
-                                    var pntTopRight1 = this.getTopRight(orig, { x: zoomUtil.scale(slideData[slideIdx].center.x), y: -zoomUtil.scale(slideData[slideIdx].center.y) }),
-                                        pntTopRight2 = this.getTopRight(newCenter, {
-                                            x: container.pad.x + zoomUtil.scale(slideData[slideIdx].pos.x + slideData[slideIdx].slideOuterSizeNoRotation.x) - newCenter.x,
-                                            y: container.pad.y + zoomUtil.scale(slideData[slideIdx].pos.y) - newCenter.y
-                                        });
-                                    return {
-                                        x: pntTopRight1.x - pntTopRight2.x,
-                                        y: pntTopRight1.y - pntTopRight2.y
-                                    };
-                                }
+                                return { x: 0, y: 0 };
                             }
                         }
-                        return { x: 0, y: 0 };
                     },
                     getTopRight: function (center, size) {
                         var h = Math.sqrt(size.x * size.x + size.y * size.y),
@@ -293,12 +296,12 @@
                         return { x: h * Math.cos(totalAngle) + center.x, y: -h * Math.sin(totalAngle) + center.y };
                     },
                     cssRotate: function (rot, m) {
-                        var rotation = 'rotate(' + rot + 'rad)';
+                        var rotation = 'rotate(' + rot.toFixed(6) + 'rad)';
                         container.$paddingDiv.css({
                             '-webkit-transform': rotation,
                             '-moz-transform': rotation,
                             '-o-transform': rotation,
-                            '-ms-transform': rotation,
+                            'msTransform': rotation,
                             'transform': rotation,
                             'margin-left': m.marginX + 'px',
                             'margin-top': m.marginY + 'px'
@@ -311,18 +314,20 @@
                             this.currOrigin.x = origin.x;
                             this.currOrigin.y = origin.y;
                         }
-                        var orig = origin.x + 'px ' + origin.y + 'px';
+                        var orig = origin.x.toFixed(2) + 'px ' + origin.y.toFixed(2) + 'px';
                         container.$paddingDiv.css({
                             '-webkit-transform-origin': orig,
                             '-moz-transform-origin': orig,
                             '-o-transform-origin': orig,
+                            'msTransformOrigin': orig,
                             'transform-origin': orig
                         });
                     }
                 },
 
                 // in IE8 or below, rotation works differently from other browsers. 
-                isIE8orBelow: $.browser.msie && parseFloat($.browser.version) < 9,
+                isIE8orBelow: $.browser.msie && parseInt($.browser.version) < 9,
+                isIE9: $.browser.msie && parseInt($.browser.version) === 9,
                 IE: {
                     // given two points, returns the angle between the center's X axis segment and the segment from center to vertex
                     // and also returns the distance between these two points
@@ -352,17 +357,17 @@
                     getMatrix: function (rad, scale) {
                         var sine = Math.sin(rad) * scale,
                             cosine = Math.cos(rad) * scale;
-                        return this.getMatrixStr([cosine, -sine, sine, cosine, 0, 0]);
+                        return this.getMatrixStr([cosine, -sine, sine, cosine]);
                     },
 
                     getMatrixRotOnly: function (rad) {
                         var sine = Math.sin(rad),
                             cosine = Math.cos(rad);
-                        return this.getMatrixStr([cosine, -sine, sine, cosine, 0, 0]);
+                        return this.getMatrixStr([cosine, -sine, sine, cosine]);
                     },
 
                     getMatrixStr: function (coefs) {
-                        return "progid:DXImageTransform.Microsoft.Matrix(M11=" + coefs[0] + ", M12=" + coefs[1] + ", M21=" + coefs[2] + ", M22=" + coefs[3] + ", DX=" + coefs[4] + ", Dy=" + coefs[5] + ", SizingMethod='auto expand');";
+                        return "progid:DXImageTransform.Microsoft.Matrix(M11=" + coefs[0].toFixed(6) + ", M12=" + coefs[1].toFixed(6) + ", M21=" + coefs[2].toFixed(6) + ", M22=" + coefs[3].toFixed(6) + ", DX=0, Dy=0, SizingMethod='auto expand');";
                     },
 
                     calcRotCenters: function (center, toAngle, toScale) {
@@ -443,8 +448,8 @@
                     doRotateScale: function (rad, center, calcCenters, adjustMargins) {
                         container.$paddingDiv.css({
                             'filter': core.IE.getMatrixRotOnly(rad),
-                            'width': zoomUtil.scale(container.IEorigSize.x) + 'px',
-                            'height': zoomUtil.scale(container.IEorigSize.y) + 'px'
+                            'width': zoomUtil.scale(container.IEorigSize.x).toFixed(0) + 'px',
+                            'height': zoomUtil.scale(container.IEorigSize.y).toFixed(0) + 'px'
                         });
 
                         container.$zoomDiv.css('filter', core.IE.getMatrix(rad, zoomUtil.zoom));
@@ -494,14 +499,14 @@
                     if (!core.isIE8orBelow) {
                         container.$zoomDiv.css({
                             '-moz-transform-origin': '0px 0px',
-                            '-moz-transform': 'scale(' + zoomUtil.zoom + ')',
+                            '-moz-transform': 'scale(' + zoomUtil.zoom.toFixed(2) + ')',
                             '-o-transform-origin': '0px 0px',
-                            '-o-transform': 'scale(' + zoomUtil.zoom + ')',
-                            'zoom': zoomUtil.zoom
+                            '-o-transform': 'scale(' + zoomUtil.zoom.toFixed(2) + ')',
+                            'zoom': zoomUtil.zoom.toFixed(2)
                         });
                         container.$paddingDiv.css({
-                            'width': newSize.x + 'px',
-                            'height': newSize.y + 'px'
+                            'width': newSize.x.toFixed(0) + 'px',
+                            'height': newSize.y.toFixed(0) + 'px'
                         });
                     }
                     if (opts.events.onChangeSize) {
@@ -557,9 +562,13 @@
                     }
                     return { $slide: minIdx === -1 ? null : container.$slides.eq(minIdx), index: minIdx };
                 },
+                
+                getActiveSlide: function () {
+                    return core.isIE8orBelow ? core.IE.getNearestSlide() : core.getNearestSlide();
+                },
 
                 selectSlide: function (forceSel) {
-                    var newActiveSlide = core.isIE8orBelow ? core.IE.getNearestSlide() : core.getNearestSlide();
+                    var newActiveSlide = this.getActiveSlide();
                     if (forceSel || activeSlide.index != newActiveSlide.index) {
                         if (opts.events.onUnselectSlide && activeSlide.$slide && activeSlide.index != newActiveSlide.index) {
                             opts.events.onUnselectSlide($elem, activeSlide.$slide, activeSlide.index);
@@ -573,16 +582,24 @@
                 },
                 
                 getRotationSlide: function (opsDegrees) {
-                    return !opsDegrees || typeof opsDegrees === 'string' && opsDegrees == 'css' ? slideData[this.gotoSlideIdx].rotation : util.degToRad(opsDegrees);
+                    return opsDegrees === null ? slideData[this.gotoSlideIdx].rotation : util.degToRad(opsDegrees);
                 },
 
                 doTransition: function (event, optsTrans) {
                     if (transData.animating) {
-                        // ignore this event if user called this event while a previous one is still running
-                        return;
+                        if (transData.isThisPartOfSlideShow()) {
+                            // ignore if user called this event while a previous one is still running
+                            return;
+                        }
+                        if (seqData.$animObj !== null) {
+                            seqData.$animObj.stop();
+                        }
+                        activeSlide = core.getActiveSlide();
+                        transData.finished(null);
                     }
                     transData.animating = true;
-
+                    // if user is currently panning around when transition kicks in, then stop pan
+                    panUtil.stopImmediately();
                     var prevGotoSlideIdx = this.gotoSlideIdx;
                     this.gotoSlideIdx = util.getSlideIdx(optsTrans.slide);
                     var zoomDest = zoomUtil.checkZoomBounds(zoomUtil.getZoomDest(optsTrans.zoomDest, this.gotoSlideIdx)),
@@ -654,17 +671,20 @@
                             },
                             scrAnim,
                             lastTriggeredRotation = this.rotation.currAngle,
-                            triggerRotEveryRad = util.degToRad(opts.events.triggerOnRotationEvery),
-                            panPnt = { x: 0, y: 0 };
+                            fireRotEveryRad = util.degToRad(opts.events.fireOnRotationEvery);
 
                         this.calcRotInfo(toPos);
 
-                        events.unbindEvents();
+                        if (seqData.userInteract) {
+                            events.unbindEvents();
+                        }
 
                         if (seqData.state == $.fn.rsSlideIt.state.PLAY && optsTrans.onBegin) {
                             optsTrans.onBegin();
                         }
-                        seqData.state = $.fn.rsSlideIt.state.PLAY;
+                        if (transData.isThisPartOfSlideShow()) {
+                            seqData.state = $.fn.rsSlideIt.state.PLAY;
+                        }
                         transData.stopAnimation = false;
 
                         if (needToRotate) {
@@ -683,17 +703,16 @@
                             }
                         }
 
-                        //////////////////////////////////////////////
-                        // now animate
+                        // animate
                         seqData.$animObj = $({ scrAnim: startAnim });
                         seqData.$animObj.animate({
                             scrAnim: endAnim
                         }, {
                             duration: optsTrans.duration,
                             easing: opts.behaviour.easing,
-                            step: function (now, fx) {
-                                var zoomFactor = util.getQuadraticValue(coefs.zoom, now);
-
+                            step: function (now) {
+                                var zoomFactor = util.getQuadraticValue(coefs.zoom, now),
+                                    panPnt = { x: 0, y: 0 };
                                 if (maxDeltaIsX) {
                                     panPnt.x = now;
                                     panPnt.y = util.getQuadraticValue(coefs.pan, now);
@@ -720,16 +739,14 @@
                                     });
                                     $elem.scrollLeft(panPnt.x + container.pad.x - elementCenter.x).scrollTop(panPnt.y + container.pad.y - elementCenter.y);
                                 } else {
-                                    if (needToRotate) {
-                                        core.rotation.cssRotate(core.rotation.currAngle, {
-                                            marginX: util.getQuadraticValue(coefs.rotation.margin.x, now),
-                                            marginY: util.getQuadraticValue(coefs.rotation.margin.y, now)
-                                        });
-                                    }
+                                    core.rotation.cssRotate(core.rotation.currAngle, {
+                                        marginX: util.getQuadraticValue(coefs.rotation.margin.x, now),
+                                        marginY: util.getQuadraticValue(coefs.rotation.margin.y, now)
+                                    });
                                     $elem.scrollLeft(centerRot.x - elementCenter.x).scrollTop(centerRot.y - elementCenter.y);
                                 }
 
-                                if (needToRotate && opts.events.onRotation && Math.abs(core.rotation.currAngle - lastTriggeredRotation) >= triggerRotEveryRad) {
+                                if (needToRotate && opts.events.onRotation && Math.abs(core.rotation.currAngle - lastTriggeredRotation) >= fireRotEveryRad) {
                                     lastTriggeredRotation = core.rotation.currAngle;
                                     opts.events.onRotation($elem, util.radToDeg(-core.rotation.currAngle), centerRot, {
                                         width: container.size.x * zoomFactor,
@@ -740,7 +757,9 @@
                                     });
                                 }
                                 if (transData.stopAnimation) {
-                                    seqData.$animObj.stop();
+                                    if (seqData.$animObj !== null) {
+                                        seqData.$animObj.stop();
+                                    }
                                     transData.onStopAnimation(panPnt);
                                 }
                             },
@@ -753,9 +772,7 @@
                                     core.IE.doRotateScale(core.rotation.currAngle, toPos, true, { marginX: 0, marginY: 0 });
                                     $elem.scrollLeft(toPos.x + container.pad.x - elementCenter.x).scrollTop(toPos.y + container.pad.y - elementCenter.y);
                                 } else {
-                                    if (needToRotate) {
-                                        core.rotation.cssRotate(core.rotation.currAngle, { marginX: 0, marginY: 0 });
-                                    }
+                                    core.rotation.cssRotate(core.rotation.currAngle, { marginX: 0, marginY: 0 });
                                     $elem.scrollLeft(centerRot.x - elementCenter.x).scrollTop(centerRot.y - elementCenter.y);
                                 }
 
@@ -768,13 +785,25 @@
                                         y: container.pad.y
                                     });
                                 }
-                                events.bindEvents();
+                                if (seqData.userInteract) {
+                                    events.bindEvents();
+                                }
+                                core.selectSlide(false);
                                 transData.finished(transData.isThisPartOfSlideShow() ? optsTrans.onEndTransSlideShow : optsTrans.onEnd);
                             }
                         });
-                        //////////////////////////////////////////////
                     } else {
-                        transData.finished(transData.isThisPartOfSlideShow() ? optsTrans.onEndTransSlideShow : optsTrans.onEnd);
+                        var eventOnEnd,
+                            isThisPartOfSlideShow = transData.isThisPartOfSlideShow();
+                        if (isThisPartOfSlideShow) {
+                            seqData.state = $.fn.rsSlideIt.state.PLAY;
+                            eventOnEnd = transData.onEnd;
+                            transData.onEnd = null;
+                        }
+                        transData.finished(isThisPartOfSlideShow ? optsTrans.onEndTransSlideShow : optsTrans.onEnd);
+                        if (isThisPartOfSlideShow) {
+                            transData.onEnd = eventOnEnd;
+                        }
                     }
                 },
 
@@ -783,13 +812,13 @@
                         transData.onEndTransSlideShow = function () {
                             if (seqData.state == $.fn.rsSlideIt.state.PAUSE ||
                                 seqData.state == $.fn.rsSlideIt.state.PLAY && (seqData.idx % seqData.qt.sequences > 0 || seqData.repeat == -1 || seqData.repeat-- > 0)) {
-                                if (seqData.state == $.fn.rsSlideIt.state.PAUSE && seqData.pauseOnSlide) {
-                                    ++seqData.idx;
-                                }
-                                if (seqData.state == $.fn.rsSlideIt.state.PAUSE && !seqData.pauseOnSlide || transData.setupNextTrans()) {
+
+                                if (seqData.state != $.fn.rsSlideIt.state.PAUSE || seqData.pauseOnSlide) {
+                                    transData.setupNextTrans();
                                     seqData.pauseOnSlide = false;
-                                    $elem.trigger('goto.rsSlideIt', [transData]);
                                 }
+                                $elem.trigger('goto.rsSlideIt', [transData]);
+                                
                             } else {
                                 switch (seqData.state) {
                                     case $.fn.rsSlideIt.state.PLAY:
@@ -798,9 +827,18 @@
                                         if (transData.inputOpts.onStop) {
                                             transData.inputOpts.onStop();
                                         }
+                                        if (!seqData.userInteract) {
+                                            events.bindEvents();
+                                        }
+                                        transData.reset();
+                                        core.selectSlide(false);
                                 }
                             }
                         };
+
+                        if (!seqData.userInteract) {
+                            events.unbindEvents();
+                        }
                         transData.onEndTransSlideShow();
                     };
 
@@ -816,8 +854,8 @@
                     row = 0,
                     needNewRow = false,
                     justifySlide = {
-                        x: opts.layout.cols && opts.layout.horizAlign && (opts.layout.horizAlign == 'left' || opts.layout.horizAlign == 'center' || opts.layout.horizAlign == 'right'),
-                        y: opts.layout.cols && opts.layout.vertAlign && (opts.layout.vertAlign == 'top' || opts.layout.vertAlign == 'center' || opts.layout.vertAlign == 'bottom')
+                        x: opts.layout.cols !== null && opts.layout.horizAlign && (opts.layout.horizAlign == 'left' || opts.layout.horizAlign == 'center' || opts.layout.horizAlign == 'right'),
+                        y: opts.layout.cols !== null && opts.layout.vertAlign && (opts.layout.vertAlign == 'top' || opts.layout.vertAlign == 'center' || opts.layout.vertAlign == 'bottom')
                     },
                     maxWidthInCol = [],
                     maxHeightInRow = [],
@@ -857,7 +895,7 @@
                                         if (notDefined(value)) {
                                             value = $slide.css('-o-transform');
                                             if (notDefined(value)) {
-                                                value = $slide.css('-ms-transform');
+                                                value = $slide.css('msTransform');
                                                 if (notDefined(value)) {
                                                     value = $slide.css('transform');
                                                     if (notDefined(value)) {
@@ -927,13 +965,7 @@
                         return util.toFloat(value) * toRad;
                     },
                     changeRow = function (col) {
-                        if (opts.layout.cols) {
-                            if (typeof opts.layout.cols === 'object') {
-                                return col % opts.layout.cols[row % opts.layout.cols.length] == 0;
-                            }
-                            return col % opts.layout.cols == 0;
-                        }
-                        return false;
+                        return !!opts.layout.cols && (col % opts.layout.cols === 0);
                     },
                     getSlideSizes = function ($slide) {
                         if (core.isIE8orBelow) {
@@ -941,29 +973,46 @@
                             try {
                                 $slide.css('filter', '');
                                 return {
-                                    outerSize: [$slide.outerWidth(), $slide.outerHeight()],
-                                    outerSizeAll: [$slide.outerWidth(true), $slide.outerHeight(true)],
-                                    size: [$slide.width(), $slide.height()]
+                                    outerSize: { x: $slide.outerWidth(), y: $slide.outerHeight() },
+                                    outerSizeAll: { x: $slide.outerWidth(true), y: $slide.outerHeight(true) },
+                                    size: { x: $slide.width(), y: $slide.height() }
                                 };
                             } finally {
                                 $slide.css('filter', filter);
                             }
                         }
                         return {
-                            outerSize: [$slide.outerWidth(), $slide.outerHeight()],
-                            outerSizeAll: [$slide.outerWidth(true), $slide.outerHeight(true)],
-                            size: [$slide.width(), $slide.height()]
+                            outerSize: { x: $slide.outerWidth(), y: $slide.outerHeight() },
+                            outerSizeAll: { x: $slide.outerWidth(true), y: $slide.outerHeight(true) },
+                            size: { x: $slide.width(), y: $slide.height() }
                         };
                     },
                     loadSlideData = function () {
                         // could be done with each(), but the core for(;;) is faster
-                        for (var i = 0; i < container.$slides.length; ++i) {
+                        for (var i = 0, len = container.$slides.length; i < len; ++i) {
                             // save data needed to render the zoom and rotation
-                            var $slide = container.$slides.eq(i),
-                                slideSizes = getSlideSizes($slide),
+                            var $slide = container.$slides.eq(i);
+
+                            // IE9 renders a black block, when both -ms-transform and filter are defined. To work around this, need to remove filter
+                            if (core.isIE9 && $slide.css('msTransform') != '' && $slide.css('filter') != '') {
+                                $slide.css('filter', '');
+                            }
+
+                            var slideInSlide = $slidesInSlides.index($slide) > -1,
                                 rotAngle = getRotation($slide),
-                                slideInSlide = $slidesInSlides.index($slide) > -1,
-                                contRect = core.rotation.getContainerRectCenter(rotAngle, slideSizes.size),
+                                cssDisplay = $slide.css('display');
+
+                            if (!slideInSlide && opts.layout.cols !== null) {
+                                // to get the correct size of blocked elements, need to read it as an inline-block
+                                $slide.css('display', 'inline-block');
+                            }
+                            var slideSizes = getSlideSizes($slide);
+                            if (!slideInSlide && opts.layout.cols !== null) {
+                                // restore the original display
+                                $slide.css('display', cssDisplay);
+                            }
+                            
+                            var contRect = core.rotation.getContainerRectCenter(rotAngle, slideSizes.size),
                                 contRectOuter = core.rotation.getContainerRectCenter(rotAngle, slideSizes.outerSizeAll);
 
                             // to prevent the default behaviour in IE when dragging an element
@@ -989,16 +1038,12 @@
                                     y: contRectOuter.bottomRight.y - contRectOuter.topLeft.y
                                 },
                                 slideSizeNoRotation: {
-                                    x: slideSizes.size[0],
-                                    y: slideSizes.size[1]
+                                    x: slideSizes.size.x,
+                                    y: slideSizes.size.y
                                 },
                                 slideOuterSizeNoRotation: {
-                                    x: slideSizes.outerSizeAll[0],
-                                    y: slideSizes.outerSizeAll[1]
-                                },
-                                slideSize: {
-                                    x: contRect.bottomRight.x - contRect.topLeft.x,
-                                    y: contRect.bottomRight.y - contRect.topLeft.y
+                                    x: slideSizes.outerSizeAll.x,
+                                    y: slideSizes.outerSizeAll.y
                                 },
                                 rectOuter: {
                                     left: contRectOuter.topLeft.x,
@@ -1007,8 +1052,8 @@
                                     bottom: contRectOuter.bottomRight.y
                                 },
                                 center: {
-                                    x: util.toInt($slide.css('margin-left')) + slideSizes.outerSize[0] / 2,
-                                    y: util.toInt($slide.css('margin-top')) + slideSizes.outerSize[1] / 2
+                                    x: util.toInt($slide.css('margin-left')) + slideSizes.outerSize.x / 2,
+                                    y: util.toInt($slide.css('margin-top')) + slideSizes.outerSize.y / 2
                                 },
                                 padding: [util.toInt($slide.css('padding-top')), util.toInt($slide.css('padding-right')), util.toInt($slide.css('padding-bottom')), util.toInt($slide.css('padding-left'))],
                                 border: [util.toInt($slide.css('border-top-width')), util.toInt($slide.css('border-right-width')), util.toInt($slide.css('border-bottom-width')), util.toInt($slide.css('border-left-width'))],
@@ -1060,20 +1105,32 @@
                             },
                             parentSlideIdx = -1;
                         col = row = 0;
-                        needNewRow = false;
+                        needNewRow = previousWasBlocked = false;
                         container.resetMaxSize();
                         container.$zoomDiv.css({
                             'position': 'relative',
                             'z-index': 0 // fix for IE8 standards mode that, without this z-index, cannot rotate child elements
                         });
-                        for (var i = 0; i < container.$slides.length; ++i) {
+                        for (var i = 0, len = container.$slides.length; i < len; ++i) {
                             var $slide = container.$slides.eq(i),
                                 slideInSlide = $slidesInSlides.index($slide) > -1;
 
                             if (slideInSlide && parentSlideIdx != -1) {
+                                $slide.css('position', 'absolute');
                                 slideData[i].pos.x = slideData[parentSlideIdx].pos.x + $slide.position().left;
                                 slideData[i].pos.y = slideData[parentSlideIdx].pos.y + $slide.position().top;
+                                $slide.css({
+                                    'left': slideData[i].pos.x + 'px',
+                                    'top': slideData[i].pos.y + 'px'
+                                });
                             } else {
+                                var isBlocked = $slide.css('display') === 'block';
+                                if (i > 0 && opts.layout.cols === null && 
+                                        (isBlocked || // current element is blocked, so need new row
+                                         previousWasBlocked)) { // previous element was blocked (occupies all row), so now need new row
+                                    needNewRow = true;
+                                }
+                                previousWasBlocked = isBlocked;
                                 if (needNewRow) {
                                     ++row;
                                     offset.y += maxHeight;
@@ -1082,7 +1139,7 @@
                                     maxHeight = col = 0;
                                 }
 
-                                slideData[i].pos.x = !opts.layout.cols ? $slide.position().left : offset.x;
+                                slideData[i].pos.x = opts.layout.cols === null ? $slide.position().left : offset.x;
                                 slideData[i].pos.x += slideData[i].rectOuter.left;
                                 if (justifySlide.x) {
                                     diff = maxWidthInCol[col] - slideData[i].size.x / 2;
@@ -1091,10 +1148,10 @@
                                     }
                                     offset.x += maxWidthInCol[col] * 2;
                                 } else {
-                                    offset.x += slideData[i].size.x;
+                                    offset.x = Math.max(offset.x, slideData[i].pos.x + slideData[i].size.x);
                                 }
 
-                                slideData[i].pos.y = !opts.layout.cols ? $slide.position().top : offset.y;
+                                slideData[i].pos.y = opts.layout.cols === null ? $slide.position().top : offset.y;
                                 slideData[i].pos.y += slideData[i].rectOuter.top;
                                 if (justifySlide.y) {
                                     diff = maxHeightInRow[row] - slideData[i].size.y / 2;
@@ -1103,21 +1160,19 @@
                                     }
                                     maxHeight = Math.max(maxHeight, maxHeightInRow[row] * 2);
                                 } else {
-                                    maxHeight = Math.max(maxHeight, slideData[i].size.y);
+                                    maxHeight = Math.max(maxHeight, /*(opts.layout.cols === null ? slideData[i].pos.y : 0) + */slideData[i].size.y);
                                 }
 
-                                if (opts.layout.cols) {
+                                if (opts.layout.cols !== null) {
                                     var ieOffset = { topLeft: { x: 0, y: 0 }, bottomRight: { x: 0, y: 0} };
                                     if (core.isIE8orBelow) {
-                                        ieOffset = core.rotation.getContainerRectCenter(slideData[i].rotation, [slideData[i].slideSizeNoRotation.x, slideData[i].slideSizeNoRotation.y]);
+                                        ieOffset = core.rotation.getContainerRectCenter(slideData[i].rotation, slideData[i].slideSizeNoRotation);
                                     }
                                     $slide.css({
                                         'position': 'absolute',
                                         'left': (slideData[i].pos.x + ieOffset.topLeft.x) + 'px',
                                         'top': (slideData[i].pos.y + ieOffset.topLeft.y) + 'px'
                                     });
-                                } else {
-                                    $slide.css('position', 'absolute');
                                 }
 
                                 needNewRow = changeRow(++col);
@@ -1127,12 +1182,26 @@
                         offset.y += maxHeight;
                         container.setMaxSize(offset.x, offset.y);
                         container.$paddingDiv.add(container.$zoomDiv).css({
-                            'width': container.size.x + 'px',
-                            'height': container.size.y + 'px'
+                            'width': container.size.x.toFixed(0) + 'px',
+                            'height': container.size.y.toFixed(0) + 'px'
                         });
                         container.setSizeForIE();
+
+                        if (opts.layout.cols !== null) {
+                            // non slides that are blocked, should float in order to not interfere with space available
+                            container.$zoomDiv.children().not(container.$slides).filter(function(index) {
+                                return $(this).css('display') === 'block';
+                            }).css('float', 'left');
+                        }
+                        
+                        for (var i = 0, len = container.$slides.length; i < len; ++i) {
+                            var slidePos = container.$slides.eq(i).position();
+                            // Mozilla returns the correct position for rotated elements, so there is no need to adjust for Mozilla
+                            slideData[i].pos.x = slidePos.left + (!!$.browser.mozilla ? 0 : (slideData[i].size.x - slideData[i].slideSizeNoRotation.x) / 2);
+                            slideData[i].pos.y = slidePos.top + (!!$.browser.mozilla ? 0 : (slideData[i].size.y - slideData[i].slideSizeNoRotation.y) / 2);
+                        }
                     },
-                    $slidesInSlides = !opts.selector.slideInSlide ? $([]) : $(opts.selector.slideInSlide);
+                    $slidesInSlides = !opts.selector.slideInSlide ? $([]) : $(opts.selector.slideInSlide, container.$zoomDiv);
 
                     loadSlideData();
                     setSlidePos();
@@ -1143,7 +1212,7 @@
                         bind('stop.rsSlideIt', events.onStop).
                         bind('getter.rsSlideIt', events.onGetter).
                         bind('setter.rsSlideIt', events.onSetter);
-                    container.$slides.bind('click.rsSlideIt', events.onClick);
+                    container.$slides.add($elemsOnTop).bind('dblclick.rsSlideIt', events.onDblClick).bind('mouseup.rsSlideIt', events.onMouseupClick);
                 },
                 initSlideForRotation: function (slide) {
                     slide = slide < 0 ? 0 : (slide >= container.$slides.length ? container.$slides.length - 1 : slide);
@@ -1160,7 +1229,6 @@
                         x: (slideData[slide].pos.x + slideData[slide].center.x) * zoomDest + container.pad.x,
                         y: (slideData[slide].pos.y + slideData[slide].center.y) * zoomDest + container.pad.y
                     });
-
                     core.doTransition(null, {
                         slide: slide,
                         duration: 0,
@@ -1300,8 +1368,8 @@
                 },
                 calcLongestPath: function () {
                     this.longestPath = 0;
-                    for (var i = 0; i < container.$slides.length; ++i) {
-                        for (var j = i + 1; j < container.$slides.length; ++j) {
+                    for (var i = 0, len = container.$slides.length; i < len; ++i) {
+                        for (var j = i + 1; j < len; ++j) {
                             this.longestPath = Math.max(this.longestPath, util.getDistanceTwoSlides(i, j));
                         }
                     }
@@ -1425,93 +1493,15 @@
             },
 
             panUtil = {
-                startPos: {
-                    x: 0,
-                    y: 0
-                },
-
-                // speed records the mouse speed while user is dragging the slides
-                mouseSpeed: {
-                    value: {
-                        x: 0,
-                        y: 0
-                    },
-                    lastPt: {
-                        x: -1,
-                        y: -1
-                    },
-                    isRunning: false,
-                    id: 0,
-                    startTimer: function () {
-                        this.id = window.setInterval(function () {
-                            panUtil.mouseSpeed.getCoords();
-                        }, 20);
-                        this.isRunning = true;
-                    },
-                    stopTimer: function () {
-                        if (this.isRunning) {
-                            window.clearInterval(this.id);
-                            this.lastPt.x = -1;
-                            this.lastPt.y = -1;
-                            this.isRunning = false;
-                        }
-                    },
-                    getCoords: function () {
-                        var scrPos = { x: $elem.scrollLeft(), y: $elem.scrollTop() };
-                        this.value.x = scrPos.x - (this.lastPt.x == -1 ? scrPos.x : this.lastPt.x);
-                        this.value.y = scrPos.y - (this.lastPt.y == -1 ? scrPos.y : this.lastPt.y);
-                        this.lastPt.x = scrPos.x;
-                        this.lastPt.y = scrPos.y;
-                    }
-                },
-
-                // timer that starts on mouseup and stops some moments later (until scrolls stops)
-                // its is used to make a smooth scroll deceleration after panning with the mouse.
-                // this feature is available when useAcceleration is true
-                timerSmoothStop: {
-                    isRunning: false,
-                    id: 0,
-                    startTimer: function () {
-                        this.id = window.setInterval(function () {
-                            panUtil.timerSmoothStop.smoothStop();
-                        }, 30);
-                        this.isRunning = true;
-                    },
-                    stopTimer: function () {
-                        if (this.isRunning) {
-                            window.clearInterval(this.id);
-                            this.isRunning = false;
-                        }
-                    },
-                    smoothStop: function () {
-                        $elem.
-                            scrollLeft($elem.scrollLeft() + (panUtil.mouseSpeed.value.x > 0 ? --panUtil.mouseSpeed.value.x : (panUtil.mouseSpeed.value.x < 0 ? ++panUtil.mouseSpeed.value.x : 0))).
-                            scrollTop($elem.scrollTop() + (panUtil.mouseSpeed.value.y > 0 ? --panUtil.mouseSpeed.value.y : (panUtil.mouseSpeed.value.y < 0 ? ++panUtil.mouseSpeed.value.y : 0)));
-                        if (panUtil.mouseSpeed.value.x > 1) panUtil.mouseSpeed.value.x--;
-                        if (panUtil.mouseSpeed.value.x < -1) panUtil.mouseSpeed.value.x++;
-                        if (panUtil.mouseSpeed.value.y > 1) panUtil.mouseSpeed.value.y--;
-                        if (panUtil.mouseSpeed.value.y < -1) panUtil.mouseSpeed.value.y++;
-                        if (panUtil.mouseSpeed.value.x == 0 && panUtil.mouseSpeed.value.y == 0) this.stopTimer();
-                    }
-                },
-
+                startPos: { x: 0, y: 0 },
                 isPanning: false,
-
                 startPan: function (event) {
                     this.startPos.x = event.pageX + $elem.scrollLeft();
                     this.startPos.y = event.pageY + $elem.scrollTop();
                     this.isPanning = true;
-                    if (opts.behaviour.panOnMouseDrag.useAcceleration) {
-                        // if still decelerating from last pan operation, then stop immediatelly
-                        this.timerSmoothStop.stopTimer();
-
-                        if (!this.mouseSpeed.isRunning) {
-                            this.mouseSpeed.lastPt.x = this.mouseSpeed.lastPt.y = -1;
-                            this.mouseSpeed.value.x = this.mouseSpeed.value.y = 0;
-                            this.mouseSpeed.isRunning = true;
-                            this.mouseSpeed.startTimer();
-                        }
-                    }
+                },
+                stopPan: function () {
+                    this.isPanning = false;
                 },
                 mousemove: function (event) {
                     if (!panUtil.isPanning) {
@@ -1523,7 +1513,7 @@
                 },
                 mousedown: function (event) {
                     if (event.which == 1) {
-                        $elemAndTops.bind('mousemove.rsSlideIt', this.mousemove);
+                        $elemAndTops.bind('mousemove.rsSlideIt', panUtil.mousemove);
                         panUtil.isPanning = false;
                     }
                     event.preventDefault();
@@ -1531,25 +1521,16 @@
                 mouseup: function (event) {
                     if (event.which == 1) {
                         $elemAndTops.unbind('mousemove.rsSlideIt');
-                    } else {
                         if (panUtil.isPanning) {
-                            panUtil.stopPan(event);
+                            panUtil.stopPan();
                         }
                     }
                     event.preventDefault();
                 },
-                bodyMouseup: function (event) {
-                    if (event.which == 1) {
-                        $elemAndTops.unbind('mousemove.rsSlideIt');
-                    }
-                },
-                stopPan: function (useSmoothStop) {
-                    this.isPanning = false;
-                    if (opts.behaviour.panOnMouseDrag.useAcceleration) {
-                        this.mouseSpeed.stopTimer();
-                        if (useSmoothStop && !this.timerSmoothStop.isRunning) {
-                            this.timerSmoothStop.startTimer();
-                        }
+                stopImmediately: function () {
+                    $elemAndTops.unbind('mousemove.rsSlideIt');
+                    if (panUtil.isPanning) {
+                        panUtil.stopPan();
                     }
                 }
             },
@@ -1560,13 +1541,15 @@
                 },
                 onMouseWheel: function (event) {
                     var delta = {x: 0, y: 0};
+                    if (event.wheelDelta === undefined && event.originalEvent !== undefined && (event.originalEvent.wheelDelta !== undefined || event.originalEvent.detail !== undefined)) { 
+                        event = event.originalEvent;
+                    }
                     if (event.wheelDelta) { 
                         delta.y = event.wheelDelta/120;
                     }
                     if (event.detail) {
                         delta.y = -event.detail/3;
                     }
-                    
                     var evt = event || window.event;
                     if (evt.axis !== undefined && evt.axis === evt.HORIZONTAL_AXIS) {
                         delta.x = - delta.y;
@@ -1587,12 +1570,17 @@
                 onMouseup: function (event) {
                     panUtil.mouseup(event);
                 },
-                onBodyMouseup: function (event) {
-                    panUtil.bodyMouseup(event);
+                onMouseenter: function (event) {
+                    if (panUtil.isPanning) {
+                        event.which = 1;
+                        panUtil.mouseup(event);
+                    }
                 },
                 onSingleTransition: function (event, optsTrans) {
-                    transData.onEndTransSlideShow = null;
-                    core.doTransition(event, optsTrans);
+                    if (!transData.isThisPartOfSlideShow()) {
+                        transData.reset();
+                        core.doTransition(event, optsTrans);
+                    }
                 },
                 onTransition: function (event, optsTrans) {
                     core.doTransition(event, optsTrans);
@@ -1611,7 +1599,7 @@
                         }
                     } else {
                         if (seqData.state == $.fn.rsSlideIt.state.STOP && !transData.animating) {
-                            seqData.init(optsSequence, (typeof optsSequence.sequence === 'string') && (optsSequence.sequence == 'prev' || optsSequence.sequence == 'next'));
+                            seqData.init(optsSequence);
                         }
                         if (seqData.state == $.fn.rsSlideIt.state.PLAY || seqData.state == $.fn.rsSlideIt.state.PAUSE) {
                             core.doSlideshow(event);
@@ -1631,26 +1619,26 @@
                 },
                 unbindEvents: function () {
                     $elemAndTops.unbind('scroll.rsSlideIt');
-                    if (opts.behaviour.zoomOnMouseWheel) {
-                        $elemAndTops.unbind('mousewheel.rsSlideIt');
+                    if (opts.behaviour.mouseZoom) {
+                        $elemAndTops.unbind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt');
                     }
-                    if (opts.behaviour.panOnMouseDrag.enabled) {
-                        $elemAndTops.unbind('mousedown.rsSlideIt mouseup.rsSlideIt');
-                        $("body, html").unbind('mouseup.rsSlideIt');
+                    if (opts.behaviour.mousePan) {
+                        $elemAndTops.
+                            unbind('mousedown.rsSlideIt mouseenter.rsSlideIt').
+                            unbind('mouseup.rsSlideIt', this.onMouseup);
                     }
                 },
                 bindEvents: function () {
                     $elemAndTops.bind('scroll.rsSlideIt', this.onScroll);
-                    if (opts.behaviour.zoomOnMouseWheel) {
-                        $elemAndTops.bind('mousewheel.rsSlideIt', this.onMouseWheel);
+                    if (opts.behaviour.mouseZoom) {
+                        $elemAndTops.bind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', this.onMouseWheel);
                     }
-                    if (opts.behaviour.panOnMouseDrag.enabled) {
+                    if (opts.behaviour.mousePan) {
                         $elemAndTops.
                             bind('mousedown.rsSlideIt', this.onMousedown).
-                            bind('mouseup.rsSlideIt', this.onMouseup);
-                        $("body, html").bind('mouseup.rsSlideIt', this.onBodyMouseup);
+                            bind('mouseup.rsSlideIt', this.onMouseup).
+                            bind('mouseenter.rsSlideIt', this.onMouseenter);
                     }
-                    core.selectSlide(false);
                 },
                 onGetter: function (event, field) {
                     switch (field) {
@@ -1663,6 +1651,7 @@
                         case 'center': return core.rotation.getCenter();
                         case 'padding': return { x: container.pad.x, y: container.pad.y };
                         case 'state': return seqData.state;
+                        case 'events': return opts.events;
                     }
                     return null;
                 },
@@ -1689,7 +1678,7 @@
                             opts.zoomStep = value;
                             break;
                         case 'activeSlide':
-                            core.gotoSlide(value, zoomUtil.zoom, 'css');
+                            core.gotoSlide(value, zoomUtil.zoom, null);
                             break;
                         case 'center':
                             core.rotation.cssOrigin(value);
@@ -1697,27 +1686,38 @@
                     }
                     return events.onGetter(event, field);
                 },
-                click_dblClickUtil: {
-                    qtClicks: 0,
-                    $slide: null
+                readUnderneath: function (event) {
+                    var $target = $(event.target),
+                        firedOnOverlay = $target.is($elemsOnTop);
+                    if (firedOnOverlay) {
+                        if (document.elementFromPoint) {
+                            $elemsOnTop.hide();
+                            // get the element underneath
+                            var $under = $(document.elementFromPoint(event.pageX, event.pageY));
+                            $elemsOnTop.show();
+                            if (container.$slides.is($under)) {
+                                return $under;
+                            }
+                        }
+                        return null;
+                    }
+                    return $target;
                 },
-                onClick: function (event) {
-                    if (opts.events.onClickSlide || opts.events.onDblClickSlide) {
-                        events.click_dblClickUtil.qtClicks++;
-                        events.click_dblClickUtil.$slide = $(this);
-                        if (events.click_dblClickUtil.qtClicks === 1) {
-                            setTimeout(function () {
-                                if (events.click_dblClickUtil.qtClicks === 1) {
-                                    if (opts.events.onClickSlide) {
-                                        opts.events.onClickSlide(event, $elem, events.click_dblClickUtil.$slide, container.$slides.index(events.click_dblClickUtil.$slide[0]));
-                                    }
-                                } else {
-                                    if (opts.events.onDblClickSlide) {
-                                        opts.events.onDblClickSlide(event, $elem, events.click_dblClickUtil.$slide, container.$slides.index(events.click_dblClickUtil.$slide[0]));
-                                    }
-                                }
-                                events.click_dblClickUtil.qtClicks = 0;
-                            }, 200);
+                onMouseupClick: function (event) {
+                    // onClick is implemented as mouseUp, because a genuine click event is fired when users finishes to pan around with mouse.
+                    // So, the workaroud is to catch the mouseup and fire the user onClickSlide
+                    if (!panUtil.isPanning && !!opts.events.onClickSlide) {
+                        var $slide = events.readUnderneath(event);
+                        if ($slide) {
+                            opts.events.onClickSlide(event, $elem, $slide, container.$slides.index($slide));
+                        }
+                    }
+                },
+                onDblClick: function (event) {
+                    if (!!opts.events.onDblClickSlide) {
+                        var $slide = events.readUnderneath(event);
+                        if ($slide) {
+                            opts.events.onDblClickSlide(event, $elem, $slide, container.$slides.index($slide));
                         }
                     }
                 }
@@ -1727,7 +1727,7 @@
             core.init();
         } catch (er) {
             if (er.id == 'no data') {
-                var msg = 'rsSlideIt.init(): ' + er;
+                var msg = 'rsSlideIt.init(): ' + er.msg;
                 if (window.console) {
                     console.error(msg);
                 } else {
@@ -1742,7 +1742,7 @@
         core.cssZoom();
         core.gotoSlide(opts.initialSlide, opts.initialZoom, opts.initialDegrees);
         zoomUtil.calcLongestPath();
-    }
+    };
 
     $.fn.rsSlideIt = function (options) {
         var transitionTo = function (optionsGoto) {
@@ -1786,7 +1786,6 @@
         var opts = $.extend({}, $.fn.rsSlideIt.defaults, options);
         opts.layout = $.extend({}, $.fn.rsSlideIt.defaults.layout, options ? options.layout : options);
         opts.behaviour = $.extend({}, $.fn.rsSlideIt.defaults.behaviour, options ? options.behaviour : options);
-        opts.behaviour.panOnMouseDrag = $.extend({}, $.fn.rsSlideIt.defaults.behaviour.panOnMouseDrag, options ? (options.behaviour ? options.behaviour.panOnMouseDrag : options.behaviour) : options);
         opts.selector = $.extend({}, $.fn.rsSlideIt.defaults.selector, options ? options.selector : options);
         opts.events = $.extend({}, $.fn.rsSlideIt.defaults.events, options ? options.events : options);
 
@@ -1802,21 +1801,18 @@
         zoomMax: 15,
         initialSlide: 0,
         initialZoom: 1,
-        initialDegrees: 'css',
+        initialDegrees: null,
         layout: {
-            width: '400px',             // string or integer or 'css'
-            height: '300px',            // string or integer or 'css'
-            overflow: 'hidden',         // string 'visible', 'hidden', 'scroll', 'auto', 'inherit'. Any other value (or 'css') then uses overflow from CSS
-            cols: null,                 // null for slides in a single row, integer or array of integers
+            width: null,
+            height: null,
+            overflow: 'hidden',         // string 'visible', 'hidden', 'scroll', 'auto', 'inherit'. Any other value then uses overflow from CSS
+            cols: 0,                    // number of columns: 0 - layout all slides in one row; positive integer - layout all slides in n columns; null - do not layout (use css layout);
             horizAlign: 'default',      // or 'left', 'center', 'right' 
             vertAlign: 'default'        // or 'top', 'center', 'bottom'
         },
         behaviour: {
-            zoomOnMouseWheel: true,
-            panOnMouseDrag: {
-                enabled: true,
-                useAcceleration: true
-            },
+            mouseZoom: true,
+            mousePan: true,
             easing: 'swing'
         },
         selector: {
@@ -1831,8 +1827,8 @@
             onStartRotation: null,  // function ($elem, startDegrees, centerRot, size, padding, endDegrees)
             onRotation: null,       // function ($elem, degrees, centerRot, size, padding)
             onEndRotation: null,    // function ($elem, degrees, centerRot, size, padding)
-            triggerOnRotationEvery: 2, // minimum angle offset in degrees that triggers the onRotation event.
-            // For example, if element rotates from 0 to 22 degrees and triggerRotationEventEvery is 5, then
+            fireOnRotationEvery: 2, // angle offset in degrees that triggers the onRotation event.
+            // For example, if element rotates from 0 to 22 degrees and fireOnRotationEvery is 5, then
             // onRotation is called 6 times during rotation (when angle is 0, 5, 10, 15, 20, 22).
             // The event is always called on the first and last rotation angle.
             onUnselectSlide: null,    // function ($elem, $slide, slideIndex)
@@ -1841,7 +1837,7 @@
             onDblClickSlide: function (event, $elem, $slide, slideIndex) {
                 $elem.rsSlideIt('goto', {
                     slide: slideIndex,
-                    zoomDest: 'cover',
+                    zoomDest: 'fit',
                     zoomVertex: 'linear',
                     duration: 'normal'
                 });
@@ -1850,11 +1846,11 @@
     };
 
     $.fn.rsSlideIt.defaultsGoto = {
-        slide: 'next',      // positive integer or 'prev' or 'first' or 'last'
+        slide: 'next',      // positive integer or 'prev' or 'next' or 'first' or 'last'
         duration: 600,      // positive integer 
         zoomDest: 1,        // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'cover'
         zoomVertex: 1,      // positive real number or 'out' or 'in' or 'linear'
-        degrees: null,      // real number. If null, undefined or 'css', then uses rotation angle from CSS
+        degrees: null,      // real number. If null then uses rotation angle from CSS
         onBegin: null,      // event handler called when this transition starts to run
         onEnd: null         // event handler called when this transition is completed
     };
@@ -1866,7 +1862,8 @@
         zoomVertex: 1,      // positive real number or 'out' or 'in' or 'linear' or an arrays of positive real numbers and strings
         duration: 600,      // positive integer or array of positive integers
         repeat: 'forever',  // positive integer or 'forever',
-        degrees: 'css',     // real number or 'css' or an array of real numbers and 'css' strings
+        degrees: null,      // real number or an array of real numbers and nulls
+        userInteract: true, // true: user can zoom and pan when slide is standing still; false: otherwise 
         onPlay: null,       // event handler called when the sequence starts to run
         onPause: null,      // event handler called when the sequence pauses in a specific slide
         onStop: null,       // event handler called when the whole sequence is completed (only if repeat is not 'forever')
@@ -1877,7 +1874,7 @@
     $.fn.rsSlideIt.state = {
         STOP: 0, // no transitions are currently running and user is free to navigate around
         PLAY: 1, // slide show is running, which stops the user from navigating around
-        PAUSE: 2 // slide show is paused and another click to Play/Pause button will resume the slide show from the current point. User can navigate around.
+        PAUSE: 2 // slide show is paused and another click to Play/Pause button will resume the slide show from the current point. User can navigate around (if userInteract is true).
     };
 
 })(jQuery);
