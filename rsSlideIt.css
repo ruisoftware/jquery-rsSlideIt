@@ -1,6 +1,9 @@
+img {
+	border: 1px solid black;
+}
+
 #Div1,
 #slideIt {
-	border: 1px solid black;
 	width: 701px;
 	height: 501px;
 	overflow: hidden;
@@ -17,32 +20,87 @@
 }
 
 #e {
-	width: 450px;
-	height: 250px;
+	width: 650px;
+	height: 450px;
 	overflow: auto;
 	position: absolute;
-	left: 0px;
-	top: 300px;	
+	background-color: #ddd;
+	left: 5px;
+	top: 100px;
+}
+#cover {
+    width: 650px;
+    height: 450px;
+    position: absolute;
+	left: 5px;
+	top: 100px;
+	background-image: url(cover.png);
+}
+#shade {
+    position: absolute;
+	width: 650px;
+	height: 450px;
+	left: 5px;
+	top: 100px;
+	/*-moz-box-shadow: inset 0 0 20px #222;
+    -webkit-box-shadow: inset 0 0 20px #222;
+*/    
+box-shadow: inset 0 0 20px 5px #333;
 }
 
-#youtube {
-    -webkit-transform: rotate(-90deg);
-    -moz-transform: rotate(-90deg);
-    -o-transform: rotate(-90deg);
-    -ms-transform: rotate(-90deg);
-    transform: rotate(-90deg);
+#e img {
+    filter: alpha(opacity=20);
+	-moz-opacity: 0.2;
+	-khtml-opacity: 0.2;
+	opacity: 0.2;
+}
+
+#container {
+	width: 300px;
+	height: 350px;
+	overflow: auto;
+}
+
+#f1 {
+	left: 300px;
+	top: 200px;
+}
+
+.slide {
+	border: 1px solid blue;
+}
+/*
+
+#youtube, #dyoutube {
+    -webkit-transform: rotate(230deg);
+    -moz-transform: rotate(230deg);
+    -o-transform: rotate(230deg);
+    -ms-transform: rotate(230deg);
+    transform: rotate(230deg);
     
     width: 110px;
     height: 55px;
-    filter: progid:DXImageTransform.Microsoft.Matrix(M11=0, M12=1, M21=-1, M22=0, SizingMethod = "auto expand");
+    filter: progid:DXImageTransform.Microsoft.Matrix(M11=-0.642, M12=0.766, M21=-0.766, M22=-0.642, SizingMethod = "auto expand");
 }
-
 #i0, #dyoutube {
     -webkit-transform: rotate(30deg);
     -moz-transform: rotate(30deg);
     -o-transform: rotate(30deg);
     -ms-transform: rotate(30deg);
     transform: rotate(30deg);
+    filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.866, M12=-0.5, M21=0.5, M22=0.866, SizingMethod = "auto expand");
+    xxfilter: progid:DXImageTransform.Microsoft.Matrix(M11=-0.642, M12=0.766, M21=-0.766, M22=-0.642, SizingMethod = "auto expand");
+}
+*/
+.youtubeemb {
+    width: 560px;
+    height: 315px;
+}
+
+#dyofutube {
+    position: absolute;
+    top: 90px;
+    left: 10px;
 }
 
 #youtube2 {
@@ -51,6 +109,7 @@
     -o-transform: rotate(-300deg);
     -ms-transform: rotate(-300deg);
     transform: rotate(-300deg);
+    filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.5, M12=-0.866, M21=0.866, M22=0.5, SizingMethod = "auto expand");
 }
 
 
@@ -61,6 +120,7 @@
     -ms-transform: rotate(-45deg);
     transform: rotate(-45deg)
 }
+
 #__cristine {
 	margin-left: 50px;
 }
@@ -73,7 +133,7 @@
 	margin: 2px;
 	padding: 10px;
 	border: 1px red solid;
-	background-color: Blue;
+	background-color: #eee;
 	z-index: 0;
 	opacity: 0.2;
 }
@@ -112,29 +172,21 @@
     height: 45px;
 }
 
-#out {
+#out, #out2, #out3, #out4, #out5, #out6 {
     position: absolute;
     top: 0px;
     right: 0px;
     width: 350px;
-    height: 100%;
     background-color: #ffe;
     font-size: 0.8em;
-    
-    display: none;
+    border: 1px dotted grey;
 }
+#out2 { top: 60px; }
+#out3 { top: 130px; }
+#out4 { top: 190px; }
+#out5 { top: 250px; }
+#out6 { top: 450px; }
 
-#__shade {
-    position: absolute;
-	width: 450px;
-	height: 250px;
-	left: 0px;
-	top: 300px;
-	/*-moz-box-shadow: inset 0 0 20px #222;
-    -webkit-box-shadow: inset 0 0 20px #222;
-*/    
-box-shadow: inset 0 0 20px 5px #333;
-}
 
 #__ce {
 background:url(http://www.w3schools.com/css3/img_flwr.gif);
@@ -181,15 +233,6 @@ background-repeat:repeat;
     position: absolute;
 }
 
-#cover {
-    width: 450px;
-    height: 250px;
-    position: absolute;
-	left: 0px;
-	top: 300px;
-	background-image: url(cover.png);
-	z-index: -100;
-}
 
 
 #ce > div {
@@ -199,3 +242,129 @@ background-repeat:repeat;
 #btnYoutube2 {
 -webkit-appearance: media-play-button;
 }
+
+#debug {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    border: 1px red solid;
+}
+
+        #debug1,
+        #debug2,
+        #debug3,
+        #debug4,
+        #debugCenter {
+            border: 1px solid yellow;
+            width: 3px;
+            height: 3px;
+            position: absolute;
+        }
+
+        #debug2 {
+            border-color: red;
+        }
+        #debug3 {
+            border-color: blue;
+        }
+        #debug4 {
+            border-color: magenta;
+        }
+        #debugCenter {
+            border-color: green;
+        }
+        
+        #dot0,
+        #dot1,
+        #dot2,
+        #dot3,
+        #dot4,
+        #dot5,
+        #dot6,
+        #dot7,
+        #dot8,
+        #dot9,
+        #dot10,
+        #dot11,
+        #dot12,
+        #dot13,
+        #dot14,
+        #dot15,
+        #dot16,
+        #dot17,
+        #dot18,
+        #dot19,
+        #dot20,
+        #dot21,
+        #dot22,
+        #dot23,
+        #dot24,
+        #dot25,
+        #dot26,
+        #dot27,
+        #dot28,
+        #dot29,
+        #dot30,
+        #dot31,
+        #dot32,
+        #dot33,
+        #dot34,
+        #dot35,
+        #dot36,
+        #dot37,
+        #dot38,
+        #dot39,
+        #dot40,
+        #dot41,
+        #dot42,
+        #dot43,
+        #dot44,
+        #dot45,
+        #dot46,
+        #dot47,
+        #dot48,
+        #dot50,
+        
+        #dotcenter   {
+            border: solid 1px black;
+            width: 3px;
+            height: 3px;
+            position: absolute;
+            font-size: 7pt;
+        }
+        
+        #dotcenter {
+            border-color: red;
+        }
+#out2 {
+    font-size: 8pt;
+}
+
+#dyoutube {
+    position: absolute;
+    top: 200px;
+    left: 10px;
+}
+
+.detail {
+    left: 20px;
+    top: 5px;
+    width: 50px;
+    height: 50px;
+    border: 1px red solid;
+    -webkit-transform: rotate(-300deg);
+    -moz-transform: rotate(-300deg);
+    -o-transform: rotate(-300deg);
+    -ms-transform: rotate(-300deg);
+    transform: rotate(-300deg);
+    filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.5, M12=-0.866, M21=0.866, M22=0.5, SizingMethod = "auto expand");
+}
+
+.r {
+    position: absolute;
+    border: 1px dotted red;
+}
+.r.last {
+    border-style: solid;
+}
+
