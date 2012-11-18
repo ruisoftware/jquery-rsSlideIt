@@ -29,6 +29,10 @@
                     this.qtSlides = container.$slides.length;
                     this.$elemAndTops = $elem.add(this.$elemsOnTop);
                 },
+                setCenterPos: function () {
+                    this.elementCenter.x = $elem.width() / 2;
+                    this.elementCenter.y = $elem.height() / 2;
+                },
                 activeSlide: {
                     $slide: null,
                     index: -1
@@ -179,8 +183,7 @@
                     if (!!opts.layout.width) { $elem.css('width', opts.layout.width); }
                     if (!!opts.layout.height) { $elem.css('height', opts.layout.height); }
                     if (!!opts.layout.overflow) { $elem.css('overflow', opts.layout.overflow); }
-                    data.elementCenter.x = $elem.width() / 2;
-                    data.elementCenter.y = $elem.height() / 2;
+                    data.setCenterPos();
                     $elem.wrapInner('<div />');
                     this.$paddingDiv = $('div:eq(0)', $elem);
                     this.$paddingDiv.wrapInner('<div />');
@@ -190,7 +193,6 @@
             },
 
             seqData = { // data for the whole slide show currently running
-                $animObj: null,
                 idx: 0,      // current active slide while sequence runs
                 repeat: 0,   // how many cycles a sequence runs
                 qt: null,    // quantities of all sequence input parameters
@@ -239,6 +241,7 @@
             },
             
             transData = {     // data for the current transition that is running
+                $animObj: null,
                 slide: null,
                 duration: null,
                 zoomDest: null,
@@ -394,12 +397,13 @@
                                 x: zoomUtil.scale(fromPos.x) + container.pad.x,
                                 y: zoomUtil.scale(fromPos.y) + container.pad.y
                             };
-
-                            if (newCenter.x != Math.floor(orig.x) || newCenter.y != Math.floor(orig.y)) {
+                            if (Math.abs(Math.round(newCenter.x) - Math.round(orig.x)) > 1 || Math.abs(Math.round(newCenter.y) - Math.round(orig.y)) > 1) {
                                 var pntTopRight1 = this.getTopRight(orig, { x: zoomUtil.scale(data.slideData[slideIdx].center.x), y: -zoomUtil.scale(data.slideData[slideIdx].center.y) }),
                                     pntTopRight2 = this.getTopRight(newCenter, {
-                                        x: container.pad.x + zoomUtil.scale(data.slideData[slideIdx].pos.x + data.slideData[slideIdx].slideOuterSizeNoRotation.x) - newCenter.x,
-                                        y: container.pad.y + zoomUtil.scale(data.slideData[slideIdx].pos.y) - newCenter.y
+                                        x: container.pad.x + zoomUtil.scale(data.slideData[slideIdx].pos.x + data.slideData[slideIdx].slideOuterSizeNoRotation.x) - newCenter.x + 
+                                            (orig.x - (container.pad.x + zoomUtil.scale(data.slideData[slideIdx].pos.x + data.slideData[slideIdx].center.x))),
+                                        y: container.pad.y + zoomUtil.scale(data.slideData[slideIdx].pos.y) - newCenter.y - 
+                                            (orig.y - (container.pad.y + zoomUtil.scale(data.slideData[slideIdx].pos.y + data.slideData[slideIdx].center.y)))
                                     });
                                 return {
                                     x: pntTopRight1.x - pntTopRight2.x,
@@ -439,7 +443,7 @@
                             this.currOrigin.x = origin.x;
                             this.currOrigin.y = origin.y;
                         }
-                        var orig = origin.x.toFixed(2) + 'px ' + origin.y.toFixed(2) + 'px';
+                        var orig = origin.x.toFixed(6) + 'px ' + origin.y.toFixed(6) + 'px';
                         container.$paddingDiv.css({
                             '-webkit-transform-origin': orig,
                             '-moz-transform-origin': orig,
@@ -639,6 +643,7 @@
 
                 // returns the slide that whose center is closest to the viewport center
                 getActiveSlide: function () {
+                    data.setCenterPos();
                     var offset = core.isIE8orBelow ? {x : 0, y: 0} : core.rotation.getCenter(),
                         minDist = minIdx = -1,
                         distance = (data.elementCenter.x + data.elementCenter.y) / 10,
@@ -701,8 +706,8 @@
                             // ignore if user called this event while a previous one is still running
                             return;
                         }
-                        if (seqData.$animObj !== null) {
-                            seqData.$animObj.stop();
+                        if (transData.$animObj !== null) {
+                            transData.$animObj.stop();
                         }
                         data.insertSorted();
                         data.activeSlide = core.getActiveSlide();
@@ -713,6 +718,7 @@
                     panUtil.stopImmediately();
                     var prevGotoSlideIdx = this.gotoSlideIdx;
                     this.gotoSlideIdx = util.getSlideIdx(optsTrans.slide);
+                    data.setCenterPos();
                     var zoomDest = zoomUtil.checkZoomBounds(zoomUtil.getZoomDest(optsTrans.zoomDest, this.gotoSlideIdx)),
                         destSlideData = data.slideData[this.gotoSlideIdx],
                         // animation will run from the current viewport's center point...
@@ -757,13 +763,13 @@
                         y: Math.abs(fromPos.y - toPos.y)
                     }, runAnimation = !$.fx.off,
                         isLinearZoom = typeof optsTrans.zoomVertex === 'string' && optsTrans.zoomVertex == 'linear',
-                        needToZoom = !isLinearZoom || Math.abs(zoomUtil.zoom - zoomDest) > 0.0005,
+                        needToZoom = Math.abs(zoomUtil.zoom - zoomDest) > 0.0005,
                         destAngle = core.getRotationSlide(optsTrans.degrees),
                         needToRotate = Math.abs(this.rotation.currAngle + destAngle) > 0.0005;
- 
+
                     if (runAnimation && delta.x < 1 && delta.y < 1) { // fromPos and toPos are the same (no translation will be done)
                         // but if zoom or rotation will change, then
-                        if (zoomDest != zoomUtil.zoom || needToRotate) {
+                        if (needToZoom || needToRotate) {
                             // need to add an artificial offset, that will not make a translation movement (not even for one pixel)
                             // this is required, because animation is based on translation, so start and end point need to be different
                             delta.x = delta.y = 0.9;
@@ -778,7 +784,6 @@
                         // medium (x, y) = (x=unknown for now, y=optsTrans.zoomVertex= min or max zoom represented by y-coordinate 
                         // that corresponds to minimum or maximun the function takes)
                         zoomUtil.setZoomVertex(optsTrans, data.activeSlide.index, this.gotoSlideIdx, zoomDest);
-                        
                         var rotMargin = this.rotation.adjustRotOrigin(prevGotoSlideIdx, fromPos),
                             maxDeltaIsX = delta.x > delta.y,
                             startAnim = maxDeltaIsX ? fromPos.x : fromPos.y,
@@ -804,7 +809,8 @@
                             },
                             scrAnim,
                             lastTriggeredRotation = this.rotation.currAngle,
-                            fireRotEveryRad = util.degToRad(opts.events.onRotationFiresEvery);
+                            fireRotEveryRad = util.degToRad(opts.events.onRotationFiresEvery),
+                            zoomFactor = zoomUtil.zoom;
 
                         this.calcRotInfo(toPos);
 
@@ -821,8 +827,8 @@
                         transData.stopAnimation = false;
 
                         if (needToRotate) {
-                            if (opts.events.onStartRotation) {
-                                $elem.triggerHandler('startRotation.rsSlideIt', [
+                            if (opts.events.onBeginRotation) {
+                                $elem.triggerHandler('beginRotation.rsSlideIt', [
                                     util.radToDeg(-this.rotation.currAngle),
                                     util.radToDeg(destAngle),
                                     this.rotation.getCenter(), {
@@ -834,15 +840,14 @@
                         }
 
                         // animate
-                        seqData.$animObj = $({ scrAnim: startAnim });
-                        seqData.$animObj.animate({
+                        transData.$animObj = $({ scrAnim: startAnim });
+                        transData.$animObj.animate({
                             scrAnim: endAnim
                         }, {
                             duration: optsTrans.duration,
                             easing: opts.behaviour.easing,
                             step: function (now) {
-                                var zoomFactor = util.getQuadraticValue(coefs.zoom, now),
-                                    panPnt = { x: 0, y: 0 };
+                                var panPnt = { x: 0, y: 0 };
                                 if (maxDeltaIsX) {
                                     panPnt.x = now;
                                     panPnt.y = util.getQuadraticValue(coefs.pan, now);
@@ -852,6 +857,7 @@
                                 }
 
                                 if (needToZoom) {
+                                    zoomFactor = util.getQuadraticValue(coefs.zoom, now);
                                     zoomUtil.doZoom(0, 0, zoomFactor, true);
                                     core.cssZoom();
                                 }
@@ -887,8 +893,8 @@
                                     ]);
                                 }
                                 if (transData.stopAnimation) {
-                                    if (seqData.$animObj !== null) {
-                                        seqData.$animObj.stop();
+                                    if (transData.$animObj !== null) {
+                                        transData.$animObj.stop();
                                     }
                                     if (needToRotate) {
                                         data.insertSorted();
@@ -1189,6 +1195,13 @@
                         
                         if (core.isIE8orBelow) {
                             core.IE.doRotateScale(core.rotation.currAngle, orig, true, { marginX: 0, marginY: 0 });
+                            var scrollOffset = {
+                                x: this.scale(this.unscale((offset.x + scr.x - container.pad.x) - orig.x, prevZoom)),
+                                y: this.scale(this.unscale((offset.y + scr.y - container.pad.y) - orig.y, prevZoom))
+                            };
+                            $elem.
+                                scrollLeft(orig.x + container.pad.x - offset.x + scrollOffset.x).
+                                scrollTop(orig.y + container.pad.y - offset.y + scrollOffset.y);
                         } else {
                             if (unscaledPos.x > 0) {
                                 $elem.scrollLeft(this.scale(unscaledPos.x) + container.pad.x - offset.x);
@@ -1226,6 +1239,7 @@
                 },
                 getZoomDest: function (zDest, gotoSlideIdx) {
                     if (typeof zDest === 'string') {
+                        data.setCenterPos();
                         var fit = [
                             data.elementCenter.x * 2 / (data.slideData[gotoSlideIdx].padding[3] + data.slideData[gotoSlideIdx].slideSizeNoRotation.x + data.slideData[gotoSlideIdx].padding[1]),
                             data.elementCenter.y * 2 / (data.slideData[gotoSlideIdx].padding[0] + data.slideData[gotoSlideIdx].slideSizeNoRotation.y + data.slideData[gotoSlideIdx].padding[2])
@@ -1248,6 +1262,7 @@
                 setterZoom: function (newZoom) {
                     var $pos = $elem.position(),
                         prev = [$elem.scrollLeft() / this.zoom, $elem.scrollTop() / this.zoom];
+                    data.setCenterPos();
                     this.doZoom(
                         $pos.left + data.elementCenter.x,
                         $pos.top + data.elementCenter.y,
@@ -1259,17 +1274,19 @@
             panUtil = {
                 startPos: { x: 0, y: 0 },
                 isPanning: false,
-                startPan: function (event) {
+                beginPan: function (event) {
                     this.startPos.x = event.pageX + $elem.scrollLeft();
                     this.startPos.y = event.pageY + $elem.scrollTop();
                     this.isPanning = true;
+                    $elem.triggerHandler('beginPan.rsSlideIt');
                 },
-                stopPan: function () {
+                endPan: function () {
                     this.isPanning = false;
+                    $elem.triggerHandler('endPan.rsSlideIt');
                 },
                 mousemove: function (event) {
                     if (!panUtil.isPanning) {
-                        panUtil.startPan(event);
+                        panUtil.beginPan(event);
                     }
                     $elem.
                         scrollLeft(panUtil.startPos.x - event.pageX).
@@ -1286,7 +1303,7 @@
                     if (event.which == 1) {
                         data.$elemAndTops.unbind('mousemove.rsSlideIt');
                         if (panUtil.isPanning) {
-                            panUtil.stopPan();
+                            panUtil.endPan();
                         }
                     }
                     event.preventDefault();
@@ -1294,7 +1311,7 @@
                 stopImmediately: function () {
                     data.$elemAndTops.unbind('mousemove.rsSlideIt');
                     if (panUtil.isPanning) {
-                        panUtil.stopPan();
+                        panUtil.endPan();
                     }
                 }
             },
@@ -1328,6 +1345,7 @@
                     event.preventDefault ? event.preventDefault() : event.returnValue = false; // prevents scrolling
                     if (core.isIE8orBelow) {
                         var $elemPos = $elem.position();
+                        data.setCenterPos();
                         zoomUtil.doZoom($elemPos.left + data.elementCenter.x, $elemPos.top + data.elementCenter.y, zoomUtil.zoom + delta.y * opts.zoomStep, false);
                     } else {
                         zoomUtil.doZoom(event.pageX, event.pageY, zoomUtil.zoom + delta.y * opts.zoomStep, false);
@@ -1535,9 +1553,9 @@
                         opts.events.onDblClickSlide(event, $slide, index);
                     }
                 }, 
-                onStartRotation: function (event, fromDegrees, toDegrees, center, size) {
-                    if (opts.events.onStartRotation) {
-                        opts.events.onStartRotation(event, fromDegrees, toDegrees, center, size);
+                onBeginRotation: function (event, fromDegrees, toDegrees, center, size) {
+                    if (opts.events.onBeginRotation) {
+                        opts.events.onBeginRotation(event, fromDegrees, toDegrees, center, size);
                     }
                 }, 
                 onRotation: function (event, degrees, center, size) {
@@ -1548,6 +1566,16 @@
                 onEndRotation: function (event, degrees, center, size) {
                     if (opts.events.onEndRotation) {
                         opts.events.onEndRotation(event, degrees, center, size);
+                    }
+                },
+                onBeginPan: function (event) {
+                    if (opts.events.onBeginPan) {
+                        opts.events.onBeginPan(event);
+                    }
+                },
+                onEndPan: function (event) {
+                    if (opts.events.onEndPan) {
+                        opts.events.onEndPan(event);
                     }
                 }
             },
@@ -1576,9 +1604,11 @@
                             bind('unselectSlide.rsSlideIt', events.onUnselectSlide).
                             bind('clickSlide.rsSlideIt', events.onClickSlide).
                             bind('dblClickSlide.rsSlideIt', events.onDblClickSlide).
-                            bind('startRotation.rsSlideIt', events.onStartRotation).
+                            bind('beginRotation.rsSlideIt', events.onBeginRotation).
                             bind('rotation.rsSlideIt', events.onRotation).
-                            bind('endRotation.rsSlideIt', events.onEndRotation);
+                            bind('endRotation.rsSlideIt', events.onEndRotation).
+                            bind('beginPan.rsSlideIt', events.onBeginPan).
+                            bind('endPan.rsSlideIt', events.onEndPan);
                             
                         container.$slides.add(data.$elemsOnTop).bind('dblclick.rsSlideIt', events.onDblClick).bind('mouseup.rsSlideIt', events.onMouseupClick);
                     }
@@ -2074,14 +2104,14 @@
 
     $.fn.rsSlideIt = function (options) {
         var transitionTo = function (optionsGoto) {
-            var optsGoto = $.extend({}, $.fn.rsSlideIt.defaultsGoto, optionsGoto);
+            var optsGoto = $.extend({}, $.fn.rsSlideIt.defaultsTransition, optionsGoto);
 
             return this.each(function () {
                 $(this).trigger('singleTransition.rsSlideIt', [optsGoto]);
             });
         },
         playPause = function (optionsSequence) {
-            var optsSequence = $.extend({}, $.fn.rsSlideIt.defaultsSlideshow, optionsSequence);
+            var optsSequence = $.extend({}, $.fn.rsSlideIt.defaultsPlayPause, optionsSequence);
 
             return this.each(function () {
                 $(this).trigger('playPause.rsSlideIt', [optsSequence]);
@@ -2157,13 +2187,15 @@
             onAjaxLoadSlide: null,          // Fired after an ajax response has been received successfully or unsuccessfully. Type: function (event, $ajaxSlide, index, success).
             onAjaxLoadEnd: null,            // Fired after all ajax requests (immediately after the last onAjaxLoadSlideAfter). Type: function (event).
             onChangeZoom: null,             // Fired when zoom changes, due to mouse wheel actions or by transitions. Type: function (event, zoom, size, pad).
-            onStartRotation: null,          // Fired when a rotation transformation is about to be performed. Type: function (event, fromDegrees, toDegrees, centerRot, size).
+            onBeginRotation: null,          // Fired when a rotation transformation is about to be performed. Type: function (event, fromDegrees, toDegrees, centerRot, size).
             onRotation: null,               // During rotation, fired every 'onRotationFiresEvery' degrees. Type: function (event, degrees, centerRot, size).
             onEndRotation: null,            // Fired when a rotation transformation has finished. Type: function (event, degrees, centerRot, size).
             onRotationFiresEvery: 2,        // Angle offset in degrees that triggers the onRotation event. Type: positive floating point number.
                                             // For example, if rotation runs from 0 to 22 degrees and onRotationFiresEvery is 5, then
                                             // onRotation is called 6 times during rotation (when angle is 0, 5, 10, 15, 20, 22).
                                             // The event onRotation is always called on the first and last rotation angle.
+            onBeginPan: null,               // Fired when the user starts to pan around. Type: function (event).
+            onEndPan: null,                 // Fired when the user finishes to pan around. Type: function (event).
             onUnselectSlide: null,          // Fired when a slide that was selected becomes unselected. Type: function (event, $slide, index).
             onSelectSlide: null,            // Fired when a slide that was unselected becomes selected. Type: function (event, $slide, index, caption).
             onClickSlide: null,             // Fired when a slide receives a single mouse click. Type: function (event, $slide, index).
@@ -2179,31 +2211,31 @@
     };
 
     // Default options for the 'transition' method.
-    $.fn.rsSlideIt.defaultsGoto = {
-        slide: 'next',      // zero-based positive integer or 'prev' or 'next' or 'first' or 'last'
-        duration: 'normal', // positive integer
-        zoomDest: 1,        // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'cover'
-        zoomVertex: 1,      // positive real number or 'out' or 'in' or 'linear'
-        degrees: null,      // real number. If null then uses rotation angle from CSS
-        onBegin: null,      // event handler called when this transition starts to run
-        onEnd: null         // event handler called when this transition is completed
+    $.fn.rsSlideIt.defaultsTransition = {
+        slide: 'next',          // zero-based positive integer or 'prev' or 'next' or 'first' or 'last'
+        duration: 'normal',     // positive integer
+        zoomDest: 1,            // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'cover'
+        zoomVertex: 'linear',   // positive real number or 'out' or 'in' or 'linear'
+        degrees: null,          // real number. If null then uses rotation angle from CSS
+        onBegin: null,          // event handler called when this transition starts to run
+        onEnd: null             // event handler called when this transition is completed
     };
 
     // Default options for the 'playPause' method.
-    $.fn.rsSlideIt.defaultsSlideshow = {
-        sequence: 'next',   // Type: array of positive integers or a string 'prev' or a string 'next'
-        delayOnSlide: 2000, // positive integer or an array of positive integers
-        zoomDest: 1,        // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'cover' or an array of positive real numbers and strings
-        zoomVertex: 1,      // positive real number or 'out' or 'in' or 'linear' or an arrays of positive real numbers and strings
-        duration: 600,      // positive integer or array of positive integers
-        repeat: 'forever',  // positive integer or 'forever',
-        degrees: null,      // real number or an array of real numbers and nulls
-        userInteract: true, // true: user can zoom and pan when slide is standing still; false: otherwise 
-        onPlay: null,       // event handler called when the sequence starts to run
-        onPause: null,      // event handler called when the sequence pauses in a specific slide
-        onStop: null,       // event handler called when the whole sequence is completed (only if repeat is not 'forever')
-        onBeginTrans: null, // event handler called when the transition within the sequence starts to run
-        onEndTrans: null    // event handler called when the transition within the sequence is completed
+    $.fn.rsSlideIt.defaultsPlayPause = {
+        sequence: 'next',       // Type: array of positive integers or a string 'prev' or a string 'next'
+        delayOnSlide: 2000,     // positive integer or an array of positive integers
+        zoomDest: 1,            // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'cover' or an array of positive real numbers and strings
+        zoomVertex: 'linear',   // positive real number or 'out' or 'in' or 'linear' or an arrays of positive real numbers and strings
+        duration: 600,          // positive integer or array of positive integers
+        repeat: 'forever',      // positive integer or 'forever',
+        degrees: null,          // real number or an array of real numbers and nulls
+        userInteract: true,     // true: user can zoom and pan when slide is standing still; false: otherwise 
+        onPlay: null,           // event handler called when the sequence starts to run
+        onPause: null,          // event handler called when the sequence pauses in a specific slide
+        onStop: null,           // event handler called when the whole sequence is completed (only if repeat is not 'forever')
+        onBeginTrans: null,     // event handler called when the transition within the sequence starts to run
+        onEndTrans: null        // event handler called when the transition within the sequence is completed
     };
 
     $.fn.rsSlideIt.state = {
