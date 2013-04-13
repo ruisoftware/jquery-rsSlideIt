@@ -1,24 +1,17 @@
 // TODO set a translate transformation (in CSS) to a -webkit-transform's slide and watch how it works with the mouse pan translate
 
 /**
-* jQuery SliteIt - Displays a slide show
-* ====================================================
+* jQuery SliteIt - Displays a CSS3 slide show with a JS fallback.
+* ===============================================================
 *
 * Licensed under The MIT License
 * 
 * @version   2 
 * @author    Jose Rui Santos
 *
-* 
-* Input parameter  Default value  Remarks
-* ================ =============  ===============================================================================================
-*
-* 
-* Usage with default values:
-* ==========================
-*
+* For info, please scroll to the bottom.
 */
-(function ($) {
+(function ($, undefined) {
     var SlideItClass = function ($elem, opts) {
         var data = {
                 $elemsOnTop: $(opts.selector.elementsOnTop),
@@ -151,7 +144,7 @@
                     return this.findRange(false, range);
                 },
 
-                // returns the slide that whose center is closest to the viewport center
+                // returns in O(log n) time, the slide whose center is closest to the viewport center
                 getActiveSlide: function () {
                     container.setCenterPos();
                     var minDist = minIdx = -1,
@@ -225,7 +218,7 @@
                     if (!!opts.layout.height) { $elem.css('height', opts.layout.height); }
                     $elem.css('overflow', 'hidden').scrollLeft(0).scrollTop(0);
                     this.setCenterPos();
-                    $elem.wrapInner('<div id="xm"/>');
+                    $elem.wrapInner('<div/>');
                     this.$transDiv = $('div:eq(0)', $elem);
                     this.$transDiv.css({
                         'position': 'relative',
@@ -257,12 +250,6 @@
                     this.onEndDelay = optsSequence.onEndDelay;
                     this.userInteract = optsSequence.userInteract;
                     this.repeat = optsSequence.repeat == 'forever' ? -1 : optsSequence.repeat;
-                    if (this.repeat != -1) {
-                        if (transData.isPrevOrNext) {
-                            this.repeat++; // when user clicks the play button, first need to go to first slide to start the sequence from there
-                            // this first step of moving to first slide consumes one repetition, therefore the need to increment it by one
-                        }
-                    }
                     this.qt = {
                         sequences: (typeof optsSequence.sequence === 'object') ? optsSequence.sequence.length : (transData.isPrevOrNext ? data.qtSlides : 0),
                         delays: (typeof optsSequence.delayOnSlide === 'object') ? optsSequence.delayOnSlide.length : 0,
@@ -316,9 +303,22 @@
             },
             
             transData = {     // data for the current transition that is running
+                // Moving from slide A to slide B
+                // ==============================
+                // data structure:
+                //   transfA is the CTM matrix composed of all slide A matrix transformations
+                //   transfB is the CTM matrix composed of all slide B matrix transformations
+                //   invTransfA is the inversed transfA, i.e, invTransfA * transfA = identity matrix (I)
+                //   invTransfB is the inversed transfB, i.e, invTransfB * transfB = identity matrix (I)
+                // 
+                // In the initial state, when slide A is shown, the plugin has the invTransfA applied.
+                // For a smoother animation to be possible, while the animation moves from slide A to slide B,
+                // the plugin matrix "morphs" progressively from invTransfA to invTransfB.
+                // In other words, during the course of transition from A to B, the invTransfA moves to an identity matrix,
+                // and the invTransfB moves from identity matrix to invTransfB. 
                 anim: {
                     $obj: null,
-                    progress: 0, // 0 <= from <= 1
+                    progress: 0, // 0 <= progress <= 1
                     centerPnt: { x: 0, y: 0 },
                     transfsFadeToIdentity: [],
                     gotoSlideIdx: 0,
@@ -332,18 +332,24 @@
                     setLastStep: function () {
                         for (var i = this.transfsFadeToIdentity.length - 1; i > -1; --i) {
                             var transformation = this.transfsFadeToIdentity[i];
-                            transformation.lastStep = transformation.lastStep + this.progress * (1 - transformation.lastStep);
+                            transformation.lastStep = util.interpolate(transformation.lastStep, 0, this.progress);
                         }
                         transData.animating = true;
                     },
                     pushTransformations: function (transformationsArray, interruptedDuringTransition) {
+                        var easingFunc = !!transData.prevEasing ? $.easing[transData.prevEasing] : null,
+                            value = interruptedDuringTransition ? this.progress : 1,
+                            valueWithEasing = !!easingFunc ? easingFunc(value, transData.prevDuration * value, 0, 1, transData.prevDuration) : value,
+                            funcCoefs = util.getLinear({ x: value, y: valueWithEasing }, { x: 0, y: 0 });
+                            
                         for (var i = transformationsArray.length - 1; i > -1; --i) {
                             var transformation = transformationsArray[i];
                             this.transfsFadeToIdentity.unshift({ 
-                                id:         transformation.id,
-                                valueIdent: transformation.valueIdent,
-                                valueInv:   transformation.valueInv, 
-                                lastStep:   interruptedDuringTransition ? 1 - this.progress : this.progress
+                                id:          transformation.id,
+                                valueIdent:  transformation.valueIdent,
+                                valueInv:    transformation.valueInv, 
+                                lastStep:    value,
+                                linearCoefs: funcCoefs
                             });
                         }
                     },
@@ -371,28 +377,39 @@
                         transData.finished(true, true);
                         events.fireSlideEvents();
                     },
-                    computeIntermediateMatrix: function (now, toTransformations, noCalcInvMatrix, zoomValue) {
+                    computeIntermediateMatrix: function (now, doEasing, toTransformations, noCalcInvMatrix, calcZoomValue) {
+                        // doEasing is false for JS animations, because the $.animate() already takes care of easing.
+                        // doEasing is true for CSS3 animations, since the easing needs to be handled manually
                         var i, transformation, interpolateFactor, value;
+                        
                         // from slide matrix to identity
                         transUtil.cache.matrixCTM = transUtil.getMatrixIdentity();
                         for (i = this.transfsFadeToIdentity.length - 1; i > -1; --i) {
                             transformation = this.transfsFadeToIdentity[i];
-                            interpolateFactor = transformation.lastStep + now * (1 - transformation.lastStep);
+                            
+                            interpolateFactor = util.interpolate(transformation.lastStep, 0, now);
+                            if (doEasing) {
+                                interpolateFactor = util.getQuadraticValue(transformation.linearCoefs, interpolateFactor);
+                            }
                             value = transformation.id == transUtil.transID.SCALEXY ? 
-                                util.interpolatePoint(transformation.valueInv, { x: transformation.valueIdent, y: transformation.valueIdent }, interpolateFactor) :
-                                util.interpolate(transformation.valueInv, transformation.valueIdent, interpolateFactor);
+                                util.interpolatePoint({ x: transformation.valueIdent, y: transformation.valueIdent }, transformation.valueInv, interpolateFactor) :
+                                util.interpolate(transformation.valueIdent, transformation.valueInv, interpolateFactor);
                             util.multiply2x2Matrices(transUtil.getMatrix(transformation.id, value), transUtil.cache.matrixCTM);
                         }
+
+                        var nowWithEasing = doEasing ? $.easing[transData.easing](now, transData.duration * now, 0, 1, transData.duration) : now;
 
                         // from identity to slide matrix
                         for (i = toTransformations.length - 1; i > -1; --i) {
                             transformation = toTransformations[i];
+
                             value = transformation.id == transUtil.transID.SCALEXY ? 
-                                util.interpolatePoint({ x: transformation.valueIdent, y: transformation.valueIdent }, transformation.valueInv, now) :
-                                util.interpolate(transformation.valueIdent, transformation.valueInv, now);
+                                util.interpolatePoint({ x: transformation.valueIdent, y: transformation.valueIdent }, transformation.valueInv, nowWithEasing) :
+                                util.interpolate(transformation.valueIdent, transformation.valueInv, nowWithEasing);
                             util.multiply2x2Matrices(transUtil.getMatrix(transformation.id, value), transUtil.cache.matrixCTM);
                         }
-                        util.multiply2x2Matrices(transUtil.getMatrix(transUtil.transID.SCALE, zoomValue === undefined ? zoomUtil.zoom : zoomValue), transUtil.cache.matrixCTM);
+
+                        util.multiply2x2Matrices(transUtil.getMatrix(transUtil.transID.SCALE, !!calcZoomValue ? util.getQuadraticValue(transData.anim.zoomCoefs, nowWithEasing) : zoomUtil.zoom), transUtil.cache.matrixCTM);
                         if (!noCalcInvMatrix) {
                             transUtil.cache.matrixCTM_inv = util.getInvertedMatrix(transUtil.cache.matrixCTM);    
                         }
@@ -403,24 +420,24 @@
                     $styleObj: null,
                     startTime: 0,
                     totalTime: 0,
+                    intervalId: null,
                     getFrames: function (fromCenterTrans, toCenterTrans, toTransformations, easing, durationMs) {
-                        var css = '', orig, animEasingFunc, animEasing, animValue;
+                        var css = '', orig, animEasingFunc, animValue;
                         for (var anim = 0; anim < 1.005; anim += 0.01) {
                             animValue = transData.anim.progressPausedOn !== null ? util.interpolate(transData.anim.progressPausedOn, 1, anim) : anim;
-                            animEasingFunc = $.easing[easing];
-                            animEasing = !!animEasingFunc ? animEasingFunc(animValue, durationMs*animValue, 0, 1, durationMs) : animValue;
-                            transData.anim.computeIntermediateMatrix(animEasing, toTransformations, true, util.getQuadraticValue(transData.anim.zoomCoefs, animEasing));
+                            transData.anim.computeIntermediateMatrix(animValue, true, toTransformations, true, true);
 
+                            animEasingFunc = $.easing[easing];
                             orig = util.interpolatePoint(fromCenterTrans, toCenterTrans, !!animEasingFunc ? animEasingFunc(anim, durationMs*anim, 0, 1, durationMs) : anim);
                             // XX is a mask that will be replaced by a css prefix
-                            css += Math.round(anim*100) + '% { XXtransform-origin: ' + orig.x.toFixed(0) + 'px ' + orig.y.toFixed(0) + 'px;' +
-                                                 'XXtransform: matrix(' + 
+                            css += Math.round(anim*100) + '% {XXtransform-origin:' + orig.x.toFixed(0) + 'px ' + orig.y.toFixed(0) + 'px;' +
+                                                 'XXtransform:matrix(' + 
                                                     transUtil.cache.matrixCTM[0].toFixed(4) + ',' + 
                                                     transUtil.cache.matrixCTM[1].toFixed(4) + ',' +
                                                     transUtil.cache.matrixCTM[2].toFixed(4) + ',' + 
                                                     transUtil.cache.matrixCTM[3].toFixed(4) + ',' +
                                                     (container.center.x - orig.x).toFixed(2) + ',' + 
-                                                    (container.center.y - orig.y).toFixed(2) + '); }\n';
+                                                    (container.center.y - orig.y).toFixed(2) + ');}\n';
                         }
                         transUtil.cache.matrixCTM_inv = util.getInvertedMatrix(transUtil.cache.matrixCTM);
                         return css;
@@ -428,12 +445,12 @@
                     interrupt: function () {
                         this.totalTime += +new Date() - this.startTime;
                         transData.anim.progress = this.totalTime / transData.prevDuration;
-                        transData.anim.progress = transData.anim.progress > 1 ? 1: transData.anim.progress;
+                        transData.anim.progress = transData.anim.progress > 1 ? 1 : transData.anim.progress;
                         var animEasingFunc = $.easing[transData.easing],
                             animEasing = !!animEasingFunc ? animEasingFunc(transData.anim.progress, transData.prevDuration * transData.anim.progress, 0, 1, transData.prevDuration) : transData.anim.progress;
-   
                         zoomUtil.zoom = util.getQuadraticValue(transData.anim.zoomCoefs, animEasing);
-                        transData.anim.computeIntermediateMatrix(animEasing, data.slideData[transData.anim.gotoSlideIdx].cssTransforms.transformations);
+                        events.cssEndZoomEvents();
+                        transData.anim.computeIntermediateMatrix(transData.anim.progress, true, data.slideData[transData.anim.gotoSlideIdx].cssTransforms.transformations);
 
                         transData.anim.centerPnt = transUtil.getTransformOriginCss(container.$transDiv);
                         transUtil.trans.x = container.center.x - transData.anim.centerPnt.x;
@@ -467,6 +484,7 @@
                 duration: null,
                 zoomDest: null,
                 zoomVertex: null,
+                prevEasing: null,
                 easing: null,
                 onBegin: null,
                 onEnd: null,                    // user event for complete standalone transition
@@ -489,7 +507,7 @@
                     this.prevDuration = this.duration = util.getSpeedMs(seqData.qt.durations == 0 ? this.inputOpts.duration : this.inputOpts.duration[seqData.idx % seqData.qt.durations]);
                     this.zoomDest = seqData.qt.zoomDests == 0 ? this.inputOpts.zoomDest : this.inputOpts.zoomDest[seqData.idx % seqData.qt.zoomDests];
                     this.zoomVertex = seqData.qt.zoomVertexes == 0 ? this.inputOpts.zoomVertex : this.inputOpts.zoomVertex[seqData.idx % seqData.qt.zoomVertexes];
-                    this.easing = seqData.qt.easings == 0 ? this.inputOpts.easing : this.inputOpts.easing[seqData.idx % seqData.qt.easings];
+                    this.prevEasing = this.easing = seqData.qt.easings == 0 ? this.inputOpts.easing : this.inputOpts.easing[seqData.idx % seqData.qt.easings];
                 },
                 
                 interrupt: function () {
@@ -683,7 +701,7 @@
                                 if (transData.anim.progressPausedOn !== null) {
                                     now = util.interpolate(transData.anim.progressPausedOn, 1, now);
                                 }
-                                transData.anim.computeIntermediateMatrix(now, toTransformations);
+                                transData.anim.computeIntermediateMatrix(now, false, toTransformations);
 
                                 transUtil.trans.x = container.center.x - transData.anim.centerPnt.x;
                                 transUtil.trans.y = container.center.y - transData.anim.centerPnt.y;
@@ -1357,13 +1375,19 @@
                 onSingleTransition: function (event, optsTrans) {
                     if (!transData.isThisPartOfSlideShow()) {
                         transData.prevDuration = transData.duration;
+                        transData.prevEasing = transData.easing;
                         transData.reset();
+                        
                         transData.duration = util.getSpeedMs(optsTrans.duration);
                         if (transData.prevDuration === null) {
                             transData.prevDuration = transData.duration;
                         }
                         optsTrans.duration = transData.duration;
+
                         transData.easing = optsTrans.easing;
+                        if (transData.prevEasing === null) {
+                            transData.prevEasing = transData.easing;
+                        }
                         transData.onBegin = optsTrans.onBegin;
                         transData.onEnd = optsTrans.onEnd;
                         transData.doTransition(event, optsTrans);
@@ -1636,6 +1660,7 @@
                 },
                 onCssAnimationStart: function (e) {
                     transData.cssAnim.startTime = +new Date();
+                    events.cssStartZoomEvents();
                 },
                 onCssAnimationEnd: function () {
                     var centerTrans = data.slideData[transData.anim.gotoSlideIdx].centerTrans;
@@ -1644,6 +1669,33 @@
                     transUtil.setTransformOrigin(centerTrans.x, centerTrans.y);
                     transData.cssAnim.resetCSSanimation();
                     transData.transitionDone(true);
+                    events.cssEndZoomEvents();
+                },
+                cssStartZoomEvents: function () {
+                    if (opts.events.onChangeZoom) {
+                        transData.cssAnim.intervalId = setInterval(events.fireCssZoomEvent, 70);
+                    }
+                },
+                fireCssZoomEvent: function (noCalc) {
+                    var prevZoom = zoomUtil.zoom,
+                        ellapsedTime, progress;
+                    
+                    if (!noCalc) {
+                        ellapsedTime = transData.cssAnim.totalTime + (+new Date() - transData.cssAnim.startTime);
+                        progress = ellapsedTime / transData.prevDuration;
+                        progress = progress > 1 ? 1 : progress;
+                        zoomUtil.zoom = util.getQuadraticValue(transData.anim.zoomCoefs, progress);
+                    }
+                    if (!!noCalc || prevZoom != zoomUtil.zoom) {
+                        $elem.triggerHandler('changeZoom.rsSlideIt', [zoomUtil.zoom]);
+                    }
+                },
+                cssEndZoomEvents: function () {
+                    if (transData.cssAnim.intervalId !== null) {
+                        clearInterval(transData.cssAnim.intervalId);
+                        transData.cssAnim.intervalId = null;
+                        events.fireCssZoomEvent(true);
+                    }
                 }
             },
 
@@ -1994,7 +2046,7 @@
                             return allTrans;
                         }
                         // CSS matrix is too complex. Need more info from data-transform
-                        util.warn('Failed to read transformation style for slide ' + (container.$slides.index($slide) + 1) + ', due to an uneven scaleX and scaleY or to the use of skew.\nDefine your transform style in a data-transform attribute instead.', true);
+                        util.warn('Failed to read transformation style for slide ' + container.$slides.index($slide) + (!!$slide.attr('id') ? ' #' + $slide.attr('id') : '') + ', due to an uneven scaleX and scaleY or to the use of skew.\nDefine your transform style in a data-transform attribute instead.', true);
                         return getTransformDefault(origin);
                     }
                     return getTransformFromData(value, origin);
@@ -2492,7 +2544,7 @@
         easing: 'swing',        // Easing function used in transitions (@see http://api.jquery.com/animate/#easing). Type: string or array of strings.
         duration: 600,          // positive integer or string or array of positive integers/strings.
         repeat: 'forever',      // positive integer or 'forever'
-        userInteract: true,     // true: user can zoom and pan when slide is standing still; false: otherwise 
+        userInteract: true,     // true: user can zoom and pan while slideshow is standing still; false: otherwise 
         onPlay: null,           // Fired when the sequence starts to run
         onStop: null,           // Fired when the whole sequence is completed (only if repeat is not 'forever')
         onPause: null,          // Fired when the sequence pauses in a specific slide
