@@ -1,5 +1,3 @@
-// TODO set a translate transformation (in CSS) to a -webkit-transform's slide and watch how it works with the mouse pan translate
-
 /**
 * jQuery SliteIt - Displays a CSS3 slide show with a JS fallback.
 * ===============================================================
@@ -52,134 +50,6 @@
                     $slide: null,
                     index: -1
                 },
-                sortedX: [],
-                sortedY: [],
-                findPnt: function (isX, elem, sortedArray) {
-                    var from = 0,
-                        len = sortedArray.length,
-                        to = len - 1,
-                        middle = -2,
-                        middleValue,
-                        slideData;
-                    while (from <= to) {
-                        middle = Math.floor((from + to)/ 2);
-                        slideData = this.slideData[sortedArray[middle]];
-                        middleValue = isX ? slideData.centerTransParent.x : slideData.centerTransParent.y;
-                        if (middleValue < elem) {
-                            from = ++middle;
-                        } else {
-                            if (middleValue > elem) {
-                                to = --middle;
-                            } else {
-                                return {found: true, idx: middle};
-                            }
-                        }
-                    }
-                    
-                    if (middle > -2) {
-                        middle = (middle < 0 ? 0 : middle);
-                        if (middle < len) {
-                            slideData = this.slideData[sortedArray[middle]];
-                            middleValue = isX ? slideData.centerTransParent.x : slideData.centerTransParent.y;
-                            if (middleValue < elem) {
-                                ++middle;
-                            }
-                        }
-                    }
-                    return { found: false, idx: (middle < 0 ? 0 : middle) };
-                },
-                insertSorted: function () {
-                    delete this.sortedX;
-                    delete this.sortedY;
-                    this.sortedX = [];
-                    this.sortedY = [];
-                    for (var i = 0; i < this.qtSlides; i++) {
-                        this.sortedX.splice(this.findPnt(true, this.slideData[i].centerTransParent.x, this.sortedX).idx, 0, i);
-                        this.sortedY.splice(this.findPnt(false, this.slideData[i].centerTransParent.y, this.sortedY).idx, 0, i);
-                    }
-                },
-                findRange: function (isX, range) {
-                    var sortedArray = (isX ? this.sortedX : this.sortedY),
-                        findResultFrom = this.findPnt(isX, range[0], sortedArray),
-                        findResultTo = this.findPnt(isX, range[1], sortedArray),
-                        value,
-                        slideData;
-                    if (findResultFrom.found) { // get the first point with the same x or y value
-                        value = range[0];
-                        while (findResultFrom.idx > 0 && value === range[0]) {
-                            --findResultFrom.idx;
-                            slideData = this.slideData[sortedArray[findResultFrom.idx]];
-                            value = isX ? slideData.centerTransParent.x : slideData.centerTransParent.y;
-                            if (value !== range[0]) {
-                                findResultFrom.idx++;
-                            }
-                        }
-                    }
-                    if (findResultTo.found) { // get the last point with the same x or y value
-                        var value = range[1],
-                            len = sortedArray.length;
-                        while (findResultTo.idx < len - 1 && value === range[1]) { // yes, "< len - 1" is correct
-                            ++findResultTo.idx;
-                            slideData = this.slideData[sortedArray[findResultTo.idx]];
-                            value = isX ? slideData.centerTransParent.x : slideData.centerTransParent.y;
-                            if (value !== range[1]) {
-                                findResultTo.idx--;
-                            }
-                        }
-                    } else {
-                        // when the range[1] is not found, the result points to the position where it should be inserted (position immediately after the largest smaller range[1]), 
-                        // hence we need to decrement it
-                        findResultTo.idx--;
-                    }
-                    var result = [];
-                    for (var idx = findResultFrom.idx; idx <= findResultTo.idx; ++idx) {
-                        result.push(sortedArray[idx]);
-                    }
-                    return result;
-                },
-                findRangeX: function (range) {
-                    return this.findRange(true, range);
-                },
-                findRangeY: function (range) {
-                    return this.findRange(false, range);
-                },
-
-                // returns in O(log n) time, the slide whose center is closest to the viewport center
-                getActiveSlide: function () {
-                    container.setCenterPos();
-                    var minDist = minIdx = -1,
-                        distance = (container.center.x + container.center.y) / 10,
-                        zoomDistance = zoomUtil.zoom * distance,
-                        pntsX = [],
-                        pntsY = [],
-                        merged = [],
-                        maxIterations = 10,
-                        transformedOrigZero = transUtil.getTransformedPoint(transUtil.orig);
-
-                    if (this.sortedX.length > 0 && this.sortedY.length > 0) {
-                        while (merged.length === 0 && maxIterations-- > 0) { // maxIterations is just an optimization, since 4 iterations should be enough to find the nearest point
-                            pntsX = this.findRangeX([transformedOrigZero.x - zoomDistance, transformedOrigZero.x + zoomDistance]);
-                            pntsY = this.findRangeY([transformedOrigZero.y - zoomDistance, transformedOrigZero.y + zoomDistance]);
-                            merged = $.map(pntsX, function (px) {
-                                return $.inArray(px, pntsY) < 0 ? null : px;
-                            });
-                            distance *= 2;
-                            zoomDistance = zoomUtil.zoom * distance;
-                        }
-                            
-                        var dist, slideData;
-                        for (var i = merged.length - 1; i > -1; i--) {
-                            slideData = this.slideData[merged[i]];
-                            dist = util.getDistanceTwoPnts(slideData.centerTransParent, transformedOrigZero);
-                            if (dist < minDist || i === merged.length - 1) {
-                                minDist = dist;
-                                minIdx = merged[i];
-                            }
-                        }
-                    }
-                    return { $slide: minIdx === -1 ? null : container.$slides.eq(minIdx), index: minIdx };
-                },
-
                 gotoSlide: function (slide) {
                     var prevSlide = this.activeSlide.index;
                     transUtil.setActiveSlide(slide);
@@ -188,6 +58,138 @@
                     events.fireSlideEvents(true, prevSlide);
                     if (seqData.userInteract) {
                         events.bindEvents();
+                    }
+                },
+
+                // To quickly find the active slide, a binary search tree is used for an efficient O(log n) search algorithm. 
+                // Active slide is the slide whose center is closest to the viewport center.
+                binTreeSearch: {
+                    sortedX: [],
+                    sortedY: [],
+                    findPnt: function (isX, elem, sortedArray) {
+                        var from = 0,
+                            len = sortedArray.length,
+                            to = len - 1,
+                            middle = -2,
+                            middleValue,
+                            slideData;
+                        while (from <= to) {
+                            middle = Math.floor((from + to)/ 2);
+                            slideData = data.slideData[sortedArray[middle]];
+                            middleValue = isX ? slideData.centerTransParent.x : slideData.centerTransParent.y;
+                            if (middleValue < elem) {
+                                from = ++middle;
+                            } else {
+                                if (middleValue > elem) {
+                                    to = --middle;
+                                } else {
+                                    return {found: true, idx: middle};
+                                }
+                            }
+                        }
+                        
+                        if (middle > -2) {
+                            middle = (middle < 0 ? 0 : middle);
+                            if (middle < len) {
+                                slideData = data.slideData[sortedArray[middle]];
+                                middleValue = isX ? slideData.centerTransParent.x : slideData.centerTransParent.y;
+                                if (middleValue < elem) {
+                                    ++middle;
+                                }
+                            }
+                        }
+                        return { found: false, idx: (middle < 0 ? 0 : middle) };
+                    },
+                    insertSorted: function () {
+                        delete this.sortedX;
+                        delete this.sortedY;
+                        this.sortedX = [];
+                        this.sortedY = [];
+                        for (var i = 0; i < data.qtSlides; i++) {
+                            this.sortedX.splice(this.findPnt(true, data.slideData[i].centerTransParent.x, this.sortedX).idx, 0, i);
+                            this.sortedY.splice(this.findPnt(false, data.slideData[i].centerTransParent.y, this.sortedY).idx, 0, i);
+                        }
+                    },
+                    findRange: function (isX, range) {
+                        var sortedArray = (isX ? this.sortedX : this.sortedY),
+                            findResultFrom = this.findPnt(isX, range[0], sortedArray),
+                            findResultTo = this.findPnt(isX, range[1], sortedArray),
+                            value,
+                            slideData;
+                        if (findResultFrom.found) { // get the first point with the same x or y value
+                            value = range[0];
+                            while (findResultFrom.idx > 0 && value === range[0]) {
+                                --findResultFrom.idx;
+                                slideData = data.slideData[sortedArray[findResultFrom.idx]];
+                                value = isX ? slideData.centerTransParent.x : slideData.centerTransParent.y;
+                                if (value !== range[0]) {
+                                    findResultFrom.idx++;
+                                }
+                            }
+                        }
+                        if (findResultTo.found) { // get the last point with the same x or y value
+                            var value = range[1],
+                                len = sortedArray.length;
+                            while (findResultTo.idx < len - 1 && value === range[1]) { // yes, "< len - 1" is correct
+                                ++findResultTo.idx;
+                                slideData = data.slideData[sortedArray[findResultTo.idx]];
+                                value = isX ? slideData.centerTransParent.x : slideData.centerTransParent.y;
+                                if (value !== range[1]) {
+                                    findResultTo.idx--;
+                                }
+                            }
+                        } else {
+                            // when the range[1] is not found, the result points to the position where it should be inserted (position immediately after the largest smaller range[1]), 
+                            // hence we need to decrement it
+                            findResultTo.idx--;
+                        }
+                        var result = [];
+                        for (var idx = findResultFrom.idx; idx <= findResultTo.idx; ++idx) {
+                            result.push(sortedArray[idx]);
+                        }
+                        return result;
+                    },
+                    findRangeX: function (range) {
+                        return this.findRange(true, range);
+                    },
+                    findRangeY: function (range) {
+                        return this.findRange(false, range);
+                    },
+                    
+                    // returns in O(log n) time, the slide whose center is closest to the viewport center
+                    getActiveSlide: function () {
+                        container.setCenterPos();
+                        var minDist = minIdx = -1,
+                            distance = (container.center.x + container.center.y) / 10,
+                            zoomDistance = zoomUtil.zoom * distance,
+                            pntsX = [],
+                            pntsY = [],
+                            merged = [],
+                            maxIterations = 10,
+                            transformedOrigZero = transUtil.getTransformedPoint(transUtil.orig);
+
+                        if (this.sortedX.length > 0 && this.sortedY.length > 0) {
+                            while (merged.length === 0 && maxIterations-- > 0) { // maxIterations is just an optimization, since 4 iterations should be enough to find the nearest point
+                                pntsX = this.findRangeX([transformedOrigZero.x - zoomDistance, transformedOrigZero.x + zoomDistance]);
+                                pntsY = this.findRangeY([transformedOrigZero.y - zoomDistance, transformedOrigZero.y + zoomDistance]);
+                                merged = $.map(pntsX, function (px) {
+                                    return $.inArray(px, pntsY) < 0 ? null : px;
+                                });
+                                distance *= 2;
+                                zoomDistance = zoomUtil.zoom * distance;
+                            }
+                                
+                            var dist, slideData;
+                            for (var i = merged.length - 1; i > -1; i--) {
+                                slideData = data.slideData[merged[i]];
+                                dist = util.getDistanceTwoPnts(slideData.centerTransParent, transformedOrigZero);
+                                if (dist < minDist || i === merged.length - 1) {
+                                    minDist = dist;
+                                    minIdx = merged[i];
+                                }
+                            }
+                        }
+                        return { $slide: minIdx === -1 ? null : container.$slides.eq(minIdx), index: minIdx };
                     }
                 }
             },
@@ -380,8 +382,7 @@
                     computeIntermediateMatrix: function (now, doEasing, toTransformations, noCalcInvMatrix, calcZoomValue) {
                         // doEasing is false for JS animations, because the $.animate() already takes care of easing.
                         // doEasing is true for CSS3 animations, since the easing needs to be handled manually
-                        var i, transformation, interpolateFactor, value;
-                        
+                        var i, transformation, interpolateFactor, value;                      
                         // from slide matrix to identity
                         transUtil.cache.matrixCTM = transUtil.getMatrixIdentity();
                         for (i = this.transfsFadeToIdentity.length - 1; i > -1; --i) {
@@ -398,7 +399,6 @@
                         }
 
                         var nowWithEasing = doEasing ? $.easing[transData.easing](now, transData.duration * now, 0, 1, transData.duration) : now;
-
                         // from identity to slide matrix
                         for (i = toTransformations.length - 1; i > -1; --i) {
                             transformation = toTransformations[i];
@@ -423,6 +423,7 @@
                     intervalId: null,
                     getFrames: function (fromCenterTrans, toCenterTrans, toTransformations, easing, durationMs) {
                         var css = '', orig, animEasingFunc, animValue;
+
                         for (var anim = 0; anim < 1.005; anim += 0.01) {
                             animValue = transData.anim.progressPausedOn !== null ? util.interpolate(transData.anim.progressPausedOn, 1, anim) : anim;
                             transData.anim.computeIntermediateMatrix(animValue, true, toTransformations, true, true);
@@ -432,10 +433,7 @@
                             // XX is a mask that will be replaced by a css prefix
                             css += Math.round(anim*100) + '% {XXtransform-origin:' + orig.x.toFixed(0) + 'px ' + orig.y.toFixed(0) + 'px;' +
                                                  'XXtransform:matrix(' + 
-                                                    transUtil.cache.matrixCTM[0].toFixed(4) + ',' + 
-                                                    transUtil.cache.matrixCTM[1].toFixed(4) + ',' +
-                                                    transUtil.cache.matrixCTM[2].toFixed(4) + ',' + 
-                                                    transUtil.cache.matrixCTM[3].toFixed(4) + ',' +
+                                                    transUtil.cache.matrixCTM + ',' +
                                                     (container.center.x - orig.x).toFixed(2) + ',' + 
                                                     (container.center.y - orig.y).toFixed(2) + ');}\n';
                         }
@@ -639,6 +637,7 @@
                         }
                         
                         animData = this.cssAnim.getFrames(this.anim.centerPnt, data.slideData[this.anim.gotoSlideIdx].centerTrans, toTransformations, optsTrans.easing, durationMs);
+                        
                         this.cssAnim.$styleObj = $('<style> ' + 
                             '@-webkit-keyframes ' + animationName + ' {\n' + animData.replace(/XX/g, '-webkit-') + '}\n' + 
                             '@-moz-keyframes ' + animationName + ' {\n' + animData.replace(/XX/g, '-moz-') + '}\n' + 
@@ -646,14 +645,18 @@
                             '@keyframes ' + animationName + ' {\n' + animData.replace(/XX/g, '') + '}\n' + 
                         '</style>');
 
-                        $('head').append(this.cssAnim.$styleObj);
-                        animData = animationName + ' ' + durationMs + 'ms linear forwards';
-                        container.$transDiv.css({
-                            '-webkit-animation': animData,
-                            '-moz-animation': animData,
-                            '-o-animation': animData,
-                            'animation': animData
-                        });
+                        // for some complex css3 animations, Chrome does not flush the whole animation data, hence the need for a timeout to fix this issue 
+                        setTimeout(function () {
+                            var animTrigger = animationName + ' ' + durationMs + 'ms linear forwards';
+                            container.$transDiv.css({
+                                '-webkit-animation': animTrigger,
+                                '-moz-animation': animTrigger,
+                                '-o-animation': animTrigger,
+                                'animation': animTrigger
+                            });
+                            $('head').append(transData.cssAnim.$styleObj);
+                        }, 1);
+
                     } else {
                         if (this.isThisPartOfSlideShow()) {
                             seqData.state = $.fn.rsSlideIt.state.PLAY;
@@ -1150,7 +1153,7 @@
                             data.slideData[i].centerTransParent.x = transformedPoint.x;
                             data.slideData[i].centerTransParent.y = transformedPoint.y;
                         }
-                        data.insertSorted();
+                        data.binTreeSearch.insertSorted();
                     }
                 },
 
@@ -1633,7 +1636,7 @@
                     }
                 },
                 fireSlideEvents: function (forceSel, prevSlide) {
-                    var newActiveSlide = data.getActiveSlide(),
+                    var newActiveSlide = data.binTreeSearch.getActiveSlide(),
                         previousSlide = prevSlide === undefined ? data.activeSlide.index : prevSlide;
                     if (newActiveSlide.index > -1 && (forceSel || previousSlide != newActiveSlide.index)) {
                         if (opts.events.onUnselectSlide && previousSlide != newActiveSlide.index) {
@@ -1746,10 +1749,10 @@
                     }
                     
                     if (typeof Modernizr === 'undefined') {
-                        util.warn('Unable to determine if your browser supports CSS3 animations natively, because Moderniz lib not loaded. Falling back to pure javascript animation!', false);
+                        util.warn('Moderniz lib not loaded! Unable to determine if browser supports CSS3 animations natively. Falling back to javascript animation!', false);
                     } else {
                         if (typeof Modernizr.cssanimations === 'undefined') {
-                            util.warn('Moderniz missing the "CSS Animations" detection feature! Use a Moderniz version that includes such feature, otherwise rsSlideIt falls back to pure javascript animations.', false);
+                            util.warn('Moderniz lib loaded, but missing the "CSS Animations" detection feature! Make sure Moderniz includes such feature, otherwise pure javascript animation is used.', false);
                         }
                     }
 
@@ -2062,7 +2065,6 @@
                                 load.getOtherSizes(slideSizes, $slide, naturalWidth, naturalHeight);
                                 load.processSlide($slide, slideInSlide, slideSizes);
                             } else {
-                                // todo
                                 load.getOtherSizes(slideSizes, $slide, 1, 1);
                                 load.processSlide($slide, slideInSlide, slideSizes);
                             }
