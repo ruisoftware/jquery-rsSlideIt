@@ -57,7 +57,7 @@
                     transUtil.cache.refreshCenterTransParent();
                     events.fireSlideEvents(true, prevSlide);
                     if (seqData.userInteract) {
-                        events.bindEvents();
+                        events.bindMouseEvents();
                     }
                 },
 
@@ -283,7 +283,7 @@
                                             transData.inputOpts.onStop();
                                         }
                                         if (!seqData.userInteract) {
-                                            events.bindEvents();
+                                            events.bindMouseEvents();
                                         }
                                         transData.reset();
                                         events.fireSlideEvents(false);
@@ -292,7 +292,7 @@
                         };
 
                         if (seqData.state !== $.fn.rsSlideIt.state.PAUSE && !seqData.userInteract) {
-                            events.unbindEvents();
+                            events.unbindMouseEvents();
                         }
                         transData.onEndTransSlideShow();
                     };
@@ -566,7 +566,7 @@
                                 this.anim.progressPausedOn = this.anim.progressPausedOn !== null ? util.interpolate(this.anim.progressPausedOn, 1, this.anim.progress) : this.anim.progress;
                             }
                             if (seqData.userInteract) {
-                                events.unbindEvents();
+                                events.unbindMouseEvents();
                             }
                             this.anim.centerPnt.x = transUtil.orig.x;
                             this.anim.centerPnt.y = transUtil.orig.y;
@@ -585,7 +585,7 @@
                         this.anim.pushTransformations(data.slideData[transUtil.activeSlideIndex].cssTransforms.transformations, !util.isAlmostZero(this.anim.progress, 5E-6));
                         this.anim.start(transUtil.orig);
                         if (seqData.userInteract) {
-                            events.unbindEvents();
+                            events.unbindMouseEvents();
                         }
                         this.anim.gotoSlideIdx = util.getSlideIdx(optsTrans.slide);
                     }
@@ -1357,8 +1357,15 @@
                     if (evt.wheelDeltaX !== undefined) { 
                         delta.x = - evt.wheelDeltaX / 120;
                     }
-                    evt.preventDefault ? evt.preventDefault() : evt.returnValue = false; // prevents scrolling
-                    zoomUtil.doZoom(zoomUtil.zoom + delta.y * opts.zoomStep);
+                    if (opts.mouseZoom && seqData.userInteract || opts.events.onMouseWheel) {
+                        evt.preventDefault ? evt.preventDefault() : evt.returnValue = false;
+                    }
+                    if (opts.mouseZoom && seqData.userInteract) {
+                        zoomUtil.doZoom(zoomUtil.zoom + delta.y * opts.zoomStep);    
+                    }
+                    if (opts.events.onMouseWheel) {
+                        $elem.triggerHandler('userMousewheel.rsSlideIt', [delta.y > 0]);
+                    }
                 },
                 onMousedown: function (event) {
                     panUtil.mousedown(event);
@@ -1410,7 +1417,7 @@
                         } else {
                             // user clicked "pause" when the transition was running
                             if (seqData.userInteract) {
-                                events.bindEvents();
+                                events.bindMouseEvents();
                             }
                         }
                         transData.interrupt();
@@ -1435,11 +1442,11 @@
                             // user clicked "stop" when the transition was running or
                             // user clicked "stop" when transition was paused somewhere in the middle
                             if (seqData.state !== $.fn.rsSlideIt.state.PAUSE && seqData.userInteract) {
-                                events.bindEvents();
+                                events.bindMouseEvents();
                             }
                         }
                         if (!seqData.userInteract) {
-                            events.bindEvents();
+                            events.bindMouseEvents();
                         }
                         transData.anim.progressPausedOn = null;
                         if (seqData.state === $.fn.rsSlideIt.state.PAUSE) {
@@ -1455,22 +1462,14 @@
                         transData.inputOpts = null;
                     }
                 },
-                unbindEvents: function () {
-                    //console.log('-    ' + (new Date().getTime()));
-                    if (opts.mouseZoom) {
-                        data.$elemAndTops.unbind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt');
-                    }
+                unbindMouseEvents: function () {
                     if (opts.mousePan) {
                         data.$elemAndTops.
                             unbind('mousedown.rsSlideIt mouseleave.rsSlideIt').
                             unbind('mouseup.rsSlideIt', this.onMouseup);
                     }
                 },
-                bindEvents: function () {
-                    //console.log('+    ' + (new Date().getTime()));
-                    if (opts.mouseZoom) {
-                        data.$elemAndTops.bind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', this.onMouseWheel);
-                    }
+                bindMouseEvents: function () {
                     if (opts.mousePan) {
                         data.$elemAndTops.
                             bind('mousedown.rsSlideIt', this.onMousedown).
@@ -1516,7 +1515,7 @@
                         case 'activeSlide':
                             if (!transData.animating) {
                                 if (seqData.userInteract) {
-                                    events.unbindEvents();
+                                    events.unbindMouseEvents();
                                 }
                                 transData.anim.clearTransformations();
                                 data.gotoSlide(data.checkSlideBounds(value));
@@ -1545,7 +1544,7 @@
                 onMouseupClick: function (event) {
                     // onClick is implemented as mouseUp, because a genuine click event is fired when users finishes to pan around with mouse.
                     // So, the workaroud is to catch the mouseup and fire the user onClickSlide
-                    if (!panUtil.isPanning && !!opts.events.onClickSlide) {
+                    if (!panUtil.isPanning && opts.events.onClickSlide) {
                         var $slide = events.readUnderneath(event);
                         if ($slide) {
                             $elem.triggerHandler('clickSlide.rsSlideIt', [$slide, container.$slides.index($slide.closest(opts.selector.slide))]);
@@ -1553,7 +1552,7 @@
                     }
                 },
                 onDblClick: function (event) {
-                    if (!!opts.events.onDblClickSlide) {
+                    if (opts.events.onDblClickSlide) {
                         var $slide = events.readUnderneath(event);
                         if ($slide) {
                             $elem.triggerHandler('dblClickSlide.rsSlideIt', [$slide, container.$slides.index($slide.closest(opts.selector.slide))]);
@@ -1604,7 +1603,12 @@
                     if (opts.events.onDblClickSlide) {
                         opts.events.onDblClickSlide(event, $slide, index);
                     }
-                }, 
+                },
+                onUserMouseWheel: function (event, up) {
+                    if (opts.events.onMouseWheel) {
+                        opts.events.onMouseWheel(event, up);
+                    }
+                },
                 onBeginPan: function (event) {
                     if (opts.events.onBeginPan) {
                         opts.events.onBeginPan(event);
@@ -1732,9 +1736,12 @@
                             bind('beginTrans.rsSlideIt', events.onBeginTrans).
                             bind('endTrans.rsSlideIt', events.onEndTrans).
                             bind('beginDelay.rsSlideIt', events.onBeginDelay).
-                            bind('endDelay.rsSlideIt', events.onEndDelay);
+                            bind('endDelay.rsSlideIt', events.onEndDelay).
+                            bind('userMousewheel.rsSlideIt', events.onUserMouseWheel);
 
                         container.$slides.add(data.$elemsOnTop).bind('dblclick.rsSlideIt', events.onDblClick).bind('mouseup.rsSlideIt', events.onMouseupClick);
+                        data.$elemAndTops.bind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', events.onMouseWheel);
+
                         if (data.supportsCSSAnimation) { 
                             container.$transDiv.
                                 bind('animationstart.rsSlideIt', events.onCssAnimationStart).
@@ -1758,6 +1765,7 @@
 
                     opts.initialSlide = data.checkSlideBounds(opts.initialSlide);
                     if (opts.zoomMax < opts.zoomMin) { var sw = opts.zoomMax; opts.zoomMax = opts.zoomMin; opts.zoomMin = sw; }
+                    
                     opts.initialZoom = opts.initialZoom < opts.Min ? opts.Min : (opts.initialZoom > opts.Max ? opts.Max : opts.initialZoom);
                     $elem.
                         bind('loadSlide.rsSlideIt', this.onLoadSlide).
@@ -2489,7 +2497,7 @@
         initialZoom: 1,         // Scale used when plugin is initialized.
                                 // Positive real number or 'fitWidth' or 'fitHeight' or 'fit' or 'cover'. Type: positive floating point number or string.
                                 
-        mouseZoom: true,        // Determines whether mouse wheel is used to zoom in/out. Type: boolean.
+        mouseZoom: true,        // Determines whether mouse wheel is used to zoom in/out. The onMouseWheel event (see below) is called, even if mouseZoom is false. Type: boolean.
         mousePan: true,         // Determines whether mouse panning is allowed. Type: boolean.
         layout: {
             width: null,            // Container width in pixels. If null then uses the width defined in CSS. Type: integer.
@@ -2510,6 +2518,7 @@
             onAjaxLoadBegin: null,          // Fired before starting to make ajax requests. Type: function (event, qtTotal).
             onAjaxLoadSlide: null,          // Fired after an ajax response has been received successfully or unsuccessfully. Type: function (event, $ajaxSlide, index, success).
             onAjaxLoadEnd: null,            // Fired after all ajax responses have been received (immediately after the last onAjaxLoadSlide). Type: function (event).
+            onMouseWheel: null,             // Fired when mouse whell moves upwards or downwards. Type: function (event, up).
             onChangeZoom: null,             // Fired when zoom changes, due to mouse wheel actions or by transitions. Type: function (event, zoom).
             onBeginPan: null,               // Fired when the user starts to pan around. Type: function (event).
             onEndPan: null,                 // Fired when the user finishes to pan around. Type: function (event).
