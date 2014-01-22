@@ -10,10 +10,10 @@
 * For info, please scroll to the bottom.
 */
 (function ($, undefined) {
-    var SlideItClass = function ($elem, opts) {
+    var SlideItClass = function ($viewport, opts) {
         var data = {
                 $elemsOnTop: $(opts.selector.elementsOnTop),
-                $elemAndTops: null,
+                $viewportAndTops: null,
                 slideData: [],
                 qtSlides: 0,
                 supportsCSSAnimation: (typeof Modernizr !== 'undefined') && !!Modernizr.cssanimations,
@@ -22,10 +22,10 @@
                 isMozilla11orBelow: false,
                 init: function () {
                     this.qtSlides = container.$slides.length;
-                    this.$elemAndTops = $elem.add(this.$elemsOnTop);
+                    this.$viewportAndTops = $viewport.add(this.$elemsOnTop);
 
                     // to prevent the default behaviour in IE when dragging an element
-                    this.$elemAndTops.add(container.$transDiv).each(function () {
+                    this.$viewportAndTops.add(container.$world).each(function () {
                         this.ondragstart = this.onselectstart = function () { return false; };
                     });
                     this.initBrowsers();
@@ -53,7 +53,7 @@
                 gotoSlide: function (slide) {
                     var prevSlide = this.activeSlide.index;
                     transUtil.setActiveSlide(slide);
-                    container.$transDiv.css(transUtil.getTransformCSS());
+                    container.$world.css(transUtil.getTransformCSS());
                     transUtil.cache.refreshCenterTransParent();
                     events.fireSlideEvents(true, prevSlide);
                     if (seqData.userInteract) {
@@ -195,18 +195,18 @@
             },
             
             container = {
-                $transDiv: null,
+                $world: null,
                 $slides: null, // set with all slide elements
                 size: { x: 0, y: 0 },
                 IEorigSize: { x: 0, y: 0 }, // IE needs to compute based on unscaled (original) container size
                 center: { x: 0, y: 0 }, // center point. Used to determine the active slide. Active slide is the slide whose center is closest to this center.
                 setCenterPos: function () {
-                    this.center.x = $elem.width() / 2;
-                    this.center.y = $elem.height() / 2;
+                    this.center.x = $viewport.width() / 2;
+                    this.center.y = $viewport.height() / 2;
                 },
                 setSizeForIE: function () {
-                    this.IEorigSize.x = this.$transDiv.width();
-                    this.IEorigSize.y = this.$transDiv.height();
+                    this.IEorigSize.x = this.$world.width();
+                    this.IEorigSize.y = this.$world.height();
                 },
                 resetMaxSize: function () {
                     this.size.x = this.size.y = 0;
@@ -216,17 +216,17 @@
                     this.size.y = Math.max(this.size.y, height);
                 },
                 init: function () {
-                    if (!!opts.layout.width) { $elem.css('width', opts.layout.width); }
-                    if (!!opts.layout.height) { $elem.css('height', opts.layout.height); }
-                    $elem.css('overflow', 'hidden').scrollLeft(0).scrollTop(0);
+                    if (!!opts.layout.width) { $viewport.css('width', opts.layout.width); }
+                    if (!!opts.layout.height) { $viewport.css('height', opts.layout.height); }
+                    $viewport.css('overflow', 'hidden').scrollLeft(0).scrollTop(0);
                     this.setCenterPos();
-                    $elem.wrapInner('<div/>');
-                    this.$transDiv = $('div:eq(0)', $elem);
-                    this.$transDiv.css({
-                        'position': 'relative',
+                    $viewport.wrapInner('<div/>');
+                    this.$world = $('div:eq(0)', $viewport);
+                    this.$world.css({
+                        'position': 'absolute',
                         'z-index': 0 // fix for IE8 standards mode that, without this z-index, cannot transform child elements
                     })
-                    this.$slides = $(opts.selector.slide, this.$transDiv);
+                    this.$slides = $(opts.selector.slide, this.$world);
                 }
             },
 
@@ -272,7 +272,7 @@
                                     transData.setupNextTrans();
                                     seqData.pauseOnSlide = false;
                                 }
-                                $elem.trigger('transition.rsSlideIt', [transData]);
+                                $viewport.trigger('transition.rsSlideIt', [transData]);
                                 
                             } else {
                                 switch (seqData.state) {
@@ -450,7 +450,7 @@
                         events.cssEndZoomEvents();
                         transData.anim.computeIntermediateMatrix(transData.anim.progress, true, data.slideData[transData.anim.gotoSlideIdx].cssTransforms.transformations);
 
-                        transData.anim.centerPnt = transUtil.getTransformOriginCss(container.$transDiv);
+                        transData.anim.centerPnt = transUtil.getTransformOriginCss(container.$world);
                         transUtil.trans.x = container.center.x - transData.anim.centerPnt.x;
                         transUtil.trans.y = container.center.y - transData.anim.centerPnt.y;
                         transUtil.setTransformOrigin(transData.anim.centerPnt.x, transData.anim.centerPnt.y);
@@ -469,7 +469,7 @@
                         events.fireSlideEvents();
                     },
                     resetCSSanimation: function () {
-                        container.$transDiv.css(transUtil.getTransformCSSstyle()).css({
+                        container.$world.css(transUtil.getTransformCSSstyle()).css({
                             '-webkit-animation': '',
                             '-moz-animation': '',
                             '-o-animation': '',
@@ -515,7 +515,7 @@
                 finished: function (finishedWithAnimation, interrupted) {
                     var done = function () {
                         if (seqData.timeoutId) {
-                            $elem.triggerHandler('endDelay.rsSlideIt', [transData.anim.gotoSlideIdx]);
+                            $viewport.triggerHandler('endDelay.rsSlideIt', [transData.anim.gotoSlideIdx]);
                         }                            
                         seqData.timeoutId = null;
                         transData.animating = false;
@@ -533,7 +533,7 @@
                                 done();
                             } else {
                                 var delay = seqData.qt.delays == 0 ? this.inputOpts.delayOnSlide : this.inputOpts.delayOnSlide[seqData.idx % seqData.qt.delays];
-                                $elem.triggerHandler('beginDelay.rsSlideIt', [this.anim.gotoSlideIdx, delay]);
+                                $viewport.triggerHandler('beginDelay.rsSlideIt', [this.anim.gotoSlideIdx, delay]);
                                 seqData.timeoutId = setTimeout(done, delay);
                             }
                         } else {
@@ -626,7 +626,7 @@
                             animData;
 
                         if ((seqData.state === $.fn.rsSlideIt.state.PLAY || !this.isThisPartOfSlideShow()) && optsTrans.onBegin) {
-                            $elem.triggerHandler('beginTrans.rsSlideIt', [data.activeSlide.index, this.anim.gotoSlideIdx]);
+                            $viewport.triggerHandler('beginTrans.rsSlideIt', [data.activeSlide.index, this.anim.gotoSlideIdx]);
                         }
                         if (this.isThisPartOfSlideShow()) {
                             seqData.state = $.fn.rsSlideIt.state.PLAY;
@@ -648,7 +648,7 @@
                         // for some complex css3 animations, Chrome does not flush the whole animation data, hence the need for a timeout to fix this issue 
                         setTimeout(function () {
                             var animTrigger = animationName + ' ' + durationMs + 'ms linear forwards';
-                            container.$transDiv.css({
+                            container.$world.css({
                                 '-webkit-animation': animTrigger,
                                 '-moz-animation': animTrigger,
                                 '-o-animation': animTrigger,
@@ -681,7 +681,7 @@
                         this.anim.zoomCoefs = util.getQuadratic2PntsVertex({ x: 0, y: zoomUtil.zoom }, { x: 1, y: zoomDest }, isLinearZoom ? 'linear' : zoomUtil.zoomVertex);
 
                         if ((seqData.state === $.fn.rsSlideIt.state.PLAY || !this.isThisPartOfSlideShow()) && optsTrans.onBegin) {
-                            $elem.triggerHandler('beginTrans.rsSlideIt', [data.activeSlide.index, this.anim.gotoSlideIdx]);
+                            $viewport.triggerHandler('beginTrans.rsSlideIt', [data.activeSlide.index, this.anim.gotoSlideIdx]);
                         }
                         if (this.isThisPartOfSlideShow()) {
                             seqData.state = $.fn.rsSlideIt.state.PLAY;
@@ -712,7 +712,7 @@
                                     transUtil.adjustTransIE(transData.anim.centerPnt);
                                 }
                                 transUtil.setTransformOrigin(transData.anim.centerPnt.x, transData.anim.centerPnt.y);
-                                container.$transDiv.css(transUtil.getTransformCSSstyle());
+                                container.$world.css(transUtil.getTransformCSSstyle());
                                 zoomUtil.invokeChangeZoom(prevZoom);
                             },
                             complete: function () {
@@ -733,7 +733,7 @@
                     this.anim.progressPausedOn = null;
                     this.anim.clearTransformations();
                     if (finishedWithAnimation) {
-                        $elem.triggerHandler('endTrans.rsSlideIt', [data.activeSlide.index, this.anim.gotoSlideIdx]);
+                        $viewport.triggerHandler('endTrans.rsSlideIt', [data.activeSlide.index, this.anim.gotoSlideIdx]);
                     }
                     data.gotoSlide(this.anim.gotoSlideIdx);
                     this.finished(finishedWithAnimation, false);
@@ -974,7 +974,7 @@
                     var prevZoom = this.zoom;
                     this.zoom = this.checkZoomBounds(newZoom);
                     if (prevZoom != this.zoom) {
-                        container.$transDiv.css(transUtil.doMouseZoom(prevZoom, this.zoom));
+                        container.$world.css(transUtil.doMouseZoom(prevZoom, this.zoom));
                         transUtil.cache.refreshCenterTransParent();
                         events.fireSlideEvents(false);
                         this.invokeChangeZoom(prevZoom);
@@ -982,7 +982,7 @@
                 },
                 invokeChangeZoom: function (prevZoom) {
                     if (prevZoom != this.zoom && opts.events.onChangeZoom) {
-                        $elem.triggerHandler('changeZoom.rsSlideIt', [this.zoom]);
+                        $viewport.triggerHandler('changeZoom.rsSlideIt', [this.zoom]);
                     }
                 },
                 setZoomVertex: function (zoomVertex, destSlide, zoomDest) {
@@ -1044,23 +1044,23 @@
                     panUtil.startTrans.y = transUtil.trans.y;
                     panUtil.isPanning = true;
                     var rect = transUtil.getTransformedRect(container.IEorigSize),
-                        pos = $elem.position();
+                        pos = $viewport.position();
                     panUtil.width = rect.bottomRight.x - rect.topLeft.x;
                     panUtil.height = rect.bottomRight.y - rect.topLeft.y;
                     panUtil.elemPos.x = pos.left;
                     panUtil.elemPos.y = pos.top;
-                    $elem.triggerHandler('beginPan.rsSlideIt');
+                    $viewport.triggerHandler('beginPan.rsSlideIt');
                 },
                 endPan: function () {
                     panUtil.isPanning = false;
-                    $elem.triggerHandler('endPan.rsSlideIt');
+                    $viewport.triggerHandler('endPan.rsSlideIt');
                 },
                 mousemove: function (event) {
                     if (!panUtil.isPanning) {
                         panUtil.beginPan(event);
                     }
                     
-                    var position = container.$transDiv.offset(),
+                    var position = container.$world.offset(),
                         limits = {
                             top: position.top - panUtil.elemPos.y + panUtil.height,
                             right: position.left - panUtil.elemPos.x - container.center.x * 2,
@@ -1090,11 +1090,11 @@
                     if (data.isIE8orBelow) {
                         offset = transUtil.getTransformedPoint(offset, transUtil.cache.matrixCTM_inv);
                     }
-                    container.$transDiv.css(transUtil.doMousePan(offset));
+                    container.$world.css(transUtil.doMousePan(offset));
                 },
                 mousedown: function (event) {
                     if (event.which == 1) {
-                        data.$elemAndTops.bind('mousemove.rsSlideIt', panUtil.mousemove);
+                        data.$viewportAndTops.bind('mousemove.rsSlideIt', panUtil.mousemove);
                         panUtil.isPanning = false;
                     }
                     event.preventDefault();
@@ -1114,7 +1114,7 @@
                     event.preventDefault();
                 },
                 stopImmediately: function () {
-                    data.$elemAndTops.unbind('mousemove.rsSlideIt');
+                    data.$viewportAndTops.unbind('mousemove.rsSlideIt');
                     if (panUtil.isPanning) {
                         panUtil.endPan();
                     }
@@ -1283,20 +1283,20 @@
                     return this.getTransformCSSstyle();
                 },
 
-                getTransformOriginCss: function ($element, outerSize) {
+                getTransformOriginCss: function ($elem, outerSize) {
                     if (data.isIE8orBelow) {
                         // TODO check if in IE8 and below, the transform origin correctly maps to the margins
-                        return { x: util.toFloat($element.css('margin-left')), y: util.toFloat($element.css('margin-top')) };
+                        return { x: util.toFloat($elem.css('margin-left')), y: util.toFloat($elem.css('margin-top')) };
                     } else {
-                        var value = $element.css('-webkit-transform-origin');
+                        var value = $elem.css('-webkit-transform-origin');
                         if (!util.isDefined(value)) {
-                            value = $element.css('-moz-transform-origin');
+                            value = $elem.css('-moz-transform-origin');
                             if (!util.isDefined(value)) {
-                                value = $element.css('-o-transform-origin');
+                                value = $elem.css('-o-transform-origin');
                                 if (!util.isDefined(value)) {
-                                    value = $element.css('msTransformOrigin');
+                                    value = $elem.css('msTransformOrigin');
                                     if (!util.isDefined(value)) {
-                                        value = $element.css('transform-origin');
+                                        value = $elem.css('transform-origin');
                                         if (!util.isDefined(value)) {
                                             return !!outerSize ? 
                                                 { x: outerSize.x / 2, y: outerSize.y / 2 } : { x: container.IEorigSize.x / 2, y: container.IEorigSize.y / 2 };
@@ -1364,7 +1364,7 @@
                         zoomUtil.doZoom(zoomUtil.zoom + delta.y * opts.zoomStep);    
                     }
                     if (opts.events.onMouseWheel) {
-                        $elem.triggerHandler('userMousewheel.rsSlideIt', [delta.y > 0]);
+                        $viewport.triggerHandler('userMousewheel.rsSlideIt', [delta.y > 0]);
                     }
                 },
                 onMousedown: function (event) {
@@ -1376,7 +1376,7 @@
                 onMouseleave: function (event) {
                     if (panUtil.isPanning) {
                         var $mouseOn = $(document.elementFromPoint(event.clientX, event.clientY));
-                        if (!!$mouseOn && $mouseOn.closest(data.$elemAndTops).length !== 1) {
+                        if (!!$mouseOn && $mouseOn.closest(data.$viewportAndTops).length !== 1) {
                             event.which = 1;
                             panUtil.mouseup(event);
                         }
@@ -1464,14 +1464,14 @@
                 },
                 unbindMouseEvents: function () {
                     if (opts.mousePan) {
-                        data.$elemAndTops.
+                        data.$viewportAndTops.
                             unbind('mousedown.rsSlideIt mouseleave.rsSlideIt').
                             unbind('mouseup.rsSlideIt', this.onMouseup);
                     }
                 },
                 bindMouseEvents: function () {
                     if (opts.mousePan) {
-                        data.$elemAndTops.
+                        data.$viewportAndTops.
                             bind('mousedown.rsSlideIt', this.onMousedown).
                             bind('mouseup.rsSlideIt', this.onMouseup).
                             bind('mouseleave.rsSlideIt', this.onMouseleave);
@@ -1547,7 +1547,7 @@
                     if (!panUtil.isPanning && opts.events.onClickSlide) {
                         var $slide = events.readUnderneath(event);
                         if ($slide) {
-                            $elem.triggerHandler('clickSlide.rsSlideIt', [$slide, container.$slides.index($slide.closest(opts.selector.slide))]);
+                            $viewport.triggerHandler('clickSlide.rsSlideIt', [$slide, container.$slides.index($slide.closest(opts.selector.slide))]);
                         }
                     }
                 },
@@ -1555,7 +1555,7 @@
                     if (opts.events.onDblClickSlide) {
                         var $slide = events.readUnderneath(event);
                         if ($slide) {
-                            $elem.triggerHandler('dblClickSlide.rsSlideIt', [$slide, container.$slides.index($slide.closest(opts.selector.slide))]);
+                            $viewport.triggerHandler('dblClickSlide.rsSlideIt', [$slide, container.$slides.index($slide.closest(opts.selector.slide))]);
                         }
                     }
                 },
@@ -1644,11 +1644,11 @@
                         previousSlide = prevSlide === undefined ? data.activeSlide.index : prevSlide;
                     if (newActiveSlide.index > -1 && (forceSel || previousSlide != newActiveSlide.index)) {
                         if (opts.events.onUnselectSlide && previousSlide != newActiveSlide.index) {
-                            $elem.triggerHandler('unselectSlide.rsSlideIt', [container.$slides.eq(previousSlide), previousSlide]);
+                            $viewport.triggerHandler('unselectSlide.rsSlideIt', [container.$slides.eq(previousSlide), previousSlide]);
                         }
                         data.activeSlide = newActiveSlide;
                         if (opts.events.onSelectSlide) {
-                            $elem.triggerHandler('selectSlide.rsSlideIt', [data.activeSlide.$slide, data.activeSlide.index, data.slideData[newActiveSlide.index].caption]);
+                            $viewport.triggerHandler('selectSlide.rsSlideIt', [data.activeSlide.$slide, data.activeSlide.index, data.slideData[newActiveSlide.index].caption]);
                         }
                     }
                 },
@@ -1694,7 +1694,7 @@
                         zoomUtil.zoom = util.getQuadraticValue(transData.anim.zoomCoefs, progress);
                     }
                     if (!!noCalc || prevZoom != zoomUtil.zoom) {
-                        $elem.triggerHandler('changeZoom.rsSlideIt', [zoomUtil.zoom]);
+                        $viewport.triggerHandler('changeZoom.rsSlideIt', [zoomUtil.zoom]);
                     }
                 },
                 cssEndZoomEvents: function () {
@@ -1713,9 +1713,9 @@
                     container.init();
                     data.init();
                     this.ajax.init();
-                    this.$slidesInSlides = !opts.selector.slideInSlide ? $([]) : $(opts.selector.slideInSlide, container.$transDiv);
+                    this.$slidesInSlides = !opts.selector.slideInSlide ? $([]) : $(opts.selector.slideInSlide, container.$world);
                     if (data.qtSlides > 0) {
-                        $elem.
+                        $viewport.
                             bind('singleTransition.rsSlideIt', events.onSingleTransition).
                             bind('transition.rsSlideIt', events.onTransition).
                             bind('playPause.rsSlideIt', events.onPlayPause).
@@ -1740,10 +1740,10 @@
                             bind('userMousewheel.rsSlideIt', events.onUserMouseWheel);
 
                         container.$slides.add(data.$elemsOnTop).bind('dblclick.rsSlideIt', events.onDblClick).bind('mouseup.rsSlideIt', events.onMouseupClick);
-                        data.$elemAndTops.bind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', events.onMouseWheel);
+                        data.$viewportAndTops.bind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', events.onMouseWheel);
 
                         if (data.supportsCSSAnimation) { 
-                            container.$transDiv.
+                            container.$world.
                                 bind('animationstart.rsSlideIt', events.onCssAnimationStart).
                                 bind('webkitAnimationStart.rsSlideIt', events.onCssAnimationStart).
                                 bind('oanimationstart.rsSlideIt', events.onCssAnimationStart).
@@ -1767,7 +1767,7 @@
                     if (opts.zoomMax < opts.zoomMin) { var sw = opts.zoomMax; opts.zoomMax = opts.zoomMin; opts.zoomMin = sw; }
                     
                     opts.initialZoom = opts.initialZoom < opts.Min ? opts.Min : (opts.initialZoom > opts.Max ? opts.Max : opts.initialZoom);
-                    $elem.
+                    $viewport.
                         bind('loadSlide.rsSlideIt', this.onLoadSlide).
                         triggerHandler('loadSlide.rsSlideIt');
                 },
@@ -2108,7 +2108,7 @@
                 processSlide: function ($slide, slideInSlide, slideSizes) {
                     load.pushSlideData($slide, slideInSlide, slideSizes);
                     if (++load.processedSlides < data.qtSlides) {
-                        $elem.triggerHandler('loadSlide.rsSlideIt');
+                        $viewport.triggerHandler('loadSlide.rsSlideIt');
                     } else {
                         load.setSlidePos();
                     }
@@ -2174,7 +2174,7 @@
                             y: slideSizes.outerSize.y / 2
                         },
                         centerTrans: { x: 0, y: 0 }, // same as center but with transformations applied and origin set to transDiv topleft
-                        centerTransParent: { x: 0, y: 0 }, // centerTrans transformed to the parent CTM (container.$transDiv) with a (0, 0) center
+                        centerTransParent: { x: 0, y: 0 }, // centerTrans transformed to the parent CTM (container.$world) with a (0, 0) center
                         sizeTrans: {
                             x: Math.round(contRectOuter.bottomRight.x - contRectOuter.topLeft.x),
                             y: Math.round(contRectOuter.bottomRight.y - contRectOuter.topLeft.y)
@@ -2251,13 +2251,13 @@
 
                     if (opts.layout.cols !== null) {
                         // non slides that are blocked, should float in order to not interfere with space available
-                        container.$transDiv.children().not(container.$slides).filter(function (index) {
+                        container.$world.children().not(container.$slides).filter(function (index) {
                             return $(this).css('display') === 'block';
                         }).css('float', 'left');
                     }
                     
                     container.resetMaxSize();
-                    container.$transDiv.css({ 'width': '500000px', 'height': '500000px' }); // (ugly) workaround that allows $.position() return correct values in some older browsers. This dimension is correctly set after the following for loop.
+                    container.$world.css({ 'width': '500000px', 'height': '500000px' }); // (ugly) workaround that allows $.position() return correct values in some older browsers. This dimension is correctly set after the following for loop.
                     var maxHeight = 0, previousWasBlocked = false, parentSlideIdx = -1, diff, offset = { x: 0, y: 0 }, slidePos;
                     needNewRow = false;
                     col = row = 0;
@@ -2316,7 +2316,7 @@
                             slideData.pos.y -= slideData.topLeftTrans.top;
 
                             // In non IE browsers, when you set the position of some element that has some transformations applied, you are really setting
-                            // the position of the untransformed version of that element. However, the getter $elem.position() returns the top/left of the 
+                            // the position of the untransformed version of that element. However, the getter $viewport.position() returns the top/left of the 
                             // transformed element, i.e., the getter returns the "real" transformed coordinates, the setter sets the position before the 
                             // element is transformed.
 
@@ -2358,7 +2358,7 @@
                         slideData.center.y = Math.round(slideData.center.y + slideData.pos.y);
                     }
 
-                    container.$transDiv.css({
+                    container.$world.css({
                         // 50 is a gap necessary - when cols is null - to avoid static slide reposition when zoom out is very large
                         'width': Math.floor(container.size.x + (opts.layout.cols === null ? 50 : 0)) + 'px',
                         'height': Math.floor(container.size.y + (opts.layout.cols === null ? 50 : 0)) + 'px'
@@ -2369,10 +2369,10 @@
                         zoomUtil.initZoom(opts.initialZoom, opts.zoomMin, opts.initialSlide);
                         data.gotoSlide(opts.initialSlide);
                         zoomUtil.calcLongestPath();
-                        $elem.triggerHandler('create.rsSlideIt');
+                        $viewport.triggerHandler('create.rsSlideIt');
                         load.ajax.doLoad();
                     } else {
-                        $elem.triggerHandler('create.rsSlideIt');
+                        $viewport.triggerHandler('create.rsSlideIt');
                     }
                 },
                 ajax: {
@@ -2387,17 +2387,17 @@
                         var doAjax = function ($slide) {
                             $slide.load(function () {
                                 var success = this.complete && typeof this.naturalWidth != "undefined" && this.naturalWidth > 0;
-                                $elem.triggerHandler('ajaxLoadSlide.rsSlideIt', [$slide, load.ajax.quant - load.ajax.toProcess + 1, success]);
+                                $viewport.triggerHandler('ajaxLoadSlide.rsSlideIt', [$slide, load.ajax.quant - load.ajax.toProcess + 1, success]);
                                 if (--load.ajax.toProcess == 0) {
-                                    $elem.triggerHandler('ajaxLoadEnd.rsSlideIt');
+                                    $viewport.triggerHandler('ajaxLoadEnd.rsSlideIt');
                                 }
                                 if (successEvent) {
                                     successEvent(this.complete, this.naturalWidth, this.naturalHeight);
                                 }
                             }).error(function () {
-                                $elem.triggerHandler('ajaxLoadSlide.rsSlideIt', [$slide, load.ajax.quant - load.ajax.toProcess + 1, false]);
+                                $viewport.triggerHandler('ajaxLoadSlide.rsSlideIt', [$slide, load.ajax.quant - load.ajax.toProcess + 1, false]);
                                 if (--load.ajax.toProcess == 0) {
-                                    $elem.triggerHandler('ajaxLoadEnd.rsSlideIt');
+                                    $viewport.triggerHandler('ajaxLoadEnd.rsSlideIt');
                                 }
                                 if (failureEvent) {
                                     failureEvent();
@@ -2407,7 +2407,7 @@
                         
                         if (this.quant > 0) {
                             if (this.toProcess == this.quant) {
-                                $elem.triggerHandler('ajaxLoadBegin.rsSlideIt', [this.quant]);
+                                $viewport.triggerHandler('ajaxLoadBegin.rsSlideIt', [this.quant]);
                             }
                             if (!!$loadThisSlide) {
                                 var idx = this.slidesArray.indexOf($loadThisSlide[0]);
