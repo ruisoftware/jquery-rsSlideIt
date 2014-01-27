@@ -216,8 +216,8 @@
                     this.size.y = Math.max(this.size.y, height);
                 },
                 init: function () {
-                    if (!!opts.layout.width) { $viewport.css('width', opts.layout.width); }
-                    if (!!opts.layout.height) { $viewport.css('height', opts.layout.height); }
+                    if (!!opts.width) { $viewport.css('width', opts.width); }
+                    if (!!opts.height) { $viewport.css('height', opts.height); }
                     $viewport.css('overflow', 'hidden').scrollLeft(0).scrollTop(0);
                     this.setCenterPos();
                     $viewport.wrapInner('<div/>');
@@ -1708,12 +1708,10 @@
 
             load = {
                 processedSlides: 0,
-                $slidesInSlides: null,
                 init: function () {
                     container.init();
                     data.init();
                     this.ajax.init();
-                    this.$slidesInSlides = !opts.selector.slideInSlide ? $([]) : $(opts.selector.slideInSlide, container.$world);
                     if (data.qtSlides > 0) {
                         $viewport.
                             bind('singleTransition.rsSlideIt', events.onSingleTransition).
@@ -2064,31 +2062,33 @@
                 },
                 onLoadSlide: function (event) {
                     var $slide = container.$slides.eq(load.processedSlides),
-                        slideInSlide = load.$slidesInSlides.index($slide) > -1,
                         loadSuccess = function () {
                             loadSuccessExternal(this.complete, this.naturalWidth, this.naturalHeight);
                         },
                         loadSuccessExternal = function (complete, naturalWidth, naturalHeight) {
                             if (complete && typeof naturalWidth != "undefined" && naturalWidth > 0) {
                                 load.getOtherSizes(slideSizes, $slide, naturalWidth, naturalHeight);
-                                load.processSlide($slide, slideInSlide, slideSizes);
+                                load.processSlide($slide, slideSizes);
                             } else {
                                 load.getOtherSizes(slideSizes, $slide, 1, 1);
-                                load.processSlide($slide, slideInSlide, slideSizes);
+                                load.processSlide($slide, slideSizes);
                             }
                         },
                         loadFailure = function () {
                             load.getOtherSizes(slideSizes, $slide, 1, 1);
-                            load.processSlide($slide, slideInSlide, slideSizes);
+                            load.processSlide($slide, slideSizes);
                         };
 
+                    // to prevent the default behaviour in IE when dragging an element
+                    $slide[0].ondragstart = $slide[0].onselectstart = function () { return false; };
+                    
                     // IE9 renders a black block, when both -ms-transform and filter are defined. To work around this, need to remove filter
                     if (data.isIE9 && $slide.css('msTransform') != '' && $slide.css('filter') != '') {
                         $slide.css('filter', '');
                     }
                     var isImg = $slide.is('img'),
                         isImgAjax = $slide.is('img[data-src]'),
-                        slideSizes = load.getSlideSizes($slide, slideInSlide);
+                        slideSizes = load.getSlideSizes($slide);
                     if (slideSizes.size.x === 0 || slideSizes.size.y === 0 || isImgAjax && (util.toInt($slide.attr('width')) == 0 || util.toInt($slide.attr('height')) == 0)) { // size is unknown and slide does not contain any valid width/height attribute
                         if (isImg) {
                             if (isImgAjax) { // ajax img without width/height attribute defined
@@ -2099,14 +2099,14 @@
                         } else {
                             // slides should have a non-zero dimension. In the rare case of zero size element, assume 1x1 instead. This is reasonable workaround. 
                             this.getOtherSizes(slideSizes, $slide, 1, 1);
-                            load.processSlide($slide, slideInSlide, slideSizes);
+                            load.processSlide($slide, slideSizes);
                         }
                     } else {                            
-                        load.processSlide($slide, slideInSlide, slideSizes);
+                        load.processSlide($slide, slideSizes);
                     }
                 },
-                processSlide: function ($slide, slideInSlide, slideSizes) {
-                    load.pushSlideData($slide, slideInSlide, slideSizes);
+                processSlide: function ($slide, slideSizes) {
+                    load.pushSlideData($slide, slideSizes);
                     if (++load.processedSlides < data.qtSlides) {
                         $viewport.triggerHandler('loadSlide.rsSlideIt');
                     } else {
@@ -2131,13 +2131,8 @@
                             util.toInt($slide.css('margin-top')) + util.toInt($slide.css('margin-bottom'));
                     }
                 },
-                getSlideSizes: function ($slide, slideInSlide) {
-                    var cssDisplay, ieFilter, ieMsFilter;
-                    if (!slideInSlide && opts.layout.cols !== null) {
-                        // to get the correct size of blocked elements, need to read it as an inline-block
-                        cssDisplay = $slide.css('display');
-                        $slide.css('display', 'inline-block');
-                    }
+                getSlideSizes: function ($slide) {
+                    var ieFilter, ieMsFilter;
                     if (data.isIE8orBelow) {
                         ieFilter = $slide.css('filter');
                         ieMsFilter = $slide.css('-ms-filter');
@@ -2155,16 +2150,15 @@
                     if (data.isIE8orBelow) {
                         $slide.css({ 'filter': ieFilter, '-ms-filter': ieMsFilter });
                     }
-                    if (!slideInSlide && opts.layout.cols !== null) {
-                        // restore the original display
-                        $slide.css('display', cssDisplay);
-                    }
                     return sizes;
                 },
-                pushSlideData: function ($slide, slideInSlide, slideSizes) {
+                pushSlideData: function ($slide, slideSizes) {
                     var cssTransforms = load.getTransformInfo($slide, slideSizes.outerSize),
-                        contRectOuter = transUtil.getTransformedRect(slideSizes.outerSize, cssTransforms.ctmMatrix, cssTransforms.origin),
-                        contRectOuterAll = transUtil.getTransformedRect(slideSizes.outerSizeAll, cssTransforms.ctmMatrix, cssTransforms.origin);
+                        contRectOuter = contRectOuterAll = transUtil.getTransformedRect(slideSizes.outerSize, cssTransforms.ctmMatrix, cssTransforms.origin);
+                        
+                        if (slideSizes.outerSize.x !== slideSizes.outerSizeAll.x || slideSizes.outerSize.y !== slideSizes.outerSizeAll.y) {
+                            contRectOuterAll = transUtil.getTransformedRect(slideSizes.outerSizeAll, cssTransforms.ctmMatrix, cssTransforms.origin);
+                        }
 
                     data.slideData.push({
                         // pos and centerTrans are computed later
@@ -2173,7 +2167,7 @@
                             x: slideSizes.outerSize.x / 2,
                             y: slideSizes.outerSize.y / 2
                         },
-                        centerTrans: { x: 0, y: 0 }, // same as center but with transformations applied and origin set to transDiv topleft
+                        centerTrans: { x: 0, y: 0 }, // same as center but with transformations applied and origin set to (container.$world) topleft
                         centerTransParent: { x: 0, y: 0 }, // centerTrans transformed to the parent CTM (container.$world) with a (0, 0) center
                         sizeTrans: {
                             x: Math.round(contRectOuter.bottomRight.x - contRectOuter.topLeft.x),
@@ -2201,146 +2195,11 @@
                     });
                 },
                 setSlidePos: function () {
-                    var col = row = 0,
-                        needNewRow = false,
-                        justifySlide = {
-                            x: opts.layout.cols !== null && opts.layout.horizAlign && (opts.layout.horizAlign == 'left' || opts.layout.horizAlign == 'center' || opts.layout.horizAlign == 'right'),
-                            y: opts.layout.cols !== null && opts.layout.vertAlign && (opts.layout.vertAlign == 'top' || opts.layout.vertAlign == 'center' || opts.layout.vertAlign == 'bottom')
-                        },
-                        maxWidthInCol = [],
-                        maxHeightInRow = [],
-                        $slide, slideInSlide, slideData,
-                        changeRow = function (col) {
-                            return opts.layout.cols !== null && (col % opts.layout.cols === 0);
-                        };
-                        
-                    if (justifySlide.x || justifySlide.y) {
-                        for (var i = 0; i < data.qtSlides; ++i) {
-                            $slide = container.$slides.eq(i);
-                            slideInSlide = load.$slidesInSlides.index($slide) > -1;
-                            slideData = data.slideData[i];
-
-                            if (!slideInSlide && needNewRow) {
-                                ++row;
-                            }
-
-                            if (!slideInSlide) {
-                                if (justifySlide.x) {
-                                    if (col === maxWidthInCol.length) {
-                                        maxWidthInCol.push(slideData.sizeTransAll.x);
-                                    } else {
-                                        maxWidthInCol[col] = Math.max(maxWidthInCol[col], slideData.sizeTransAll.x);
-                                    }
-                                }
-
-                                if (justifySlide.y) {
-                                    if (row === maxHeightInRow.length) {
-                                        maxHeightInRow.push(slideData.sizeTransAll.y);
-                                    } else {
-                                        maxHeightInRow[row] = Math.max(maxHeightInRow[row], slideData.sizeTransAll.y);
-                                    }
-                                }
-
-                                needNewRow = changeRow(++col);
-                                if (needNewRow) {
-                                    col = 0;
-                                }
-                            }
-                        }
-                    }
-
-                    if (opts.layout.cols !== null) {
-                        // non slides that are blocked, should float in order to not interfere with space available
-                        container.$world.children().not(container.$slides).filter(function (index) {
-                            return $(this).css('display') === 'block';
-                        }).css('float', 'left');
-                    }
-                    
+                    var $slide, slideData, slidePos;
                     container.resetMaxSize();
-                    container.$world.css({ 'width': '500000px', 'height': '500000px' }); // (ugly) workaround that allows $.position() return correct values in some older browsers. This dimension is correctly set after the following for loop.
-                    var maxHeight = 0, previousWasBlocked = false, parentSlideIdx = -1, diff, offset = { x: 0, y: 0 }, slidePos;
-                    needNewRow = false;
-                    col = row = 0;
                     for (var i = 0; i < data.qtSlides; ++i) {
                         $slide = container.$slides.eq(i);
-                        slideInSlide = load.$slidesInSlides.index($slide) > -1;
                         slideData = data.slideData[i];
-
-                        // to prevent the default behaviour in IE when dragging an element
-                        $slide[0].ondragstart = $slide[0].onselectstart = function () { return false; };
-
-                        if (slideInSlide && parentSlideIdx != -1) {
-                            $slide.css('position', 'absolute');
-                            slideData.pos.x = data.slideData[parentSlideIdx].pos.x + $slide.position().left;
-                            slideData.pos.y = data.slideData[parentSlideIdx].pos.y + $slide.position().top;
-                            $slide.css({
-                                'left': slideData.pos.x + 'px',
-                                'top': slideData.pos.y + 'px'
-                            });
-                        } else {
-                            var isBlocked = $slide.css('display') === 'block';
-                            if (i > 0 && opts.layout.cols === null && 
-                                    (isBlocked || // current element is blocked, so need new row
-                                     previousWasBlocked)) { // previous element was blocked (occupies all row), so now need new row
-                                needNewRow = true;
-                            }
-                            previousWasBlocked = isBlocked;
-                            if (needNewRow) {
-                                ++row;
-                                offset.y = (opts.layout.cols === null ? 0 : offset.y) + maxHeight;
-                                offset.x = maxHeight = col = 0;
-                            }
-
-                            slideData.pos.x = opts.layout.cols === null ? $slide.position().left : offset.x;
-                            if (justifySlide.x) {
-                                diff = maxWidthInCol[col] - slideData.sizeTransAll.x;
-                                if (diff !== 0) {
-                                    slideData.pos.x += opts.layout.horizAlign == 'center' ? diff / 2: (opts.layout.horizAlign == 'left' ? 0 : diff);
-                                }
-                                offset.x += maxWidthInCol[col];
-                            } else {
-                                offset.x = Math.max(offset.x, slideData.pos.x + slideData.sizeTransAll.x);
-                            }
-                            slideData.pos.x -= slideData.topLeftTrans.left;
-
-                            slideData.pos.y = opts.layout.cols === null ? $slide.position().top : offset.y;
-                            if (justifySlide.y) {
-                                diff = maxHeightInRow[row] - slideData.sizeTransAll.y;
-                                if (diff !== 0) {
-                                    slideData.pos.y += opts.layout.vertAlign == 'center' ? diff / 2 : (opts.layout.vertAlign == 'top' ? 0 : diff);
-                                }
-                                maxHeight = Math.max(maxHeight, maxHeightInRow[row]);
-                            } else {
-                                maxHeight = Math.max(maxHeight, slideData.pos.y + slideData.sizeTransAll.y);
-                            }
-                            slideData.pos.y -= slideData.topLeftTrans.top;
-
-                            // In non IE browsers, when you set the position of some element that has some transformations applied, you are really setting
-                            // the position of the untransformed version of that element. However, the getter $viewport.position() returns the top/left of the 
-                            // transformed element, i.e., the getter returns the "real" transformed coordinates, the setter sets the position before the 
-                            // element is transformed.
-
-                            // In IE, when you set the position of some element that has some transformations applied, the getter returns the same position.
-                            // Both getter and setter return the same position.
-
-                            if (opts.layout.cols !== null) {
-                                $slide.css({
-                                    'position': 'absolute',
-                                    'left': (slideData.pos.x + (data.isIE8orBelow ? slideData.topLeftTrans.left : 0)) + 'px',
-                                    'top': (slideData.pos.y + (data.isIE8orBelow ? slideData.topLeftTrans.top : 0)) + 'px'
-                                });
-                            } else {
-                                if (isBlocked) {
-                                    $slide.css({
-                                        'width': slideData.sizeTrans.x + 'px',
-                                        'height': slideData.sizeTrans.y + 'px'
-                                    });
-                                }
-                            }
-                            needNewRow = changeRow(++col);
-                            parentSlideIdx = i;
-                        }
-
                         slidePos = $slide.position();
                         if (data.isMozilla11orBelow) {
                             // Mozilla (up to 11.0b8) returns incorrect position for transformed elements, so there is a need to make an adjustment
@@ -2359,9 +2218,8 @@
                     }
 
                     container.$world.css({
-                        // 50 is a gap necessary - when cols is null - to avoid static slide reposition when zoom out is very large
-                        'width': Math.floor(container.size.x + (opts.layout.cols === null ? 50 : 0)) + 'px',
-                        'height': Math.floor(container.size.y + (opts.layout.cols === null ? 50 : 0)) + 'px'
+                        'width': Math.floor(container.size.x) + 'px',
+                        'height': Math.floor(container.size.y) + 'px'
                     });
                     container.setSizeForIE();
 
@@ -2472,7 +2330,6 @@
             }
         }
         var opts = $.extend({}, $.fn.rsSlideIt.defaults, options);
-        opts.layout = $.extend({}, $.fn.rsSlideIt.defaults.layout, options ? options.layout : options);
         opts.selector = $.extend({}, $.fn.rsSlideIt.defaults.selector, options ? options.selector : options);
         opts.events = $.extend({}, $.fn.rsSlideIt.defaults.events, options ? options.events : options);
 
@@ -2489,28 +2346,19 @@
 
     // public access to the default input parameters
     $.fn.rsSlideIt.defaults = {
-        zoomMin: 0.4,           // Minimum zoom possible. Type: floating point number.
+        zoomMin: 0.4,           // Minimum zoom possible. Type: floating point number greater than zero.
         zoomStep: 0.1,          // Value incremented to the current zoom, when mouse wheel moves up. When mouse wheel moves down, current zoom is decremented by this value.
                                 // To reverse direction, use negative zoomStep. To disable zoom on mouse wheel, do not set zoomStep to zero, but set mouseZoom to false instead. Type: floating point number.
         zoomMax: 15,            // Maximun zoom possible. Type: floating point number.
         initialSlide: 0,        // Active slide when plugin is initialized. Type: zero-based integer.
-        initialZoom: 1,         // Scale used when plugin is initialized.
-                                // Positive real number or 'fitWidth' or 'fitHeight' or 'fit' or 'cover'. Type: positive floating point number or string.
-                                
+        initialZoom: 1,         // Scale used when plugin is initialized. Type: positive floating point number or strings 'fitWidth' or 'fitHeight' or 'fit' or 'cover'.
         mouseZoom: true,        // Determines whether mouse wheel is used to zoom in/out. The onMouseWheel event (see below) is called, even if mouseZoom is false. Type: boolean.
         mousePan: true,         // Determines whether mouse panning is allowed. Type: boolean.
-        layout: {
-            width: null,            // Container width in pixels. If null then uses the width defined in CSS. Type: integer.
-            height: null,           // Container height in pixels. If null then uses the height defined in CSS. Type: integer.
-            cols: 0,                // Layouts all slides in this number of columns, in a rightwards and downwards direction.
-                                    // Use zero to layout all slides in one row; Use null to ignore slide layout and use the positioning set by CSS. Type: positive integer.
-            horizAlign: null,       // Slide horizontal justification 'left', 'center' or 'right'. Ignored if cols is null. Type: string.
-            vertAlign: null         // Slide vertical justification 'top', 'center' or 'bottom'. Ignored if cols is null. Type: string.
-        },
+        width: null,            // Container width in pixels. If null then uses the width defined in CSS. Type: integer.
+        height: null,           // Container height in pixels. If null then uses the width defined in CSS. Type: integer.
         selector: {
             slide: 'img',           // jQuery selector string for all slide elements. Type: string.
             caption: '.caption',    // jQuery selector string for all text elements for each slide. Type: string.
-            slideInSlide: null,     // jQuery selector string for all child slides inside a parent slide. Type: string.
             elementsOnTop: null     // jQuery selector string for the elements on top of the container element (if any). Type: string.
         },
         events: {
