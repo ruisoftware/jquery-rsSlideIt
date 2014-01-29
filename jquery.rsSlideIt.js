@@ -21,11 +21,11 @@
                 isIE9: false,
                 isMozilla11orBelow: false,
                 init: function () {
-                    this.qtSlides = container.$slides.length;
+                    this.qtSlides = viewport.world.$slides.length;
                     this.$viewportAndTops = $viewport.add(this.$elemsOnTop);
 
                     // to prevent the default behaviour in IE when dragging an element
-                    this.$viewportAndTops.add(container.$world).each(function () {
+                    this.$viewportAndTops.add(viewport.world.$elem).add(viewport.world.$slides).each(function () {
                         this.ondragstart = this.onselectstart = function () { return false; };
                     });
                     this.initBrowsers();
@@ -53,7 +53,7 @@
                 gotoSlide: function (slide) {
                     var prevSlide = this.activeSlide.index;
                     transUtil.setActiveSlide(slide);
-                    container.$world.css(transUtil.getTransformCSS());
+                    viewport.world.$elem.css(transUtil.getTransformCSS());
                     transUtil.cache.refreshCenterTransParent();
                     events.fireSlideEvents(true, prevSlide);
                     if (seqData.userInteract) {
@@ -158,9 +158,9 @@
                     
                     // returns in O(log n) time, the slide whose center is closest to the viewport center
                     getActiveSlide: function () {
-                        container.setCenterPos();
+                        viewport.setCenterPos();
                         var minDist = minIdx = -1,
-                            distance = (container.center.x + container.center.y) / 10,
+                            distance = (viewport.center.x + viewport.center.y) / 10,
                             zoomDistance = zoomUtil.zoom * distance,
                             pntsX = [],
                             pntsY = [],
@@ -189,44 +189,53 @@
                                 }
                             }
                         }
-                        return { $slide: minIdx === -1 ? null : container.$slides.eq(minIdx), index: minIdx };
+                        return { $slide: minIdx === -1 ? null : viewport.world.$slides.eq(minIdx), index: minIdx };
                     }
                 }
             },
             
-            container = {
-                $world: null,
-                $slides: null, // set with all slide elements
-                size: { x: 0, y: 0 },
-                IEorigSize: { x: 0, y: 0 }, // IE needs to compute based on unscaled (original) container size
-                center: { x: 0, y: 0 }, // center point. Used to determine the active slide. Active slide is the slide whose center is closest to this center.
+            viewport = {
+                world: {
+                    $elem: null,                // this element is create dynamically as the child element of $viewport. World.$elem is the parent of all $slides
+                    size: { x: 0, y: 0 },
+                    IEorigSize: { x: 0, y: 0 }, // IE needs to compute based on untransformed (original) viewport size
+                    $slides: null,              // set with all slide elements
+                    resetMaxSize: function () {
+                        this.size.x = this.size.y = 0;
+                    },
+                    setMaxSize: function (width, height) {
+                        this.size.x = Math.max(this.size.x, width);
+                        this.size.y = Math.max(this.size.y, height);
+                    },
+                    setFinalSize: function () {
+                        this.$elem.css({
+                            'width': Math.floor(this.size.x) + 'px',
+                            'height': Math.floor(this.size.y) + 'px'
+                        });
+                        this.IEorigSize.x = this.$elem.width();
+                        this.IEorigSize.y = this.$elem.height();
+                    },
+                    init: function () {
+                        $viewport.wrapInner('<div/>');
+                        this.$elem = $('div:eq(0)', $viewport);
+                        this.$elem.css({
+                            'position': 'absolute',
+                            'z-index': 0 // fix for IE8 standards mode that, without this z-index, cannot transform child elements
+                        })
+                        this.$slides = $(opts.selector.slide, this.$elem);
+                    }
+                },
+                center: { x: 0, y: 0 },
                 setCenterPos: function () {
                     this.center.x = $viewport.width() / 2;
                     this.center.y = $viewport.height() / 2;
-                },
-                setSizeForIE: function () {
-                    this.IEorigSize.x = this.$world.width();
-                    this.IEorigSize.y = this.$world.height();
-                },
-                resetMaxSize: function () {
-                    this.size.x = this.size.y = 0;
-                },
-                setMaxSize: function (width, height) {
-                    this.size.x = Math.max(this.size.x, width);
-                    this.size.y = Math.max(this.size.y, height);
                 },
                 init: function () {
                     if (!!opts.width) { $viewport.css('width', opts.width); }
                     if (!!opts.height) { $viewport.css('height', opts.height); }
                     $viewport.css('overflow', 'hidden').scrollLeft(0).scrollTop(0);
                     this.setCenterPos();
-                    $viewport.wrapInner('<div/>');
-                    this.$world = $('div:eq(0)', $viewport);
-                    this.$world.css({
-                        'position': 'absolute',
-                        'z-index': 0 // fix for IE8 standards mode that, without this z-index, cannot transform child elements
-                    })
-                    this.$slides = $(opts.selector.slide, this.$world);
+                    this.world.init();
                 }
             },
 
@@ -365,8 +374,8 @@
                         transUtil.activeSlideCTMmatrix = util.getInvertedMatrix(transUtil.cache.matrixCTM);
                         util.multiply2x2Matrices(transUtil.getMatrixScale(zoomUtil.zoom), transUtil.activeSlideCTMmatrix); // remove the user zoom
                         if (data.isIE8orBelow) {
-                            transUtil.trans.x = container.center.x - transUtil.orig.x;
-                            transUtil.trans.y = container.center.y - transUtil.orig.y;
+                            transUtil.trans.x = viewport.center.x - transUtil.orig.x;
+                            transUtil.trans.y = viewport.center.y - transUtil.orig.y;
                             transUtil.activeSlideCenterTrans.x = transUtil.orig.x;
                             transUtil.activeSlideCenterTrans.y = transUtil.orig.y;
                             transUtil.cache.refresh();
@@ -434,8 +443,8 @@
                             css += Math.round(anim*100) + '% {XXtransform-origin:' + orig.x.toFixed(0) + 'px ' + orig.y.toFixed(0) + 'px;' +
                                                  'XXtransform:matrix(' + 
                                                     transUtil.cache.matrixCTM + ',' +
-                                                    (container.center.x - orig.x).toFixed(2) + ',' + 
-                                                    (container.center.y - orig.y).toFixed(2) + ');}\n';
+                                                    (viewport.center.x - orig.x).toFixed(2) + ',' + 
+                                                    (viewport.center.y - orig.y).toFixed(2) + ');}\n';
                         }
                         transUtil.cache.matrixCTM_inv = util.getInvertedMatrix(transUtil.cache.matrixCTM);
                         return css;
@@ -450,9 +459,9 @@
                         events.cssEndZoomEvents();
                         transData.anim.computeIntermediateMatrix(transData.anim.progress, true, data.slideData[transData.anim.gotoSlideIdx].cssTransforms.transformations);
 
-                        transData.anim.centerPnt = transUtil.getTransformOriginCss(container.$world);
-                        transUtil.trans.x = container.center.x - transData.anim.centerPnt.x;
-                        transUtil.trans.y = container.center.y - transData.anim.centerPnt.y;
+                        transData.anim.centerPnt = transUtil.getTransformOriginCss(viewport.world.$elem);
+                        transUtil.trans.x = viewport.center.x - transData.anim.centerPnt.x;
+                        transUtil.trans.y = viewport.center.y - transData.anim.centerPnt.y;
                         transUtil.setTransformOrigin(transData.anim.centerPnt.x, transData.anim.centerPnt.y);
 
                         transUtil.activeSlideCTMmatrix = util.getInvertedMatrix(transUtil.cache.matrixCTM);
@@ -469,7 +478,7 @@
                         events.fireSlideEvents();
                     },
                     resetCSSanimation: function () {
-                        container.$world.css(transUtil.getTransformCSSstyle()).css({
+                        viewport.world.$elem.$elem.css(transUtil.getTransformCSSstyle()).css({
                             '-webkit-animation': '',
                             '-moz-animation': '',
                             '-o-animation': '',
@@ -592,7 +601,7 @@
 
                     // if user is currently panning around when transition kicks in, then stop panning
                     panUtil.stopImmediately();
-                    container.setCenterPos();
+                    viewport.setCenterPos();
                     return sameDestSlideIdx;
                 },
 
@@ -648,7 +657,7 @@
                         // for some complex css3 animations, Chrome does not flush the whole animation data, hence the need for a timeout to fix this issue 
                         setTimeout(function () {
                             var animTrigger = animationName + ' ' + durationMs + 'ms linear forwards';
-                            container.$world.css({
+                            viewport.world.$elem.css({
                                 '-webkit-animation': animTrigger,
                                 '-moz-animation': animTrigger,
                                 '-o-animation': animTrigger,
@@ -706,13 +715,13 @@
                                 }
                                 transData.anim.computeIntermediateMatrix(now, false, toTransformations);
 
-                                transUtil.trans.x = container.center.x - transData.anim.centerPnt.x;
-                                transUtil.trans.y = container.center.y - transData.anim.centerPnt.y;
+                                transUtil.trans.x = viewport.center.x - transData.anim.centerPnt.x;
+                                transUtil.trans.y = viewport.center.y - transData.anim.centerPnt.y;
                                 if (data.isIE8orBelow) {
                                     transUtil.adjustTransIE(transData.anim.centerPnt);
                                 }
                                 transUtil.setTransformOrigin(transData.anim.centerPnt.x, transData.anim.centerPnt.y);
-                                container.$world.css(transUtil.getTransformCSSstyle());
+                                viewport.world.$elem.css(transUtil.getTransformCSSstyle());
                                 zoomUtil.invokeChangeZoom(prevZoom);
                             },
                             complete: function () {
@@ -974,7 +983,7 @@
                     var prevZoom = this.zoom;
                     this.zoom = this.checkZoomBounds(newZoom);
                     if (prevZoom != this.zoom) {
-                        container.$world.css(transUtil.doMouseZoom(prevZoom, this.zoom));
+                        viewport.world.$elem.css(transUtil.doMouseZoom(prevZoom, this.zoom));
                         transUtil.cache.refreshCenterTransParent();
                         events.fireSlideEvents(false);
                         this.invokeChangeZoom(prevZoom);
@@ -1003,18 +1012,18 @@
                 },
                 getZoomDest: function (zDest, gotoSlideIdx) {
                     if (typeof zDest === 'string') {
-                        container.setCenterPos();
+                        viewport.setCenterPos();
                         var slideData = data.slideData[gotoSlideIdx],
                             fit = {
-                                x: container.center.x * 2 / (slideData.padding[3] + slideData.size.x + slideData.padding[1]),
-                                y: container.center.y * 2 / (slideData.padding[0] + slideData.size.y + slideData.padding[2])
+                                x: viewport.center.x * 2 / (slideData.padding[3] + slideData.size.x + slideData.padding[1]),
+                                y: viewport.center.y * 2 / (slideData.padding[0] + slideData.size.y + slideData.padding[2])
                             };
                         switch (zDest) {
                             case 'current': return this.zoom;
                             case 'fitWidth': return fit.x;
                             case 'fitHeight': return fit.y;
                             case 'fit': return Math.min(fit.x, fit.y);
-                            case 'cover': return Math.max(container.center.x * 2 / slideData.size.x, container.center.y * 2 / slideData.size.y);
+                            case 'cover': return Math.max(viewport.center.x * 2 / slideData.size.x, viewport.center.y * 2 / slideData.size.y);
                             default: return this.zoom;
                         }
                     }
@@ -1025,7 +1034,7 @@
                     this.zoom = this.checkZoomBounds(this.getZoomDest(z, slideIdx));
                 },
                 setterZoom: function (newZoom) {
-                    container.setCenterPos();
+                    viewport.setCenterPos();
                     this.doZoom(this.checkZoomBounds(newZoom));
                 }
             },
@@ -1043,7 +1052,7 @@
                     panUtil.startTrans.x = transUtil.trans.x;
                     panUtil.startTrans.y = transUtil.trans.y;
                     panUtil.isPanning = true;
-                    var rect = transUtil.getTransformedRect(container.IEorigSize),
+                    var rect = transUtil.getTransformedRect(viewport.world.IEorigSize),
                         pos = $viewport.position();
                     panUtil.width = rect.bottomRight.x - rect.topLeft.x;
                     panUtil.height = rect.bottomRight.y - rect.topLeft.y;
@@ -1060,11 +1069,11 @@
                         panUtil.beginPan(event);
                     }
                     
-                    var position = container.$world.offset(),
+                    var position = viewport.world.$elem.offset(),
                         limits = {
                             top: position.top - panUtil.elemPos.y + panUtil.height,
-                            right: position.left - panUtil.elemPos.x - container.center.x * 2,
-                            bottom: position.top - panUtil.elemPos.y - container.center.y * 2,  
+                            right: position.left - panUtil.elemPos.x - viewport.center.x * 2,
+                            bottom: position.top - panUtil.elemPos.y - viewport.center.y * 2,  
                             left: position.left - panUtil.elemPos.x + panUtil.width
                         };
                     if (limits.top < 0) {
@@ -1090,7 +1099,7 @@
                     if (data.isIE8orBelow) {
                         offset = transUtil.getTransformedPoint(offset, transUtil.cache.matrixCTM_inv);
                     }
-                    container.$world.css(transUtil.doMousePan(offset));
+                    viewport.world.$elem.css(transUtil.doMousePan(offset));
                 },
                 mousedown: function (event) {
                     if (event.which == 1) {
@@ -1132,7 +1141,7 @@
                     SCALEXY:    6,
                     SCALE:      7
                 },
-                orig: { x: container.center.x, y: container.center.y }, // transformation origin point
+                orig: { x: viewport.center.x, y: viewport.center.y }, // transformation origin point
                 trans: { x: 0, y: 0 },
                 activeSlideIndex: -1,
                 activeSlideCTMmatrix: null,
@@ -1249,18 +1258,18 @@
                 },
 
                 adjustTransIE: function (centerPnt) {
-                    var rect = this.getTransformedRect(container.IEorigSize, this.cache.matrixCTM, centerPnt);
+                    var rect = this.getTransformedRect(viewport.world.IEorigSize, this.cache.matrixCTM, centerPnt);
                     this.trans.x += rect.topLeft.x;
                     this.trans.y += rect.topLeft.y;
                 },
 
                 setActiveSlide: function (slideIdx) {
                     data.activeSlide.index = this.activeSlideIndex = slideIdx;
-                    data.activeSlide.$slide = container.$slides.eq(slideIdx);
+                    data.activeSlide.$slide = viewport.world.$slides.eq(slideIdx);
                     var slideData = data.slideData[slideIdx];
                     this.activeSlideCTMmatrix = slideData.cssTransforms.ctmMatrix;
-                    this.trans.x = container.center.x - slideData.centerTrans.x;
-                    this.trans.y = container.center.y - slideData.centerTrans.y;
+                    this.trans.x = viewport.center.x - slideData.centerTrans.x;
+                    this.trans.y = viewport.center.y - slideData.centerTrans.y;
                     this.cache.refresh();
                     if (data.isIE8orBelow) {
                         this.activeSlideCenterTrans.x = slideData.centerTrans.x;
@@ -1270,9 +1279,9 @@
                 },
 
                 getTransformCSS: function (offset) {
-                    this.setTransformOrigin(container.center.x - this.trans.x, container.center.y - this.trans.y);
+                    this.setTransformOrigin(viewport.center.x - this.trans.x, viewport.center.y - this.trans.y);
                     if (data.isIE8orBelow) {
-                        var rect = this.getTransformedRect(container.IEorigSize, this.cache.matrixCTM, 
+                        var rect = this.getTransformedRect(viewport.world.IEorigSize, this.cache.matrixCTM, 
                             offset === undefined ? this.activeSlideCenterTrans : {
                                 x: this.activeSlideCenterTrans.x - offset.x,
                                 y: this.activeSlideCenterTrans.y - offset.y
@@ -1299,7 +1308,7 @@
                                         value = $elem.css('transform-origin');
                                         if (!util.isDefined(value)) {
                                             return !!outerSize ? 
-                                                { x: outerSize.x / 2, y: outerSize.y / 2 } : { x: container.IEorigSize.x / 2, y: container.IEorigSize.y / 2 };
+                                                { x: outerSize.x / 2, y: outerSize.y / 2 } : { x: viewport.world.IEorigSize.x / 2, y: viewport.world.IEorigSize.y / 2 };
                                         }
                                     }
                                 }
@@ -1322,10 +1331,10 @@
                         if (!util.isAlmostZero(oldMouseZoom)) {
                             var deltaScale, deltaTrans;
                             deltaScale = newMouseZoom - oldMouseZoom;
-                            deltaTrans = (container.center.x - this.trans.x) / oldMouseZoom;
+                            deltaTrans = (viewport.center.x - this.trans.x) / oldMouseZoom;
                             this.trans.x -= deltaTrans * deltaScale;
                             
-                            deltaTrans = (container.center.y - this.trans.y) / oldMouseZoom;
+                            deltaTrans = (viewport.center.y - this.trans.y) / oldMouseZoom;
                             this.trans.y -= deltaTrans * deltaScale;
                        }
                     }
@@ -1547,7 +1556,7 @@
                     if (!panUtil.isPanning && opts.events.onClickSlide) {
                         var $slide = events.readUnderneath(event);
                         if ($slide) {
-                            $viewport.triggerHandler('clickSlide.rsSlideIt', [$slide, container.$slides.index($slide.closest(opts.selector.slide))]);
+                            $viewport.triggerHandler('clickSlide.rsSlideIt', [$slide, viewport.world.$slides.index($slide.closest(opts.selector.slide))]);
                         }
                     }
                 },
@@ -1555,7 +1564,7 @@
                     if (opts.events.onDblClickSlide) {
                         var $slide = events.readUnderneath(event);
                         if ($slide) {
-                            $viewport.triggerHandler('dblClickSlide.rsSlideIt', [$slide, container.$slides.index($slide.closest(opts.selector.slide))]);
+                            $viewport.triggerHandler('dblClickSlide.rsSlideIt', [$slide, viewport.world.$slides.index($slide.closest(opts.selector.slide))]);
                         }
                     }
                 },
@@ -1644,7 +1653,7 @@
                         previousSlide = prevSlide === undefined ? data.activeSlide.index : prevSlide;
                     if (newActiveSlide.index > -1 && (forceSel || previousSlide != newActiveSlide.index)) {
                         if (opts.events.onUnselectSlide && previousSlide != newActiveSlide.index) {
-                            $viewport.triggerHandler('unselectSlide.rsSlideIt', [container.$slides.eq(previousSlide), previousSlide]);
+                            $viewport.triggerHandler('unselectSlide.rsSlideIt', [viewport.world.$slides.eq(previousSlide), previousSlide]);
                         }
                         data.activeSlide = newActiveSlide;
                         if (opts.events.onSelectSlide) {
@@ -1671,8 +1680,8 @@
                 },
                 onCssAnimationEnd: function () {
                     var centerTrans = data.slideData[transData.anim.gotoSlideIdx].centerTrans;
-                    transUtil.trans.x = container.center.x - centerTrans.x;
-                    transUtil.trans.y = container.center.y - centerTrans.y;
+                    transUtil.trans.x = viewport.center.x - centerTrans.x;
+                    transUtil.trans.y = viewport.center.y - centerTrans.y;
                     transUtil.setTransformOrigin(centerTrans.x, centerTrans.y);
                     transData.cssAnim.resetCSSanimation();
                     transData.transitionDone(true);
@@ -1709,7 +1718,7 @@
             load = {
                 processedSlides: 0,
                 init: function () {
-                    container.init();
+                    viewport.init();
                     data.init();
                     this.ajax.init();
                     if (data.qtSlides > 0) {
@@ -1737,11 +1746,11 @@
                             bind('endDelay.rsSlideIt', events.onEndDelay).
                             bind('userMousewheel.rsSlideIt', events.onUserMouseWheel);
 
-                        container.$slides.add(data.$elemsOnTop).bind('dblclick.rsSlideIt', events.onDblClick).bind('mouseup.rsSlideIt', events.onMouseupClick);
+                        viewport.world.$slides.add(data.$elemsOnTop).bind('dblclick.rsSlideIt', events.onDblClick).bind('mouseup.rsSlideIt', events.onMouseupClick);
                         data.$viewportAndTops.bind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', events.onMouseWheel);
 
                         if (data.supportsCSSAnimation) { 
-                            container.$world.
+                            viewport.world.$elem.
                                 bind('animationstart.rsSlideIt', events.onCssAnimationStart).
                                 bind('webkitAnimationStart.rsSlideIt', events.onCssAnimationStart).
                                 bind('oanimationstart.rsSlideIt', events.onCssAnimationStart).
@@ -1889,12 +1898,12 @@
                             // try skew(x,y) -- non standard
                             found = value.match(/skew\([-|+]?[\d.]+(deg|rad|grad|turn),[-|+]?[\d.]+(deg|rad|grad|turn)\)/i);
                             if (found && util.isDefined(found[0])) {
-                                util.warn('Slide ' + (container.$slides.index($slide) + 1) + ' contains a non-standard transformation: skew(x,y). Use skewX(x) skewY(y) instead.', true);
+                                util.warn('Slide ' + (viewport.world.$slides.index($slide) + 1) + ' contains a non-standard transformation: skew(x,y). Use skewX(x) skewY(y) instead.', true);
                             } else {
                                 // try skew(x) -- non standard
                                 found = value.match(/skew\([-|+]?[\d.]+(deg|rad|grad|turn)\)/i);
                                 if (found && util.isDefined(found[0])) {
-                                    util.warn('Slide ' + (container.$slides.index($slide) + 1) + ' contains a non-standard transformation: skew(x). Use skewX(x) instead.', true);
+                                    util.warn('Slide ' + (viewport.world.$slides.index($slide) + 1) + ' contains a non-standard transformation: skew(x). Use skewX(x) instead.', true);
                                 }
                             }
                             return null;
@@ -2055,13 +2064,13 @@
                             return allTrans;
                         }
                         // CSS matrix is too complex. Need more info from data-transform
-                        util.warn('Failed to read transformation style for slide ' + container.$slides.index($slide) + (!!$slide.attr('id') ? ' #' + $slide.attr('id') : '') + ', due to an uneven scaleX and scaleY or to the use of skew.\nDefine your transform style in a data-transform attribute instead.', true);
+                        util.warn('Failed to read transformation style for slide ' + viewport.world.$slides.index($slide) + (!!$slide.attr('id') ? ' #' + $slide.attr('id') : '') + ', due to an uneven scaleX and scaleY or to the use of skew.\nDefine your transform style in a data-transform attribute instead.', true);
                         return getTransformDefault(origin);
                     }
                     return getTransformFromData(value, origin);
                 },
                 onLoadSlide: function (event) {
-                    var $slide = container.$slides.eq(load.processedSlides),
+                    var $slide = viewport.world.$slides.eq(load.processedSlides),
                         loadSuccess = function () {
                             loadSuccessExternal(this.complete, this.naturalWidth, this.naturalHeight);
                         },
@@ -2078,9 +2087,6 @@
                             load.getOtherSizes(slideSizes, $slide, 1, 1);
                             load.processSlide($slide, slideSizes);
                         };
-
-                    // to prevent the default behaviour in IE when dragging an element
-                    $slide[0].ondragstart = $slide[0].onselectstart = function () { return false; };
                     
                     // IE9 renders a black block, when both -ms-transform and filter are defined. To work around this, need to remove filter
                     if (data.isIE9 && $slide.css('msTransform') != '' && $slide.css('filter') != '') {
@@ -2167,8 +2173,8 @@
                             x: slideSizes.outerSize.x / 2,
                             y: slideSizes.outerSize.y / 2
                         },
-                        centerTrans: { x: 0, y: 0 }, // same as center but with transformations applied and origin set to (container.$world) topleft
-                        centerTransParent: { x: 0, y: 0 }, // centerTrans transformed to the parent CTM (container.$world) with a (0, 0) center
+                        centerTrans: { x: 0, y: 0 }, // same as center but with transformations applied and origin set to (viewport.world.$elem) topleft
+                        centerTransParent: { x: 0, y: 0 }, // centerTrans transformed to the parent CTM (viewport.world.$elem) with a (0, 0) center
                         sizeTrans: {
                             x: Math.round(contRectOuter.bottomRight.x - contRectOuter.topLeft.x),
                             y: Math.round(contRectOuter.bottomRight.y - contRectOuter.topLeft.y)
@@ -2196,9 +2202,9 @@
                 },
                 setSlidePos: function () {
                     var $slide, slideData, slidePos;
-                    container.resetMaxSize();
+                    viewport.world.resetMaxSize();
                     for (var i = 0; i < data.qtSlides; ++i) {
-                        $slide = container.$slides.eq(i);
+                        $slide = viewport.world.$slides.eq(i);
                         slideData = data.slideData[i];
                         slidePos = $slide.position();
                         if (data.isMozilla11orBelow) {
@@ -2207,8 +2213,8 @@
                             slidePos.left += correctedPos.topLeft.x;
                             slidePos.top += correctedPos.topLeft.y;
                         }
-                        container.setMaxSize(slideData.pos.x + slideData.sizeTransAll.x + slideData.topLeftTrans.left, 
-                                             slideData.pos.y + slideData.sizeTransAll.y + slideData.topLeftTrans.top);
+                        viewport.world.setMaxSize(slideData.pos.x + slideData.sizeTransAll.x + slideData.topLeftTrans.left, 
+                                                  slideData.pos.y + slideData.sizeTransAll.y + slideData.topLeftTrans.top);
                         slideData.centerTrans = transUtil.getTransformedPoint(slideData.center, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin);
                         var topLeftOuter = transUtil.getTransformedRect(slideData.outerSize, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
                         slideData.centerTrans.x = Math.round(slideData.centerTrans.x + slidePos.left - topLeftOuter.x + util.toInt($slide.css('margin-left')));
@@ -2217,11 +2223,7 @@
                         slideData.center.y = Math.round(slideData.center.y + slideData.pos.y);
                     }
 
-                    container.$world.css({
-                        'width': Math.floor(container.size.x) + 'px',
-                        'height': Math.floor(container.size.y) + 'px'
-                    });
-                    container.setSizeForIE();
+                    viewport.world.setFinalSize();
 
                     if (data.qtSlides > 0) {
                         zoomUtil.initZoom(opts.initialZoom, opts.zoomMin, opts.initialSlide);
@@ -2238,7 +2240,7 @@
                     toProcess: 0,
                     quant: 0,
                     init: function () {
-                        this.slidesArray = $.makeArray(container.$slides.filter($('img[data-src]')));
+                        this.slidesArray = $.makeArray(viewport.world.$slides.filter($('img[data-src]')));
                         this.toProcess = this.quant = this.slidesArray.length;
                     },
                     doLoad: function ($loadThisSlide, successEvent, failureEvent) {
@@ -2354,12 +2356,12 @@
         initialZoom: 1,         // Scale used when plugin is initialized. Type: positive floating point number or strings 'fitWidth' or 'fitHeight' or 'fit' or 'cover'.
         mouseZoom: true,        // Determines whether mouse wheel is used to zoom in/out. The onMouseWheel event (see below) is called, even if mouseZoom is false. Type: boolean.
         mousePan: true,         // Determines whether mouse panning is allowed. Type: boolean.
-        width: null,            // Container width in pixels. If null then uses the width defined in CSS. Type: integer.
-        height: null,           // Container height in pixels. If null then uses the width defined in CSS. Type: integer.
+        width: null,            // Viewport width in pixels. If null then uses the width defined in CSS. Type: integer.
+        height: null,           // Viewport height in pixels. If null then uses the width defined in CSS. Type: integer.
         selector: {
             slide: 'img',           // jQuery selector string for all slide elements. Type: string.
             caption: '.caption',    // jQuery selector string for all text elements for each slide. Type: string.
-            elementsOnTop: null     // jQuery selector string for the elements on top of the container element (if any). Type: string.
+            elementsOnTop: null     // jQuery selector string for the elements on top of the viewport element (if any). Type: string.
         },
         events: {
             onCreate: null,                 // Fired when plug-in has been initialized. Type: function (event).
