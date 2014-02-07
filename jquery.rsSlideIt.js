@@ -898,7 +898,7 @@
 
                 getQuadraticAprox: function (p1, p2, p3) {
                     var coefs = this.getQuadratic(p1, p2, p3);
-                    if (!isAlmostZero(coefs.a)) { // only continue if a is non zero (if it is a parabola)
+                    if (!this.isAlmostZero(coefs.a)) { // only continue if a is non zero (if it is a parabola)
 
                         var vertexPnt = {
                             x: this.getVertexPointX(coefs),
@@ -1508,6 +1508,7 @@
                             unbind('mousedown.rsSlideIt mouseleave.rsSlideIt').
                             unbind('mouseup.rsSlideIt', this.onMouseup);
                     }
+                    data.$viewportAndTops.unbind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt');
                 },
                 bindMouseEvents: function () {
                     if (opts.mousePan) {
@@ -1516,6 +1517,7 @@
                             bind('mouseup.rsSlideIt', this.onMouseup).
                             bind('mouseleave.rsSlideIt', this.onMouseleave);
                     }
+                    data.$viewportAndTops.bind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', events.onMouseWheel);
                 },
                 onGetter: function (event, field) {
                     switch (field) {
@@ -1780,7 +1782,6 @@
                             bind('userMousewheel.rsSlideIt', events.onUserMouseWheel);
 
                         viewport.world.$slides.add(data.$elemsOnTop).bind('dblclick.rsSlideIt', events.onDblClick).bind('mouseup.rsSlideIt', events.onMouseupClick);
-                        data.$viewportAndTops.bind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', events.onMouseWheel);
 
                         if (data.supportsCSSAnimation) { 
                             viewport.world.$elem.
