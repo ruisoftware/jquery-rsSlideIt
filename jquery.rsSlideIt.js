@@ -197,21 +197,9 @@
             viewport = {
                 world: {
                     $elem: null,                // this element is create dynamically as the child element of $viewport. World.$elem is the parent of all $slides
-                    size: { x: 0, y: 0 },
                     IEorigSize: { x: 0, y: 0 }, // IE needs to compute based on untransformed (original) viewport size
                     $slides: null,              // set with all slide elements
-                    resetMaxSize: function () {
-                        this.size.x = this.size.y = 0;
-                    },
-                    setMaxSize: function (width, height) {
-                        this.size.x = Math.max(this.size.x, width);
-                        this.size.y = Math.max(this.size.y, height);
-                    },
                     setFinalSize: function () {
-                        this.$elem.css({
-                            'width': Math.floor(this.size.x) + 'px',
-                            'height': Math.floor(this.size.y) + 'px'
-                        });
                         this.IEorigSize.x = this.$elem.width();
                         this.IEorigSize.y = this.$elem.height();
                     },
@@ -313,7 +301,7 @@
                 }
             },
             
-            transData = {     // data for the current transition that is running
+            transData = { // data for the current transition that is running
                 // Moving from slide A to slide B
                 // ==============================
                 // data structure:
@@ -322,16 +310,17 @@
                 //   invTransfA is the inversed transfA, i.e, invTransfA * transfA = identity matrix (I)
                 //   invTransfB is the inversed transfB, i.e, invTransfB * transfB = identity matrix (I)
                 // 
-                // In the initial state, when slide A is shown, the plugin has the invTransfA applied.
+                // Hereafter "world" means the $viewport only child element, that contains all the slides. 
+                // In the initial state, when slide A is shown, the world has the invTransfA applied.
                 // For a smoother animation to be possible, while the animation moves from slide A to slide B,
-                // the plugin matrix "morphs" progressively from invTransfA to invTransfB.
-                // In other words, during the course of transition from A to B, the invTransfA moves to an identity matrix,
-                // and the invTransfB moves from identity matrix to invTransfB. 
+                // the world matrix "morphs" progressively from invTransfA to invTransfB.
+                // In other words, during the course of transition from A to B, the invTransfA moves towards an identity matrix,
+                // and the invTransfB moves from an identity matrix towards an invTransfB. 
                 anim: {
                     $obj: null,
                     requestIdAnimationFrame: null,
                     progress: 0, // 0 <= progress <= 1
-                    centerPnt: { x: 0, y: 0 },
+                    centerPnt: { x: 0, y: 0 }, // the world transform origin. This value changes during a transition from slide A to B
                     transfsFadeToIdentity: [],
                     gotoSlideIdx: 0,
                     progressPausedOn: null,
@@ -1176,11 +1165,11 @@
                 },
                 orig: { x: viewport.center.x, y: viewport.center.y }, // transformation origin point
                 trans: { x: 0, y: 0 },
-                activeSlideIndex: -1,
+                activeSlideIndex: -1, // the slide to which we want to move after a transition is done. data.activeSlide.index is the current active slide
                 activeSlideCTMmatrix: null,
                 activeSlideCenterTrans: { x: 0, y: 0 },
                 cache: { // caches some expensive function results
-                    matrixCTM:      [1, 0, 0, 1], // Current Transformation Matrix containing all the precalculated transformations
+                    matrixCTM:      [1, 0, 0, 1], // Current Transformation Matrix containing all the precalculated transformations, plus current zoom applied
                     matrixCTM_inv:  [1, 0, 0, 1], // Inversed matrixCTM, which means matrixCTM * matrixCTM_inv = Identity matrix. This matrixCTM_inv matches the current slide ctmMatrix, with user zoom applied.
                     
                     refresh: function () {
@@ -1270,7 +1259,8 @@
                                         ',SizingMethod=\'auto expand\')'
                         };
                     } else {
-                        var matrixCss = 'matrix(' + this.cache.matrixCTM + ',' + this.trans.x + ',' + this.trans.y + ')',
+                        // translate3d is used to enable hardware optimization on css animations
+                        var matrixCss = 'matrix(' + this.cache.matrixCTM + ',' + this.trans.x + ',' + this.trans.y + ') translate3d(0,0,0)',
                             origCss = this.orig.x.toFixed(0) + 'px ' + this.orig.y.toFixed(0) + 'px';
                         return {
                             '-webkit-transform-origin': origCss,
@@ -1283,7 +1273,13 @@
                             '-moz-transform': matrixCss,
                             '-o-transform': matrixCss,
                             'msTransform': matrixCss,
-                            'transform': matrixCss
+                            'transform': matrixCss,
+
+                            // prevents some flickering effect even in 2D css animations
+                            '-webkit-backface-visibility': 'hidden',
+                            '-moz-backface-visibility': 'hidden',
+                            '-ms-backface-visibility': 'hidden',
+                            'backface-visibility': 'hidden'
                         };
                     }
                 },
@@ -1564,7 +1560,7 @@
                                 transData.anim.clearTransformations();
                                 data.gotoSlide(data.checkSlideBounds(value));
                                 transData.anim.progress = transData.cssAnim.totalTime = 0;
-                            }   
+                            }
                     }
                     return events.onGetter(event, field);
                 },
@@ -1600,6 +1596,7 @@
                         var $slide = events.readUnderneath(event);
                         if ($slide) {
                             $viewport.triggerHandler('dblClickSlide.rsSlideIt', [$slide, viewport.world.$slides.index($slide.closest(opts.selector.slide))]);
+                            event.stopPropagation();
                         }
                     }
                 },
@@ -1607,6 +1604,92 @@
                     if (opts.events.onCreate) {
                         opts.events.onCreate(event);
                     }
+                },
+                onDestroy: function (event) {
+                    if (transData.inputOpts) {
+                        $viewport.trigger('stop.rsSlideIt'); // stop slideshow
+                    } else {
+                        if (transData.animating) {
+                            transData.interrupt();
+                        }
+                    }
+
+                    data.$viewportAndTops.unbind(
+                        'mousedown.rsSlideIt mouseleave.rsSlideIt mousemove.rsSlideIt mouseup.rsSlideIt ' + 
+                        'DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt');
+                    
+                    $viewport.unbind(
+                        'singleTransition.rsSlideIt transition.rsSlideIt playPause.rsSlideIt stop.rsSlideIt ' + 
+                        'destroy.rsSlideIt getter.rsSlideIt setter.rsSlideIt create.rsSlideIt ' + 
+                        'ajaxLoadBegin.rsSlideIt ajaxLoadSlide.rsSlideIt ajaxLoadEnd.rsSlideIt changeZoom.rsSlideIt ' + 
+                        // 'selectSlide.rsSlideIt unselectSlide.rsSlideIt ' +
+                        'clickSlide.rsSlideIt dblClickSlide.rsSlideIt beginPan.rsSlideIt endPan.rsSlideIt ' +
+                        'beginTrans.rsSlideIt endTrans.rsSlideIt beginDelay.rsSlideIt endDelay.rsSlideIt ' +
+                        'userMousewheel.rsSlideIt loadSlide.rsSlideIt');
+
+                    viewport.world.$slides.add(data.$elemsOnTop).unbind(
+                        'dblclick.rsSlideIt mouseup.rsSlideIt');
+
+                    if (data.supportsCSSAnimation) {
+                        if (transData.cssAnim.$styleObj) {
+                            transData.cssAnim.$styleObj.remove();
+                        }
+                        viewport.world.$elem.css({
+                            '-webkit-animation': '',
+                            '-moz-animation': '',
+                            '-o-animation': '',
+                            'animation': ''
+                        }).unbind(
+                            'animationstart.rsSlideIt webkitAnimationStart.rsSlideIt oanimationstart.rsSlideIt ' +
+                            'MSAnimationStart.rsSlideIt animationend.rsSlideIt webkitAnimationEnd.rsSlideIt ' +
+                            'oanimationend.rsSlideIt MSAnimationEnd.rsSlideIt');
+                    }
+                    if (data.isIE8orBelow) {
+                        viewport.world.$elem.css({
+                            'margin-left': '',
+                            'margin-top': '',
+                            'filter': ''
+                        });
+                    } else {
+                        viewport.world.$elem.css({
+                            '-webkit-transform-origin': '',
+                            '-moz-transform-origin': '',
+                            '-o-transform-origin': '',
+                            'msTransformOrigin': '',
+                            'transform-origin': '',
+                            '-webkit-transform': '',
+                            '-moz-transform': '',
+                            '-o-transform': '',
+                            'msTransform': '',
+                            'transform': '',
+                            '-webkit-backface-visibility': '',
+                            '-moz-backface-visibility': '',
+                            '-ms-backface-visibility': '',
+                            'backface-visibility': ''
+                        });
+                    }
+                    if (data.supportsCSSTransforms3D) {
+                        if (opts.data3D.viewportClass) {
+                            $viewport.removeClass(opts.data3D.viewportClass);
+                        }
+                        $viewport.css({
+                            '-webkit-perspective': '',
+                            '-moz-perspective': '',
+                            'perspective': ''
+                        });
+                    }
+                    if (!!opts.width) { $viewport.css('width', ''); }
+                    if (!!opts.height) { $viewport.css('height', ''); }
+                    $viewport.css('overflow', '');
+                    viewport.world.$slides.css({
+                        'display': '',
+                        'width': '',
+                        'height': ''
+                    });
+                    $viewport.add(viewport.world.$slides).filter(function () {
+                        return $(this).attr('style') === '';
+                    }).removeAttr('style');
+                    viewport.world.$slides.eq(0).unwrap();
                 },
                 onAjaxLoadBegin: function (event, qtTotal) {
                     if (opts.events.onAjaxLoadBegin) {
@@ -1762,6 +1845,7 @@
                             bind('transition.rsSlideIt', events.onTransition).
                             bind('playPause.rsSlideIt', events.onPlayPause).
                             bind('stop.rsSlideIt', events.onStop).
+                            bind('destroy.rsSlideIt', events.onDestroy).
                             bind('getter.rsSlideIt', events.onGetter).
                             bind('setter.rsSlideIt', events.onSetter).
                             bind('create.rsSlideIt', events.onCreate).
@@ -2206,12 +2290,11 @@
                         }
 
                     data.slideData.push({
-                        // pos and centerTrans are computed later
-                        pos: { x: 0, y: 0 },
                         center: { // center of element, with origin pointing to this element's topleft
                             x: slideSizes.outerSize.x / 2,
                             y: slideSizes.outerSize.y / 2
                         },
+                        // centerTrans and centerTransParent are computed later
                         centerTrans: { x: 0, y: 0 }, // same as center but with transformations applied and origin set to (viewport.world.$elem) topleft
                         centerTransParent: { x: 0, y: 0 }, // centerTrans transformed to the parent CTM (viewport.world.$elem) with a (0, 0) center
                         sizeTrans: {
@@ -2238,28 +2321,60 @@
                         caption: load.getCaption($slide),
                         cssTransforms: cssTransforms
                     });
+                    if ($slide.css('display') == 'block') {
+                        $slide.css('display', 'inline-block');
+                    }
+                    $slide.css({
+                        'width': slideSizes.size.x + 'px',
+                        'height': slideSizes.size.y + 'px'
+                    });
                 },
                 setSlidePos: function () {
-                    var $slide, slideData, slidePos;
-                    viewport.world.resetMaxSize();
+                    var $slide, slideData, slidePos, parents;
                     for (var i = 0; i < data.qtSlides; ++i) {
                         $slide = viewport.world.$slides.eq(i);
                         slideData = data.slideData[i];
+
                         slidePos = $slide.position();
                         if (data.isMozilla11orBelow) {
                             // Mozilla (up to 11.0b8) returns incorrect position for transformed elements, so there is a need to make an adjustment
-                            var correctedPos = transUtil.getTransformedRect(slideData.size, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin);
-                            slidePos.left += correctedPos.topLeft.x;
-                            slidePos.top += correctedPos.topLeft.y;
+                            var topLeft = transUtil.getTransformedRect(slideData.size, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
+                            slidePos.left += topLeft.x;
+                            slidePos.top += topLeft.y;
                         }
-                        viewport.world.setMaxSize(slideData.pos.x + slideData.sizeTransAll.x + slideData.topLeftTrans.left, 
-                                                  slideData.pos.y + slideData.sizeTransAll.y + slideData.topLeftTrans.top);
+                        
+                        parents = $viewport.find($slide.parent().closest(opts.selector.slide)).map(function (i, e) {
+                            var index = viewport.world.$slides.index(e);
+                            return index === -1 ? null : index;
+                        }).get();
+                        var topLeftOuter;
+
+                        if (parents.length > 0) { // parents array has either zero or one elements
+                            var composedMatrix = transUtil.getMatrixIdentity();
+                            util.multiply2x2Matrices(data.slideData[parents[0]].cssTransforms.ctmMatrix, composedMatrix);
+                            util.multiply2x2Matrices(slideData.cssTransforms.ctmMatrix, composedMatrix);
+                            slideData.cssTransforms.ctmMatrix = composedMatrix.slice(); // copies composedMatrix array into another (by value)
+                            var topLeft = transUtil.getTransformedRect(slideData.size, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
+                            slidePos.left -= topLeft.x;
+                            slidePos.top -= topLeft.y;
+                            // push the parent transformations into this slide
+                            var parentTransfs = data.slideData[parents[0]].cssTransforms.transformations;
+                            for(var p = parentTransfs.length - 1; p > -1; --p) {
+                                slideData.cssTransforms.transformations.unshift({
+                                    id:         parentTransfs[p].id,
+                                    matrixInv:  parentTransfs[p].matrixInv.slice(),
+                                    valueIdent: parentTransfs[p].valueIdent,
+                                    valueInv:   parentTransfs[p].valueInv 
+                                });
+                            }
+                            topLeftOuter = {x: 0, y: 0};
+                        } else {
+                            topLeftOuter = transUtil.getTransformedRect(slideData.outerSize, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
+                        }
+
                         slideData.centerTrans = transUtil.getTransformedPoint(slideData.center, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin);
-                        var topLeftOuter = transUtil.getTransformedRect(slideData.outerSize, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
                         slideData.centerTrans.x = Math.round(slideData.centerTrans.x + slidePos.left - topLeftOuter.x + util.toInt($slide.css('margin-left')));
                         slideData.centerTrans.y = Math.round(slideData.centerTrans.y + slidePos.top - topLeftOuter.y + util.toInt($slide.css('margin-top')));
-                        slideData.center.x = Math.round(slideData.center.x + slideData.pos.x);
-                        slideData.center.y = Math.round(slideData.center.y + slideData.pos.y);
                     }
 
                     viewport.world.setFinalSize();
@@ -2356,7 +2471,13 @@
                     return this.eq(0).triggerHandler(op + '.rsSlideIt', arguments);
                 }
             }
+        },
+        destroy = function () {
+            return this.each(function () {
+                $(this).trigger('destroy.rsSlideIt');
+            });
         };
+
 
         if (typeof options === 'string') {
             var otherArgs = Array.prototype.slice.call(arguments, 1);
@@ -2365,6 +2486,7 @@
                 case 'playPause': return playPause.apply(this, otherArgs);
                 case 'stop': return stop.call(this);
                 case 'option': return option.apply(this, otherArgs);
+                case 'destroy': return destroy.call(this);
                 default: return this;
             }
         }
@@ -2388,7 +2510,7 @@
         zoomMin: 0.4,           // Minimum zoom possible. Type: floating point number greater than zero.
         zoomStep: 0.1,          // Value incremented to the current zoom, when mouse wheel moves up. When mouse wheel moves down, current zoom is decremented by this value.
                                 // To reverse direction, use negative zoomStep. To disable zoom on mouse wheel, do not set zoomStep to zero, but set mouseZoom to false instead. Type: floating point number.
-        zoomMax: 15,            // Maximun zoom possible. Type: floating point number.
+        zoomMax: 30,            // Maximun zoom possible. Type: floating point number.
         initialSlide: 0,        // Active slide when plugin is initialized. Type: zero-based integer.
         initialZoom: 1,         // Scale used when plugin is initialized. Type: positive floating point number or strings 'fitWidth' or 'fitHeight' or 'fit' or 'cover'.
         mouseZoom: true,        // Determines whether mouse wheel is used to zoom in/out. The onMouseWheel event (see below) is called, even if mouseZoom is false. Type: boolean.
