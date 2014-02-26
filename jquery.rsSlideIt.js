@@ -1622,7 +1622,7 @@
                         'singleTransition.rsSlideIt transition.rsSlideIt playPause.rsSlideIt stop.rsSlideIt ' + 
                         'destroy.rsSlideIt getter.rsSlideIt setter.rsSlideIt create.rsSlideIt ' + 
                         'ajaxLoadBegin.rsSlideIt ajaxLoadSlide.rsSlideIt ajaxLoadEnd.rsSlideIt changeZoom.rsSlideIt ' + 
-                        // 'selectSlide.rsSlideIt unselectSlide.rsSlideIt ' +
+                        'selectSlide.rsSlideIt unselectSlide.rsSlideIt ' +
                         'clickSlide.rsSlideIt dblClickSlide.rsSlideIt beginPan.rsSlideIt endPan.rsSlideIt ' +
                         'beginTrans.rsSlideIt endTrans.rsSlideIt beginDelay.rsSlideIt endDelay.rsSlideIt ' +
                         'userMousewheel.rsSlideIt loadSlide.rsSlideIt');
