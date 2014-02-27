@@ -1145,7 +1145,7 @@
                     event.preventDefault();
                 },
                 stopImmediately: function () {
-                    data.$viewportAndTops.unbind('mousemove.rsSlideIt');
+                    data.$viewportAndTops.unbind('mousemove.rsSlideIt', panUtil.mousemove);
                     if (panUtil.isPanning) {
                         panUtil.endPan();
                     }
@@ -1153,7 +1153,7 @@
             },
 
             transUtil = {
-                transID: { 
+                transID: {
                     TRANSLATE:  0,
                     ROTATE:     1,
                     SKEWX:      2,
@@ -1501,10 +1501,11 @@
                 unbindMouseEvents: function () {
                     if (opts.mousePan) {
                         data.$viewportAndTops.
-                            unbind('mousedown.rsSlideIt mouseleave.rsSlideIt').
-                            unbind('mouseup.rsSlideIt', this.onMouseup);
+                            unbind('mousedown.rsSlideIt', this.onMousedown).
+                            unbind('mouseup.rsSlideIt', this.onMouseup).
+                            unbind('mouseleave.rsSlideIt', this.onMouseleave);
                     }
-                    data.$viewportAndTops.unbind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt');
+                    data.$viewportAndTops.unbind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', events.onMouseWheel);
                 },
                 bindMouseEvents: function () {
                     if (opts.mousePan) {
@@ -1614,21 +1615,34 @@
                         }
                     }
 
-                    data.$viewportAndTops.unbind(
-                        'mousedown.rsSlideIt mouseleave.rsSlideIt mousemove.rsSlideIt mouseup.rsSlideIt ' + 
-                        'DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt');
-                    
-                    $viewport.unbind(
-                        'singleTransition.rsSlideIt transition.rsSlideIt playPause.rsSlideIt stop.rsSlideIt ' + 
-                        'destroy.rsSlideIt getter.rsSlideIt setter.rsSlideIt create.rsSlideIt ' + 
-                        'ajaxLoadBegin.rsSlideIt ajaxLoadSlide.rsSlideIt ajaxLoadEnd.rsSlideIt changeZoom.rsSlideIt ' + 
-                        'selectSlide.rsSlideIt unselectSlide.rsSlideIt ' +
-                        'clickSlide.rsSlideIt dblClickSlide.rsSlideIt beginPan.rsSlideIt endPan.rsSlideIt ' +
-                        'beginTrans.rsSlideIt endTrans.rsSlideIt beginDelay.rsSlideIt endDelay.rsSlideIt ' +
-                        'userMousewheel.rsSlideIt loadSlide.rsSlideIt');
+                    $viewport.
+                        unbind('singleTransition.rsSlideIt', events.onSingleTransition).
+                        unbind('transition.rsSlideIt', events.onTransition).
+                        unbind('playPause.rsSlideIt', events.onPlayPause).
+                        unbind('stop.rsSlideIt', events.onStop).
+                        unbind('destroy.rsSlideIt', events.onDestroy).
+                        unbind('getter.rsSlideIt', events.onGetter).
+                        unbind('setter.rsSlideIt', events.onSetter).
+                        unbind('create.rsSlideIt', events.onCreate).
+                        unbind('ajaxLoadBegin.rsSlideIt', events.onAjaxLoadBegin).
+                        unbind('ajaxLoadSlide.rsSlideIt', events.onAjaxLoadSlide).
+                        unbind('ajaxLoadEnd.rsSlideIt', events.onAjaxLoadEnd).
+                        unbind('changeZoom.rsSlideIt', events.onChangeZoom).
+                        unbind('selectSlide.rsSlideIt', events.onSelectSlide).
+                        unbind('unselectSlide.rsSlideIt', events.onUnselectSlide).
+                        unbind('clickSlide.rsSlideIt', events.onClickSlide).
+                        unbind('dblClickSlide.rsSlideIt', events.onDblClickSlide).
+                        unbind('beginPan.rsSlideIt', events.onBeginPan).
+                        unbind('endPan.rsSlideIt', events.onEndPan).
+                        unbind('beginTrans.rsSlideIt', events.onBeginTrans).
+                        unbind('endTrans.rsSlideIt', events.onEndTrans).
+                        unbind('beginDelay.rsSlideIt', events.onBeginDelay).
+                        unbind('endDelay.rsSlideIt', events.onEndDelay).
+                        unbind('userMousewheel.rsSlideIt', events.onUserMouseWheel);
 
-                    viewport.world.$slides.add(data.$elemsOnTop).unbind(
-                        'dblclick.rsSlideIt mouseup.rsSlideIt');
+                    viewport.world.$slides.add(data.$elemsOnTop).
+                        unbind('dblclick.rsSlideIt', events.onDblClick).
+                        unbind('mouseup.rsSlideIt', events.onMouseupClick);
 
                     if (data.supportsCSSAnimation) {
                         if (transData.cssAnim.$styleObj) {
@@ -1639,11 +1653,23 @@
                             '-moz-animation': '',
                             '-o-animation': '',
                             'animation': ''
-                        }).unbind(
-                            'animationstart.rsSlideIt webkitAnimationStart.rsSlideIt oanimationstart.rsSlideIt ' +
-                            'MSAnimationStart.rsSlideIt animationend.rsSlideIt webkitAnimationEnd.rsSlideIt ' +
-                            'oanimationend.rsSlideIt MSAnimationEnd.rsSlideIt');
+                        }).
+                        unbind('animationstart.rsSlideIt', events.onCssAnimationStart).
+                        unbind('webkitAnimationStart.rsSlideIt', events.onCssAnimationStart).
+                        unbind('oanimationstart.rsSlideIt', events.onCssAnimationStart).
+                        unbind('MSAnimationStart.rsSlideIt', events.onCssAnimationStart).
+                        unbind('animationend.rsSlideIt', events.onCssAnimationEnd).
+                        unbind('webkitAnimationEnd.rsSlideIt', events.onCssAnimationEnd).
+                        unbind('oanimationend.rsSlideIt', events.onCssAnimationEnd).
+                        unbind('MSAnimationEnd.rsSlideIt', events.onCssAnimationEnd);
                     }
+                    data.$viewportAndTops.
+                        unbind('mousemove.rsSlideIt', panUtil.mousemove).
+                        unbind('mousedown.rsSlideIt', this.onMousedown).
+                        unbind('mouseup.rsSlideIt', this.onMouseup).
+                        unbind('mouseleave.rsSlideIt', this.onMouseleave).
+                        unbind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', events.onMouseWheel);
+
                     if (data.isIE8orBelow) {
                         viewport.world.$elem.css({
                             'margin-left': '',
