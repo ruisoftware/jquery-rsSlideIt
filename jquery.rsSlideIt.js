@@ -16,10 +16,15 @@
                 $viewportAndTops: null,
                 slideData: [],
                 qtSlides: 0,
-                supportsCSSAnimation: (typeof Modernizr !== 'undefined') && !!Modernizr.cssanimations,
+                supportsCSSAnimation: true, //(typeof Modernizr !== 'undefined') && !!Modernizr.cssanimations,
+                supportsCSSTransforms3D: true, //(typeof Modernizr !== 'undefined') && !!Modernizr.csstransforms3d,
                 isIE8orBelow: false,
                 isIE9: false,
                 isMozilla11orBelow: false,
+                activeSlide: {
+                    $slide: null,
+                    index: -1
+                },
                 init: function () {
                     this.qtSlides = viewport.world.$slides.length;
                     this.$viewportAndTops = $viewport.add(this.$elemsOnTop);
@@ -46,150 +51,11 @@
                 checkSlideBounds: function (slideIdx) {
                     return slideIdx < 0 ? 0 : (slideIdx > this.qtSlides - 1 ? data.qtSlides - 1 : slideIdx);
                 },
-                activeSlide: {
-                    $slide: null,
-                    index: -1
-                },
                 gotoSlide: function (slide) {
-                    var prevSlide = this.activeSlide.index;
                     transUtil.setActiveSlide(slide);
                     viewport.world.$elem.css(transUtil.getTransformCSS());
-                    transUtil.cache.refreshCenterTransParent();
-                    events.fireSlideEvents(true, prevSlide);
                     if (seqData.userInteract) {
                         events.bindMouseEvents();
-                    }
-                },
-
-                // To quickly find the active slide, a binary search tree is used for an efficient O(log n) search algorithm. 
-                // Active slide is the slide whose center is closest to the viewport center.
-                binTreeSearch: {
-                    sortedX: [],
-                    sortedY: [],
-                    findPnt: function (isX, elem, sortedArray) {
-                        var from = 0,
-                            len = sortedArray.length,
-                            to = len - 1,
-                            middle = -2,
-                            middleValue,
-                            slideData;
-                        while (from <= to) {
-                            middle = Math.floor((from + to)/ 2);
-                            slideData = data.slideData[sortedArray[middle]];
-                            middleValue = isX ? slideData.centerTransParent.x : slideData.centerTransParent.y;
-                            if (middleValue < elem) {
-                                from = ++middle;
-                            } else {
-                                if (middleValue > elem) {
-                                    to = --middle;
-                                } else {
-                                    return {found: true, idx: middle};
-                                }
-                            }
-                        }
-                        
-                        if (middle > -2) {
-                            middle = (middle < 0 ? 0 : middle);
-                            if (middle < len) {
-                                slideData = data.slideData[sortedArray[middle]];
-                                middleValue = isX ? slideData.centerTransParent.x : slideData.centerTransParent.y;
-                                if (middleValue < elem) {
-                                    ++middle;
-                                }
-                            }
-                        }
-                        return { found: false, idx: (middle < 0 ? 0 : middle) };
-                    },
-                    insertSorted: function () {
-                        delete this.sortedX;
-                        delete this.sortedY;
-                        this.sortedX = [];
-                        this.sortedY = [];
-                        for (var i = 0; i < data.qtSlides; i++) {
-                            this.sortedX.splice(this.findPnt(true, data.slideData[i].centerTransParent.x, this.sortedX).idx, 0, i);
-                            this.sortedY.splice(this.findPnt(false, data.slideData[i].centerTransParent.y, this.sortedY).idx, 0, i);
-                        }
-                    },
-                    findRange: function (isX, range) {
-                        var sortedArray = (isX ? this.sortedX : this.sortedY),
-                            findResultFrom = this.findPnt(isX, range[0], sortedArray),
-                            findResultTo = this.findPnt(isX, range[1], sortedArray),
-                            value,
-                            slideData;
-                        if (findResultFrom.found) { // get the first point with the same x or y value
-                            value = range[0];
-                            while (findResultFrom.idx > 0 && value === range[0]) {
-                                --findResultFrom.idx;
-                                slideData = data.slideData[sortedArray[findResultFrom.idx]];
-                                value = isX ? slideData.centerTransParent.x : slideData.centerTransParent.y;
-                                if (value !== range[0]) {
-                                    findResultFrom.idx++;
-                                }
-                            }
-                        }
-                        if (findResultTo.found) { // get the last point with the same x or y value
-                            var value = range[1],
-                                len = sortedArray.length;
-                            while (findResultTo.idx < len - 1 && value === range[1]) { // yes, "< len - 1" is correct
-                                ++findResultTo.idx;
-                                slideData = data.slideData[sortedArray[findResultTo.idx]];
-                                value = isX ? slideData.centerTransParent.x : slideData.centerTransParent.y;
-                                if (value !== range[1]) {
-                                    findResultTo.idx--;
-                                }
-                            }
-                        } else {
-                            // when the range[1] is not found, the result points to the position where it should be inserted (position immediately after the largest smaller range[1]), 
-                            // hence we need to decrement it
-                            findResultTo.idx--;
-                        }
-                        var result = [];
-                        for (var idx = findResultFrom.idx; idx <= findResultTo.idx; ++idx) {
-                            result.push(sortedArray[idx]);
-                        }
-                        return result;
-                    },
-                    findRangeX: function (range) {
-                        return this.findRange(true, range);
-                    },
-                    findRangeY: function (range) {
-                        return this.findRange(false, range);
-                    },
-                    
-                    // returns in O(log n) time, the slide whose center is closest to the viewport center
-                    getActiveSlide: function () {
-                        viewport.setCenterPos();
-                        var minDist = minIdx = -1,
-                            distance = (viewport.center.x + viewport.center.y) / 10,
-                            zoomDistance = zoomUtil.zoom * distance,
-                            pntsX = [],
-                            pntsY = [],
-                            merged = [],
-                            maxIterations = 10,
-                            transformedOrigZero = transUtil.getTransformedPoint(transUtil.orig);
-
-                        if (this.sortedX.length > 0 && this.sortedY.length > 0) {
-                            while (merged.length === 0 && maxIterations-- > 0) { // maxIterations is just an optimization, since 4 iterations should be enough to find the nearest point
-                                pntsX = this.findRangeX([transformedOrigZero.x - zoomDistance, transformedOrigZero.x + zoomDistance]);
-                                pntsY = this.findRangeY([transformedOrigZero.y - zoomDistance, transformedOrigZero.y + zoomDistance]);
-                                merged = $.map(pntsX, function (px) {
-                                    return $.inArray(px, pntsY) < 0 ? null : px;
-                                });
-                                distance *= 2;
-                                zoomDistance = zoomUtil.zoom * distance;
-                            }
-                                
-                            var dist, slideData;
-                            for (var i = merged.length - 1; i > -1; i--) {
-                                slideData = data.slideData[merged[i]];
-                                dist = util.getDistanceTwoPnts(slideData.centerTransParent, transformedOrigZero);
-                                if (dist < minDist || i === merged.length - 1) {
-                                    minDist = dist;
-                                    minIdx = merged[i];
-                                }
-                            }
-                        }
-                        return { $slide: minIdx === -1 ? null : viewport.world.$slides.eq(minIdx), index: minIdx };
                     }
                 }
             },
@@ -227,6 +93,7 @@
                 }
             },
 
+            // TODO check code
             seqData = { // data for the whole slide show currently running
                 idx: 0,      // current active slide while sequence runs
                 repeat: 0,   // how many cycles a sequence runs
@@ -283,7 +150,6 @@
                                             events.bindMouseEvents();
                                         }
                                         transData.reset();
-                                        events.fireSlideEvents(false);
                                 }
                             }
                         };
@@ -301,6 +167,7 @@
                 }
             },
             
+            // TODO check code
             transData = { // data for the current transition that is running
                 // Moving from slide A to slide B
                 // ==============================
@@ -320,7 +187,7 @@
                     $obj: null,
                     requestIdAnimationFrame: null,
                     progress: 0, // 0 <= progress <= 1
-                    centerPnt: { x: 0, y: 0 }, // the world transform origin. This value changes during a transition from slide A to B
+                    centerPnt: { x: 0, y: 0, z: 0 }, // the world transform origin. This value changes during a transition from slide A to B
                     transfsFadeToIdentity: [],
                     gotoSlideIdx: 0,
                     progressPausedOn: null,
@@ -329,6 +196,7 @@
                         this.progress = 0;
                         this.centerPnt.x = center.x;
                         this.centerPnt.y = center.y;
+                        this.centerPnt.z = center.z;
                     },
                     setLastStep: function () {
                         for (var i = this.transfsFadeToIdentity.length - 1; i > -1; --i) {
@@ -372,7 +240,7 @@
                             this.$obj.stop(); 
                         }
                         transUtil.activeSlideCTMmatrix = util.getInvertedMatrix(transUtil.cache.matrixCTM);
-                        util.multiply2x2Matrices(transUtil.getMatrixScale(zoomUtil.zoom), transUtil.activeSlideCTMmatrix); // remove the user zoom
+                        util.multiplyMatrices(zoomUtil.getMatrixUserZoom(zoomUtil.zoom), transUtil.activeSlideCTMmatrix); // remove the user zoom
                         if (data.isIE8orBelow) {
                             transUtil.trans.x = viewport.center.x - transUtil.orig.x;
                             transUtil.trans.y = viewport.center.y - transUtil.orig.y;
@@ -384,14 +252,12 @@
                         if (seqData.state == $.fn.rsSlideIt.state.STOP) {
                             transUtil.activeSlideIndex = this.gotoSlideIdx;
                         }
-                        transUtil.cache.refreshCenterTransParent();
                         transData.finished(true, true);
-                        events.fireSlideEvents();
                     },
                     computeIntermediateMatrix: function (now, doEasing, toTransformations, noCalcInvMatrix, calcZoomValue) {
                         // doEasing is false for JS animations, because the $.animate() already takes care of easing.
                         // doEasing is true for CSS3 animations, since the easing needs to be handled manually
-                        var i, transformation, interpolateFactor, value;                      
+                        var i, transformation, interpolateFactor, value, userZoom;
                         // from slide matrix to identity
                         transUtil.cache.matrixCTM = transUtil.getMatrixIdentity();
                         for (i = this.transfsFadeToIdentity.length - 1; i > -1; --i) {
@@ -404,7 +270,7 @@
                             value = transformation.id == transUtil.transID.SCALEXY ? 
                                 util.interpolatePoint({ x: transformation.valueIdent, y: transformation.valueIdent }, transformation.valueInv, interpolateFactor) :
                                 util.interpolate(transformation.valueIdent, transformation.valueInv, interpolateFactor);
-                            util.multiply2x2Matrices(transUtil.getMatrix(transformation.id, value), transUtil.cache.matrixCTM);
+                            util.multiplyMatrices(transUtil.getMatrix(transformation.id, value), transUtil.cache.matrixCTM);
                         }
 
                         var nowWithEasing = doEasing ? $.easing[transData.easing](now, transData.duration * now, 0, 1, transData.duration) : now;
@@ -415,13 +281,17 @@
                             value = transformation.id == transUtil.transID.SCALEXY ? 
                                 util.interpolatePoint({ x: transformation.valueIdent, y: transformation.valueIdent }, transformation.valueInv, nowWithEasing) :
                                 util.interpolate(transformation.valueIdent, transformation.valueInv, nowWithEasing);
-                            util.multiply2x2Matrices(transUtil.getMatrix(transformation.id, value), transUtil.cache.matrixCTM);
+                            util.multiplyMatrices(transUtil.getMatrix(transformation.id, value), transUtil.cache.matrixCTM);
                         }
 
-                        util.multiply2x2Matrices(transUtil.getMatrix(transUtil.transID.SCALE, !!calcZoomValue ? util.getQuadraticValue(transData.anim.zoomCoefs, nowWithEasing) : zoomUtil.zoom), transUtil.cache.matrixCTM);
+                        userZoom = !!calcZoomValue ? util.getQuadraticValue(transData.anim.zoomCoefs, nowWithEasing) : zoomUtil.zoom;
+                        util.multiplyMatrices(zoomUtil.getMatrixUserZoom(userZoom), transUtil.cache.matrixCTM);
+                        util.roundMatrixToTrigonometricBounds(transUtil.cache.matrixCTM);
+
                         if (!noCalcInvMatrix) {
-                            transUtil.cache.matrixCTM_inv = util.getInvertedMatrix(transUtil.cache.matrixCTM);    
+                            transUtil.cache.matrixCTM_inv = util.getInvertedMatrix(transUtil.cache.matrixCTM);
                         }
+                        return userZoom;
                     }
                 },
 
@@ -431,20 +301,34 @@
                     totalTime: 0,
                     intervalId: null,
                     getFrames: function (fromCenterTrans, toCenterTrans, toTransformations, easing, durationMs) {
-                        var css = '', orig, animEasingFunc, animValue;
+                        var css = '', animEasingFunc, animValue,
+                            addMatrix = function (orig) {
+                                return 'XXtransform:matrix('
+                                    + transUtil.cache.matrixCTM.slice(0, 2) + ','
+                                    + transUtil.cache.matrixCTM.slice(3, 5) + ','
+                                    + (viewport.center.x - orig.x).toFixed(2) + ','
+                                    + (viewport.center.y - orig.y).toFixed(2) + ') translate3d(0,0,0);}\n';
+                            },
+                            addMatrix3D = function (orig) {
+                                return 'XXtransform:matrix3d('
+                                    + transUtil.cache.matrixCTM.slice(0, 3) + ',0,'
+                                    + transUtil.cache.matrixCTM.slice(3, 6) + ',0,'
+                                    + transUtil.cache.matrixCTM.slice(6, 9) + ',0,'
+                                    + (viewport.center.x - orig.x).toFixed(2) + ','
+                                    + (viewport.center.y - orig.y).toFixed(2) + ','
+                                    + (- orig.z).toFixed(2) + ',1);}\n';
+                            },
+                            doAddMatrix = data.supportsCSSTransforms3D ? addMatrix3D : addMatrix;
 
                         for (var anim = 0; anim < 1.005; anim += 0.01) {
                             animValue = transData.anim.progressPausedOn !== null ? util.interpolate(transData.anim.progressPausedOn, 1, anim) : anim;
                             transData.anim.computeIntermediateMatrix(animValue, true, toTransformations, true, true);
 
                             animEasingFunc = $.easing[easing];
-                            orig = util.interpolatePoint(fromCenterTrans, toCenterTrans, animEasingFunc ? animEasingFunc(anim, durationMs*anim, 0, 1, durationMs) : anim);
+                            var orig = util.interpolatePoint(fromCenterTrans, toCenterTrans, animEasingFunc ? animEasingFunc(anim, durationMs*anim, 0, 1, durationMs) : anim);
                             // XX is a mask that will be replaced by a css prefix
-                            css += Math.round(anim*100) + '% {XXtransform-origin:' + orig.x.toFixed(0) + 'px ' + orig.y.toFixed(0) + 'px;' +
-                                                 'XXtransform:matrix(' + 
-                                                    transUtil.cache.matrixCTM + ',' +
-                                                    (viewport.center.x - orig.x).toFixed(2) + ',' + 
-                                                    (viewport.center.y - orig.y).toFixed(2) + ');}\n';
+                            css += Math.round(anim*100) + '% {XXtransform-origin: ' + orig.x.toFixed(0) + 'px ' + orig.y.toFixed(0) + 'px ' + orig.z.toFixed(0) + 'px; ' +
+                                doAddMatrix(orig);
                         }
                         transUtil.cache.matrixCTM_inv = util.getInvertedMatrix(transUtil.cache.matrixCTM);
                         return css;
@@ -465,7 +349,7 @@
                         transUtil.setTransformOrigin(transData.anim.centerPnt.x, transData.anim.centerPnt.y);
 
                         transUtil.activeSlideCTMmatrix = util.getInvertedMatrix(transUtil.cache.matrixCTM);
-                        util.multiply2x2Matrices(transUtil.getMatrixScale(zoomUtil.zoom), transUtil.activeSlideCTMmatrix); // remove the user zoom
+                        util.multiplyMatrices(zoomUtil.getMatrixUserZoom(zoomUtil.zoom), transUtil.activeSlideCTMmatrix); // remove the user zoom
                         
                         if (transData.isThisPartOfSlideShow()) {
                             this.resetCSSanimation();
@@ -473,9 +357,7 @@
                         if (seqData.state == $.fn.rsSlideIt.state.STOP) {
                             transUtil.activeSlideIndex = transData.anim.gotoSlideIdx;
                         }
-                        transUtil.cache.refreshCenterTransParent();
                         transData.finished(true, true);
-                        events.fireSlideEvents();
                     },
                     resetCSSanimation: function () {
                         viewport.world.$elem.css(transUtil.getTransformCSSstyle()).css({
@@ -607,9 +489,9 @@
 
                 animationWillRun: function (fromCenterTrans, toCenterTrans, zoomDest) {
                     var sameMatrices = function (matrix1, matrix2) {
-                        var m = [matrix2[0], matrix2[1], matrix2[2], matrix2[3]];
-                        util.multiply2x2Matrices(transUtil.getMatrix(transUtil.transID.SCALE, zoomUtil.zoom), m);
-                        return util.areMatricesEqual(matrix1, m);
+                        var m2 = matrix2.slice();
+                        util.multiplyMatrices(zoomUtil.getMatrixUserZoom(zoomUtil.zoom), m2);
+                        return util.areMatricesEqual(matrix1, m2);
                     };
                     return fromCenterTrans.x != toCenterTrans.x ||
                            fromCenterTrans.y != toCenterTrans.y ||
@@ -646,7 +528,7 @@
                         }
                         
                         animData = this.cssAnim.getFrames(this.anim.centerPnt, data.slideData[this.anim.gotoSlideIdx].centerTrans, toTransformations, optsTrans.easing, durationMs);
-                        
+
                         this.cssAnim.$styleObj = $('<style> ' + 
                             '@-webkit-keyframes ' + animationName + ' {\n' + animData.replace(/XX/g, '-webkit-') + '}\n' + 
                             '@-moz-keyframes ' + animationName + ' {\n' + animData.replace(/XX/g, '-moz-') + '}\n' + 
@@ -805,7 +687,13 @@
                 },
 
                 roundToTrigonometricBounds: function (value) {
-                    return this.isAlmostZero(value) ? 0 : (this.isAlmostOne(value) ? 1 : (this.isAlmostZero(value + 1) /* testing for -1 */ ? -1 : value));
+                    return util.isAlmostZero(value) ? 0 : (util.isAlmostOne(value) ? 1 : (util.isAlmostZero(value + 1) /* testing for -1 */ ? -1 : value));
+                },
+
+                roundMatrixToTrigonometricBounds: function (matrix) {
+                    for (var i = 0, len = matrix.length; i < len; ++i) {
+                        matrix[i] = this.roundToTrigonometricBounds(matrix[i]);
+                    }
                 },
 
                 toInt: function (str) {
@@ -825,7 +713,8 @@
                 interpolatePoint: function (from, to, percent) {
                     return { 
                         x: (to.x - from.x) * percent + from.x,
-                        y: (to.y - from.y) * percent + from.y
+                        y: (to.y - from.y) * percent + from.y,
+                        z: (to.z - from.z) * percent + from.z
                     };
                 },
 
@@ -906,31 +795,47 @@
                 },
 
                 // multiplies matrix1 by matrix2 and places result in matrix2. Also returns the result matrix
-                multiply2x2Matrices: function (matrix1, matrix2) {
-                    // matrix1 and matrix2 are 2x2 matrices, with indexes as | 0 1 |
-                    //                                                       | 2 3 |
-                    var m2 = [matrix2[0], matrix2[1], matrix2[2], matrix2[3]];
-                    matrix2[0] = matrix1[0] * m2[0] + matrix1[1] * m2[2];
-                    matrix2[1] = matrix1[0] * m2[1] + matrix1[1] * m2[3];
-                    matrix2[2] = matrix1[2] * m2[0] + matrix1[3] * m2[2];
-                    matrix2[3] = matrix1[2] * m2[1] + matrix1[3] * m2[3];
+                multiplyMatrices: function (matrix1, matrix2) {
+                    // matrix1 and matrix2 are 3x3 matrices, with indexes as | 0 1 2 |
+                    //                                                       | 3 4 5 |
+                    //                                                       | 6 7 8 |
+                    var m2 = matrix2.slice(); // clone array
+                    matrix2[0] = matrix1[0] * m2[0] + matrix1[1] * m2[3] + matrix1[2] * m2[6];
+                    matrix2[1] = matrix1[0] * m2[1] + matrix1[1] * m2[4] + matrix1[2] * m2[7];
+                    matrix2[2] = matrix1[0] * m2[2] + matrix1[1] * m2[5] + matrix1[2] * m2[8];
+
+                    matrix2[3] = matrix1[3] * m2[0] + matrix1[4] * m2[3] + matrix1[5] * m2[6];
+                    matrix2[4] = matrix1[3] * m2[1] + matrix1[4] * m2[4] + matrix1[5] * m2[7];
+                    matrix2[5] = matrix1[3] * m2[2] + matrix1[4] * m2[5] + matrix1[5] * m2[8];
+
+                    matrix2[6] = matrix1[6] * m2[0] + matrix1[7] * m2[3] + matrix1[8] * m2[6];
+                    matrix2[7] = matrix1[6] * m2[1] + matrix1[7] * m2[4] + matrix1[8] * m2[7];
+                    matrix2[8] = matrix1[6] * m2[2] + matrix1[7] * m2[5] + matrix1[8] * m2[8];
                     return matrix2;
                 },
-                
+
                 areMatricesEqual: function (matrix1, matrix2) {
-                    return  this.areTheSame(matrix1[0], matrix2[0]) &&
-                            this.areTheSame(matrix1[1], matrix2[1]) &&
-                            this.areTheSame(matrix1[2], matrix2[2]) &&
-                            this.areTheSame(matrix1[3], matrix2[3]);
-                },           
+                    for (var i = 0; i < 9; ++i) {
+                        if (!this.areTheSame(matrix1[i], matrix2[i])) {
+                            return false;
+                        }
+                    }
+                    return true;
+                },
 
                 // returns the inverse matrix of the given matrix, in such a way that matrix * matrixInv = matrixIdentity
-                getInvertedMatrix: function (matrix) {
-                    var coef = matrix[0] * matrix[3] - matrix[1] * matrix[2];
-                    if (!this.isAlmostZero(coef)) {
-                        return [matrix[3] / coef, - matrix[1] / coef, - matrix[2] / coef, matrix[0] / coef];
+                getInvertedMatrix: function (m) {
+                    var det = m[0]*(m[4]*m[8] - m[5]*m[7]) +
+                              m[1]*(m[5]*m[6] - m[3]*m[8]) +
+                              m[2]*(m[3]*m[7] - m[4]*m[6]);
+                    if (this.isAlmostZero(det)) {
+                        return m.splice();
                     }
-                    return [matrix[0], matrix[1], matrix[2], matrix[3]];
+                    return [
+                        (m[4]*m[8] - m[5]*m[7])/det, (m[2]*m[7] - m[1]*m[8])/det, (m[1]*m[5] - m[2]*m[4])/det,
+                        (m[5]*m[6] - m[3]*m[8])/det, (m[0]*m[8] - m[2]*m[6])/det, (m[2]*m[3] - m[0]*m[5])/det,
+                        (m[3]*m[7] - m[4]*m[6])/det, (m[1]*m[6] - m[0]*m[7])/det, (m[0]*m[4] - m[1]*m[3])/det
+                    ];
                 },
 
                 isDefined: function (value) {
@@ -1006,8 +911,6 @@
                     this.zoom = this.checkZoomBounds(newZoom);
                     if (prevZoom != this.zoom) {
                         viewport.world.$elem.css(transUtil.doMouseZoom(prevZoom, this.zoom));
-                        transUtil.cache.refreshCenterTransParent();
-                        events.fireSlideEvents(false);
                         this.invokeChangeZoom(prevZoom);
                     }
                 },
@@ -1058,6 +961,9 @@
                 setterZoom: function (newZoom) {
                     viewport.setCenterPos();
                     this.doZoom(this.checkZoomBounds(newZoom));
+                },
+                getMatrixUserZoom: function (zoom) {
+                    return transUtil.getMatrixScale3D(zoom, zoom, zoom);
                 }
             },
 
@@ -1154,95 +1060,182 @@
 
             transUtil = {
                 transID: {
-                    TRANSLATE:  0,
-                    ROTATE:     1,
-                    SKEWX:      2,
-                    SKEWY:      3,
-                    SCALEX:     4,
-                    SCALEY:     5,
-                    SCALEXY:    6,
-                    SCALE:      7
+                    ROTATE:      0,
+                    ROTATE3D:    1,
+                    ROTATEX:     2,
+                    ROTATEY:     3,
+                    ROTATEZ:     4,
+
+                    SCALE3D:     5,
+                    SCALE:       6,
+                    SCALEXY:     7,
+                    SCALEX:      8,
+                    SCALEY:      9,
+                    SCALEZ:     10,
+
+                    SKEWX:      11,
+                    SKEWY:      12
                 },
-                orig: { x: viewport.center.x, y: viewport.center.y }, // transformation origin point
-                trans: { x: 0, y: 0 },
+                orig: { x: viewport.center.x, y: viewport.center.y, z: 0 }, // transformation origin point
+                trans: { x: 0, y: 0, z: 0 },
                 activeSlideIndex: -1, // the slide to which we want to move after a transition is done. data.activeSlide.index is the current active slide
                 activeSlideCTMmatrix: null,
-                activeSlideCenterTrans: { x: 0, y: 0 },
+                activeSlideCenterTrans: { x: 0, y: 0, z: 0 },
                 cache: { // caches some expensive function results
-                    matrixCTM:      [1, 0, 0, 1], // Current Transformation Matrix containing all the precalculated transformations, plus current zoom applied
-                    matrixCTM_inv:  [1, 0, 0, 1], // Inversed matrixCTM, which means matrixCTM * matrixCTM_inv = Identity matrix. This matrixCTM_inv matches the current slide ctmMatrix, with user zoom applied.
-                    
+                    matrixCTM:     [1, 0, 0, 0, 1, 0, 0, 0, 1], // Current Transformation Matrix containing all the precalculated transformations, plus current zoom applied
+                    matrixCTM_inv: [1, 0, 0, 0, 1, 0, 0, 0, 1], // Inversed matrixCTM, which means matrixCTM * matrixCTM_inv = Identity matrix. This matrixCTM_inv matches the current slide ctmMatrix, with user zoom applied.
                     refresh: function () {
                         this.matrixCTM = util.getInvertedMatrix(transUtil.activeSlideCTMmatrix);
-                        util.multiply2x2Matrices(transUtil.getMatrixScale(zoomUtil.zoom), this.matrixCTM); // final scale transformation related with the mouse zoom
+                        util.multiplyMatrices(zoomUtil.getMatrixUserZoom(zoomUtil.zoom), this.matrixCTM); // final scale transformation related with the mouse zoom
                         this.matrixCTM_inv = util.getInvertedMatrix(this.matrixCTM);
-                    },
-
-                    refreshCenterTransParent: function () {
-                        for (var i = data.qtSlides - 1; i > -1; --i) {
-                            var transformedPoint = transUtil.getTransformedPoint(data.slideData[i].centerTrans);
-                            data.slideData[i].centerTransParent.x = transformedPoint.x;
-                            data.slideData[i].centerTransParent.y = transformedPoint.y;
-                        }
-                        data.binTreeSearch.insertSorted();
                     }
                 },
 
-                getMatrixIdentity:  function () { return [1, 0, 0, 1]; },
-                getMatrixRotate:    function (sine, cosine) { sine = util.roundToTrigonometricBounds(sine); cosine = util.roundToTrigonometricBounds(cosine); return [cosine, sine, - sine, cosine]; },
-                getMatrixSkewX:     function (tangent) { return [1, 0, util.roundToTrigonometricBounds(tangent), 1]; },
-                getMatrixSkewY:     function (tangent) { return [1, util.roundToTrigonometricBounds(tangent), 0, 1]; },
-                getMatrixScaleX:    function (scaleX) { return [scaleX, 0, 0, 1]; },
-                getMatrixScaleY:    function (scaleY) { return [1, 0, 0, scaleY]; },
-                getMatrixScaleXY:   function (scaleX, scaleY) { return [scaleX, 0, 0, scaleY]; },
-                getMatrixScale:     function (scale) { return [scale, 0, 0, scale]; },
+                getMatrixIdentity: function () {
+                    return [
+                        1, 0, 0,
+                        0, 1, 0,
+                        0, 0, 1
+                    ];
+                },
+                getMatrixRotate: function (sine, cosine) {
+                    sine = util.roundToTrigonometricBounds(sine);
+                    cosine = util.roundToTrigonometricBounds(cosine);
+                    return [
+                        cosine, sine, 0,
+                        -sine, cosine, 0,
+                        0, 0, 1
+                    ];
+                },
+                getMatrixRotate3D: function(x, y, z, rad) {
+                    var sq = Math.sin(rad/2),
+                        sc = sq*Math.cos(rad/2),
+                        len = Math.sqrt(x*x + y*y + z*z),
+                        trigRound = util.roundToTrigonometricBounds;
+                    if (util.isAlmostZero(len)) {
+                        return this.getMatrixIdentity();
+                    }
+                    sq *= sq;
+                    // normalize [x,y,z] vector
+                    x /= len;
+                    y /= len;
+                    z /= len;
+                    return [
+                        trigRound(1 - 2*(y*y + z*z)*sq),   trigRound(2*(x*y*sq + z*sc)),      trigRound(2*(x*z*sq - y*sc)),
+                        trigRound(2*(x*y*sq - z*sc)),      trigRound(1 - 2*(x*x + z*z)*sq),   trigRound(2*(y*z*sq + x*sc)),
+                        trigRound(2*(x*z*sq + y*sc)),      trigRound(2*(y*z*sq - x*sc)),      trigRound(1 - 2*(x*x + y*y)*sq)
+                    ];
+                },
+                getMatrixRotateX: function(rad) {
+                    return this.getMatrixRotate3D(1, 0, 0, rad);
+                },
+                getMatrixRotateY: function(rad) {
+                    return this.getMatrixRotate3D(0, 1, 0, rad);
+                },
+                getMatrixRotateZ: function(rad) {
+                    return this.getMatrixRotate3D(0, 0, 1, rad);
+                },
+
+                getMatrixScale3D: function (scaleX, scaleY, scaleZ) {
+                    return [
+                        scaleX, 0, 0,
+                        0, scaleY, 0,
+                        0, 0, scaleZ
+                    ];
+                },
+                getMatrixScale: function (scale) {
+                    return this.getMatrixScale3D(scale, scale, 1);
+                },
+                getMatrixScaleXY: function (scaleX, scaleY) {
+                    return this.getMatrixScale3D(scaleX, scaleY, 1);
+                },
+                getMatrixScaleX: function (scale) {
+                    return this.getMatrixScale3D(scale, 1, 1);
+                },
+                getMatrixScaleY: function (scale) {
+                    return this.getMatrixScale3D(1, scale, 1);
+                },
+                getMatrixScaleZ: function (scale) {
+                    return this.getMatrixScale3D(1, 1, scale);
+                },
+
+                getMatrixSkewX: function (tangent) {
+                    return [
+                        1, 0, 0, 
+                        util.roundToTrigonometricBounds(tangent), 1, 0,
+                        0, 0, 1
+                    ];
+                },
+                getMatrixSkewY: function (tangent) {
+                    return [
+                        1, util.roundToTrigonometricBounds(tangent), 0,
+                        0, 1, 0,
+                        0, 0, 1
+                    ];
+                },
+
                 getMatrix: function (id, value) {
                     switch (id) {
                         case this.transID.ROTATE:   return this.getMatrixRotate(Math.sin(value), Math.cos(value));
-                        case this.transID.SKEWX:    return this.getMatrixSkewX(Math.tan(value));
-                        case this.transID.SKEWY:    return this.getMatrixSkewY(Math.tan(value));
+                        case this.transID.ROTATE3D: return this.getMatrixRotate3D(value.x, value.y, value.z, value.rad);
+                        case this.transID.ROTATEX:  return this.getMatrixRotateX(value);
+                        case this.transID.ROTATEY:  return this.getMatrixRotateY(value);
+                        case this.transID.ROTATEZ:  return this.getMatrixRotateZ(value);
+
+                        case this.transID.SCALE3D:  return this.getMatrixScale3D(value.x, value.y, value.z);
+                        case this.transID.SCALE:    return this.getMatrixScale(value);
+                        case this.transID.SCALEXY:  return this.getMatrixScaleXY(value.x, value.y);
                         case this.transID.SCALEX:   return this.getMatrixScaleX(value);
                         case this.transID.SCALEY:   return this.getMatrixScaleY(value);
-                        case this.transID.SCALEXY:  return this.getMatrixScaleXY(value.x, value.y);
-                        case this.transID.SCALE:    return this.getMatrixScale(value);
+                        case this.transID.SCALEZ:   return this.getMatrixScaleZ(value);
+
+                        case this.transID.SKEWX:    return this.getMatrixSkewX(Math.tan(value));
+                        case this.transID.SKEWY:    return this.getMatrixSkewY(Math.tan(value));
                     }
                     return this.getMatrixIdentity();
                 },
+
                 getTransformedPoint: function(pnt, ctmMatrix, centerPnt) {
                     var ctm = ctmMatrix === undefined ? this.cache.matrixCTM : ctmMatrix;
                     if (centerPnt === undefined) {
                         return { 
-                            x: ctm[0]*pnt.x + ctm[2]*pnt.y,
-                            y: ctm[1]*pnt.x + ctm[3]*pnt.y
+                            x: ctm[0]*pnt.x + ctm[3]*pnt.y + ctm[6]*pnt.z,
+                            y: ctm[1]*pnt.x + ctm[4]*pnt.y + ctm[7]*pnt.z,
+                            z: ctm[2]*pnt.x + ctm[5]*pnt.y + ctm[8]*pnt.z
                         };
                     }
+                    var centerPntZ = centerPnt.z ? centerPnt.z : 0;
                     return { 
-                        x: centerPnt.x + ctm[0]*(pnt.x - centerPnt.x) + ctm[2]*(pnt.y - centerPnt.y),
-                        y: centerPnt.y + ctm[1]*(pnt.x - centerPnt.x) + ctm[3]*(pnt.y - centerPnt.y)
+                        x: centerPnt.x + ctm[0]*(pnt.x - centerPnt.x) + ctm[3]*(pnt.y - centerPnt.y) + ctm[6]*(pnt.z - centerPntZ),
+                        y: centerPnt.y + ctm[1]*(pnt.x - centerPnt.x) + ctm[4]*(pnt.y - centerPnt.y) + ctm[7]*(pnt.z - centerPntZ),
+                        z: centerPntZ + ctm[2]*(pnt.x - centerPnt.x) + ctm[5]*(pnt.y - centerPnt.y) + ctm[8]*(pnt.z - centerPntZ)
                     };
                 },
                 getTransformedRect: function(rectSize, ctmMatrix, centerPnt) {
-                    var lt = this.getTransformedPoint({ x: 0, y: 0 }, ctmMatrix, centerPnt),
-                        rt = this.getTransformedPoint({ x: rectSize.x, y: 0 }, ctmMatrix, centerPnt),
-                        rb = this.getTransformedPoint(rectSize, ctmMatrix, centerPnt),
-                        lb = this.getTransformedPoint({ x: 0, y: rectSize.y }, ctmMatrix, centerPnt);
+                    var lt = this.getTransformedPoint({ x: 0, y: 0, z: 0 }, ctmMatrix, centerPnt),
+                        rt = this.getTransformedPoint({ x: rectSize.x, y: 0, z: 0 }, ctmMatrix, centerPnt),
+                        rb = this.getTransformedPoint({ x: rectSize.x, y: rectSize.y, z: 0 }, ctmMatrix, centerPnt),
+                        lb = this.getTransformedPoint({ x: 0, y: rectSize.y, z: 0 }, ctmMatrix, centerPnt);
                     return {
                         topLeft: {
                             x: Math.min(lt.x, Math.min(rt.x, Math.min(lb.x, rb.x))),
-                            y: Math.min(lt.y, Math.min(rt.y, Math.min(lb.y, rb.y)))
+                            y: Math.min(lt.y, Math.min(rt.y, Math.min(lb.y, rb.y))),
+                            z: Math.min(lt.z, Math.min(rt.z, Math.min(lb.z, rb.z)))
                         },
                         bottomRight: {
                             x: Math.max(lt.x, Math.max(rt.x, Math.max(lb.x, rb.x))),
-                            y: Math.max(lt.y, Math.max(rt.y, Math.max(lb.y, rb.y)))
+                            y: Math.max(lt.y, Math.max(rt.y, Math.max(lb.y, rb.y))),
+                            z: Math.max(lt.z, Math.max(rt.z, Math.max(lb.z, rb.z)))
                         }
                     };
                 },
                 getTransformOrigin: function () {
-                    return { x: this.orig.x, y: this.orig.y };
+                    return { x: this.orig.x, y: this.orig.y, z: this.orig.z };
                 },
-                setTransformOrigin: function (origX, origY) {
+                setTransformOrigin: function (origX, origY, origZ) {
                     this.orig.x = origX;
                     this.orig.y = origY;
+                    this.orig.z = origZ;
                 },
                 getTransformCSSstyle: function () {
                     if (data.isIE8orBelow) {
@@ -1260,15 +1253,24 @@
                         };
                     } else {
                         // translate3d is used to enable hardware optimization on css animations
-                        var matrixCss = 'matrix(' + this.cache.matrixCTM + ',' + this.trans.x + ',' + this.trans.y + ') translate3d(0,0,0)',
-                            origCss = this.orig.x.toFixed(0) + 'px ' + this.orig.y.toFixed(0) + 'px';
+                        var matrixCss, origCss = this.orig.x.toFixed(0) + 'px ' + this.orig.y.toFixed(0) + 'px ' + this.orig.z.toFixed(0) + 'px';
+                        if (data.supportsCSSTransforms3D) {
+                            matrixCss = 'matrix3d(' + this.cache.matrixCTM.slice(0, 3) + ',0, '
+                                                    + this.cache.matrixCTM.slice(3, 6) + ',0, '
+                                                    + this.cache.matrixCTM.slice(6, 9) + ',0, '
+                                                    + this.trans.x + ',' + this.trans.y + ',' + this.trans.z +',1)';
+                        } else {
+                            matrixCss = 'matrix(' + this.cache.matrixCTM.slice(0, 2) + ','
+                                                  + this.cache.matrixCTM.slice(3, 5) + ','
+                                                  + this.trans.x + ',' + this.trans.y + ') translate3d(0,0,0)';
+                        }
                         return {
                             '-webkit-transform-origin': origCss,
                             '-moz-transform-origin': origCss,
                             '-o-transform-origin': origCss,
                             'msTransformOrigin': origCss,
                             'transform-origin': origCss,
-
+                            
                             '-webkit-transform': matrixCss,
                             '-moz-transform': matrixCss,
                             '-o-transform': matrixCss,
@@ -1279,7 +1281,10 @@
                             '-webkit-backface-visibility': 'hidden',
                             '-moz-backface-visibility': 'hidden',
                             '-ms-backface-visibility': 'hidden',
-                            'backface-visibility': 'hidden'
+                            'backface-visibility': 'hidden',
+                            '-webkit-transform-style': 'preserve-3d',
+                            '-moz-transform-style': 'preserve-3d',
+                            'transform-style': 'preserve-3d'
                         };
                     }
                 },
@@ -1297,6 +1302,8 @@
                     this.activeSlideCTMmatrix = slideData.cssTransforms.ctmMatrix;
                     this.trans.x = viewport.center.x - slideData.centerTrans.x;
                     this.trans.y = viewport.center.y - slideData.centerTrans.y;
+                    this.trans.z = - slideData.centerTrans.z;
+
                     this.cache.refresh();
                     if (data.isIE8orBelow) {
                         this.activeSlideCenterTrans.x = slideData.centerTrans.x;
@@ -1306,7 +1313,11 @@
                 },
 
                 getTransformCSS: function (offset) {
-                    this.setTransformOrigin(viewport.center.x - this.trans.x, viewport.center.y - this.trans.y);
+                    this.setTransformOrigin(
+                        viewport.center.x - this.trans.x,
+                        viewport.center.y - this.trans.y,
+                        - this.trans.z
+                    );
                     if (data.isIE8orBelow) {
                         var rect = this.getTransformedRect(viewport.world.IEorigSize, this.cache.matrixCTM, 
                             offset === undefined ? this.activeSlideCenterTrans : {
@@ -1322,7 +1333,7 @@
                 getTransformOriginCss: function ($elem, outerSize) {
                     if (data.isIE8orBelow) {
                         // TODO check if in IE8 and below, the transform origin correctly maps to the margins
-                        return { x: util.toFloat($elem.css('margin-left')), y: util.toFloat($elem.css('margin-top')) };
+                        return { x: util.toFloat($elem.css('margin-left')), y: util.toFloat($elem.css('margin-top')), z: 0 };
                     } else {
                         var value = $elem.css('-webkit-transform-origin');
                         if (!util.isDefined(value)) {
@@ -1335,20 +1346,25 @@
                                         value = $elem.css('transform-origin');
                                         if (!util.isDefined(value)) {
                                             return !!outerSize ? 
-                                                { x: outerSize.x / 2, y: outerSize.y / 2 } : { x: viewport.world.IEorigSize.x / 2, y: viewport.world.IEorigSize.y / 2 };
+                                                { x: outerSize.x / 2, y: outerSize.y / 2, z: 0 } : { x: viewport.world.IEorigSize.x / 2, y: viewport.world.IEorigSize.y / 2, z: 0 };
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                    var values = value.split(" ");
-                    return { x: util.toFloat(values[0]), y: util.toFloat(values[1]) };
+                    var values = value.split(" "),
+                        origin = { x: 0, y: 0, z: 0 };
+                    switch (values.length) {
+                        case 3: origin.z = util.toFloat(values[2]);
+                        case 2: origin.y = util.toFloat(values[1]);
+                        case 1: origin.x = util.toFloat(values[0]);
+                    }
+                    return origin;
                 },
 
                 doMousePan: function (offset) {
                     var css = this.getTransformCSS(offset);
-                    events.fireSlideEvents(false);
                     return css;
                 },
 
@@ -1552,16 +1568,6 @@
                             break;
                         case 'zoomStep':
                             opts.zoomStep = value;
-                            break;
-                        case 'activeSlide':
-                            if (!transData.animating) {
-                                if (seqData.userInteract) {
-                                    events.unbindMouseEvents();
-                                }
-                                transData.anim.clearTransformations();
-                                data.gotoSlide(data.checkSlideBounds(value));
-                                transData.anim.progress = transData.cssAnim.totalTime = 0;
-                            }
                     }
                     return events.onGetter(event, field);
                 },
@@ -1691,7 +1697,10 @@
                             '-webkit-backface-visibility': '',
                             '-moz-backface-visibility': '',
                             '-ms-backface-visibility': '',
-                            'backface-visibility': ''
+                            'backface-visibility': '',
+                            '-webkit-transform-style': '',
+                            '-moz-transform-style': '',
+                            'transform-style': ''
                         });
                     }
                     if (data.supportsCSSTransforms3D) {
@@ -1737,16 +1746,6 @@
                         opts.events.onChangeZoom(event, zoom);
                     }
                 },
-                onSelectSlide: function (event, $slide, index, caption) {
-                    if (opts.events.onSelectSlide) {
-                        opts.events.onSelectSlide(event, $slide, index, caption);
-                    }
-                }, 
-                onUnselectSlide: function (event, $slide, index) {
-                    if (opts.events.onUnselectSlide) {
-                        opts.events.onUnselectSlide(event, $slide, index);
-                    }
-                }, 
                 onClickSlide: function (event, $slide, index) {
                     if (opts.events.onClickSlide) {
                         opts.events.onClickSlide(event, $slide, index);
@@ -1792,19 +1791,6 @@
                         seqData.onEndDelay(event, slide);
                     }
                 },
-                fireSlideEvents: function (forceSel, prevSlide) {
-                    var newActiveSlide = data.binTreeSearch.getActiveSlide(),
-                        previousSlide = prevSlide === undefined ? data.activeSlide.index : prevSlide;
-                    if (newActiveSlide.index > -1 && (forceSel || previousSlide != newActiveSlide.index)) {
-                        if (opts.events.onUnselectSlide && previousSlide != newActiveSlide.index) {
-                            $viewport.triggerHandler('unselectSlide.rsSlideIt', [viewport.world.$slides.eq(previousSlide), previousSlide]);
-                        }
-                        data.activeSlide = newActiveSlide;
-                        if (opts.events.onSelectSlide) {
-                            $viewport.triggerHandler('selectSlide.rsSlideIt', [data.activeSlide.$slide, data.activeSlide.index, data.slideData[newActiveSlide.index].caption]);
-                        }
-                    }
-                },
                 firePauseStopEvents: function () {
                     switch (seqData.state) {
                         case $.fn.rsSlideIt.state.PAUSE:
@@ -1823,10 +1809,6 @@
                     events.cssStartZoomEvents();
                 },
                 onCssAnimationEnd: function () {
-                    var centerTrans = data.slideData[transData.anim.gotoSlideIdx].centerTrans;
-                    transUtil.trans.x = viewport.center.x - centerTrans.x;
-                    transUtil.trans.y = viewport.center.y - centerTrans.y;
-                    transUtil.setTransformOrigin(centerTrans.x, centerTrans.y);
                     transData.cssAnim.resetCSSanimation();
                     transData.transitionDone(true);
                     events.cssEndZoomEvents();
@@ -1879,8 +1861,6 @@
                             bind('ajaxLoadSlide.rsSlideIt', events.onAjaxLoadSlide).
                             bind('ajaxLoadEnd.rsSlideIt', events.onAjaxLoadEnd).
                             bind('changeZoom.rsSlideIt', events.onChangeZoom).
-                            bind('selectSlide.rsSlideIt', events.onSelectSlide).
-                            bind('unselectSlide.rsSlideIt', events.onUnselectSlide).
                             bind('clickSlide.rsSlideIt', events.onClickSlide).
                             bind('dblClickSlide.rsSlideIt', events.onDblClickSlide).
                             bind('beginPan.rsSlideIt', events.onBeginPan).
@@ -1912,15 +1892,30 @@
                         if (typeof Modernizr.cssanimations === 'undefined') {
                             util.warn('Moderniz lib loaded, but missing the "CSS Animations" detection feature! Make sure Moderniz includes such feature, otherwise pure javascript animation is used.', false);
                         }
+                        if (typeof Modernizr.csstransforms3d === 'undefined') {
+                            util.warn('Moderniz lib loaded, but missing the "CSS 3D Transforms" detection feature! Make sure Moderniz includes such feature.', false);
+                        }
                     }
 
                     opts.initialSlide = data.checkSlideBounds(opts.initialSlide);
                     if (opts.zoomMax < opts.zoomMin) { var sw = opts.zoomMax; opts.zoomMax = opts.zoomMin; opts.zoomMin = sw; }
                     
                     opts.initialZoom = opts.initialZoom < opts.Min ? opts.Min : (opts.initialZoom > opts.Max ? opts.Max : opts.initialZoom);
-                    $viewport.
-                        bind('loadSlide.rsSlideIt', this.onLoadSlide).
-                        triggerHandler('loadSlide.rsSlideIt');
+                    if (data.supportsCSSTransforms3D) {
+                        if (opts.data3D.viewportClass) {
+                            $viewport.addClass(opts.data3D.viewportClass);
+                        }
+                        $viewport.css({
+                            '-webkit-perspective': opts.data3D.perspective + 'px',
+                            '-moz-perspective': opts.data3D.perspective + 'px',
+                            'perspective': opts.data3D.perspective + 'px'
+                        });
+                    }
+                    if (data.qtSlides > 0) {
+                        $viewport.
+                            bind('loadSlide.rsSlideIt', this.onLoadSlide).
+                            triggerHandler('loadSlide.rsSlideIt');
+                    }
                 },
                 getCaption: function ($slide) {
                     var caption = [];
@@ -1978,20 +1973,50 @@
                         },
                         getTransformFromDataAttr = function () {
                             var value = $slide.attr('data-transform');
-                            return !util.isDefined(value) ? null : value;
+                            if (!util.isDefined(value)) {
+                                value = $slide.attr('data-transform2D');
+                                if (!util.isDefined(value)) {
+                                    value = $slide.attr('data-transform3D');
+                                    return !util.isDefined(value) ? null : value;
+                                }
+                            }
+                            return value;
                         },
                         getMatrixCoefs = function (value) {
-                            value = value.replace(/(matrix\(| )/gi, ''); // remove occurences of "matrix(" and " "
+                            value = value.replace(/matrix(3d)?\(/gi, ''); // remove occurences of "matrix(" and "matrix3d("
                             var coefs = value.split(',');
+                            if (coefs.length == 16) {
+                                return {
+                                    // matrix3d(m11, m12, m13, 0, m21, m22, m23, 0, m31, m32, m33, 0, tx, ty, tz, 1)
+                                    // | m11 m12 m13 0 |
+                                    // | m21 m22 m23 0 |
+                                    // | m31 m32 m33 0 |
+                                    // |  tx  ty  tz 1 |
+                                    is3D: true,
+                                    m11: util.roundToTrigonometricBounds(util.toFloat(coefs[0])),
+                                    m12: util.roundToTrigonometricBounds(util.toFloat(coefs[1])),
+                                    m13: util.roundToTrigonometricBounds(util.toFloat(coefs[2])),
+
+                                    m21: util.roundToTrigonometricBounds(util.toFloat(coefs[4])),
+                                    m22: util.roundToTrigonometricBounds(util.toFloat(coefs[5])),
+                                    m23: util.roundToTrigonometricBounds(util.toFloat(coefs[6])),
+
+                                    m31: util.roundToTrigonometricBounds(util.toFloat(coefs[8])),
+                                    m32: util.roundToTrigonometricBounds(util.toFloat(coefs[9])),
+                                    m33: util.roundToTrigonometricBounds(util.toFloat(coefs[10]))
+                                };
+                            }
+                            // matrix(m11, m12, m21, m22, tx, ty)
+                            // | m11 m12 0 |
+                            // | m21 m22 0 |
+                            // |  tx  ty 1 |
                             return {
+                                is3D: false,
                                 m11: util.roundToTrigonometricBounds(util.toFloat(coefs[0])),
                                 m12: util.roundToTrigonometricBounds(util.toFloat(coefs[1])),
                                 m21: util.roundToTrigonometricBounds(util.toFloat(coefs[2])),
                                 m22: util.roundToTrigonometricBounds(util.toFloat(coefs[3]))
                             };
-                        },
-                        getInvertedScale = function (scale) {
-                            return util.isAlmostZero(scale) ? 20000 : (1.0 / scale);
                         },
                         getTransformRotate = function (value) {
                             var found = value.match(/rotate\([-|+]?[\d.]+(deg|rad|grad|turn)\)/i);
@@ -2006,6 +2031,30 @@
                                     valueInv:   - angle,
                                     matrix:     transUtil.getMatrixRotate(sine, cosine),
                                     matrixInv:  transUtil.getMatrixRotate(- sine, cosine)
+                                };
+                            }
+                            found = value.match(/rotateX\([-|+]?[\d.]+(deg|rad|grad|turn)\)/i);
+                            // try rotateX(a) (3D)
+                            if (found && util.isDefined(found[0])) {
+                                var angle = util.getAngleRadians(value.replace(/rotateX\(|\)/gi, ''));
+                                return { 
+                                    id:         transUtil.transID.ROTATEX,
+                                    valueIdent: 0,
+                                    valueInv:   - angle,
+                                    matrix:     transUtil.getMatrixRotateX(angle),
+                                    matrixInv:  transUtil.getMatrixRotateX(- angle)
+                                };
+                            }
+                            found = value.match(/rotateY\([-|+]?[\d.]+(deg|rad|grad|turn)\)/i);
+                            // try rotateY(a) (3D)
+                            if (found && util.isDefined(found[0])) {
+                                var angle = util.getAngleRadians(value.replace(/rotateY\(|\)/gi, ''));
+                                return { 
+                                    id:         transUtil.transID.ROTATEY,
+                                    valueIdent: 0,
+                                    valueInv:   - angle,
+                                    matrix:     transUtil.getMatrixRotateY(angle),
+                                    matrixInv:  transUtil.getMatrixRotateY(- angle)
                                 };
                             }
                             return null;
@@ -2051,6 +2100,9 @@
                                 }
                             }
                             return null;
+                        },
+                        getInvertedScale = function (scale) {
+                            return util.isAlmostZero(scale) ? 20000 : (1.0 / scale);
                         },
                         getTransformScale = function (value) {
                             var scaleX, scaleY, scaleXInv, scaleYInv,
@@ -2116,16 +2168,22 @@
                         getTransformDefault = function (origin) {
                             return  {
                                 origin: { x: origin.x, y: origin.y },
-                                ctmMatrix: [1, 0, 0 , 1],
+                                ctmMatrix: transUtil.getMatrixIdentity(),
                                 transformations: []
                             };
                         },
                         getTransformFromData = function (value, origin) {
                             // remove all spaces and then add a space before each scale, rotate, skew and translate
-                            var transfs = value.replace(/ /g, '').replace(/\)scale/g, ') scale').replace(/\)rotate/g, ') rotate').replace(/\)skew/g, ') skew').replace(/\)translate/g, ') translate').split(' '),
+                            var transfs = value.replace(/ /g, '').
+                                            // 2d
+                                            replace(/\)scale/gi, ') scale').replace(/\)rotate/gi, ') rotate').replace(/\)skew/gi, ') skew').replace(/\)translate/gi, ') translate').
+                                            // 3d
+                                            replace(/\)rotateX/gi, ') rotateX').replace(/\)rotateY/gi, ') rotateY').
+                                            split(' '),
                                 allTrans = getTransformDefault(origin),
                                 cssData;
 
+                            // translate transformations are ignored
                             for (var i = 0, len = transfs.length; i < len; ++i) {
                                 cssData = null;
                                 switch (transfs[i].substring(0, 5)) { // the reason to make a switch on a substring, is just to make the code less verbose, rather than with ifs
@@ -2150,7 +2208,7 @@
                                 }
 
                                 if (cssData) {
-                                    util.multiply2x2Matrices(cssData.matrix, allTrans.ctmMatrix);
+                                    util.multiplyMatrices(cssData.matrix, allTrans.ctmMatrix);
                                     allTrans.transformations.push({ 
                                         id: cssData.id,
                                         valueIdent: cssData.valueIdent,
@@ -2165,6 +2223,48 @@
                             var id = $s.attr('id');
                             return !!id ? ' #' + id : ' at index ' + viewport.world.$slides.index($s);
                         },
+                        decompose2dMatrix = function (coefs) {
+                            // can the matrix be decomposed into rotation and scale matrices?
+                            if (util.areTheSame(coefs.m11, coefs.m22) && util.areTheSame(coefs.m12, - coefs.m21)) {
+                                var angle;
+                                if (util.isAlmostZero(coefs.m11, 0.02)) {
+                                    angle = coefs.m12 > 0 ? Math.PI / 2 : - Math.PI / 2;
+                                } else {
+                                    angle = Math.atan(coefs.m12 / coefs.m11) + (coefs.m11 < 0 ? Math.PI : 0);
+                                }
+                                var scale = Math.sqrt(coefs.m11 * coefs.m11 + coefs.m12 * coefs.m12),
+                                    allTrans = getTransformDefault(origin),
+                                    cosine = Math.cos(angle),
+                                    sine = Math.sin(angle);
+                                scale = util.isAlmostOne(scale) ? 1 : getInvertedScale(scale); // scale is the inverted scale
+                                allTrans.ctmMatrix[0] = coefs.m11; // | a b |   | a b  . |
+                                allTrans.ctmMatrix[1] = coefs.m12; // | c d | = | c d  . |
+                                allTrans.ctmMatrix[3] = coefs.m21; //           | .  . . |
+                                allTrans.ctmMatrix[4] = coefs.m22;
+
+                                if (!util.isAlmostOne(scale)) {
+                                    allTrans.transformations.push({
+                                        id: transUtil.transID.SCALE,
+                                        valueIdent: 1,
+                                        valueInv: scale,
+                                        matrixInv: transUtil.getMatrixScale(scale)
+                                    });
+                                }
+                                if (!util.isAlmostZero(angle, 0.000000005)) {
+                                    allTrans.transformations.push({
+                                        id: transUtil.transID.ROTATE,
+                                        valueIdent: 0,
+                                        valueInv: - angle,
+                                        matrixInv: transUtil.getMatrixRotate(- sine, cosine)
+                                    });
+                                }
+                                return allTrans;
+                            }
+                            return null;
+                        },
+                        decompose3dMatrix = function (coefs) {
+                            return null;
+                        },
                         value = getTransformFromDataAttr(),
                         origin = transUtil.getTransformOriginCss($slide, outerSize);
 
@@ -2174,47 +2274,22 @@
                             return getTransformDefault(origin);
                         }
                     }
-                    if (value.indexOf('matrix(') == 0) {
-                        var coefs = getMatrixCoefs(value);
-                        // can the matrix be decomposed into rotation and scale matrices?
-                        if (util.areTheSame(coefs.m11, coefs.m22) && util.areTheSame(coefs.m12, - coefs.m21)) {
-                            var angle;
-                            if (util.isAlmostZero(coefs.m11, 0.02)) {
-                                angle = coefs.m12 > 0 ? Math.PI / 2 : - Math.PI / 2;
-                            } else {
-                                angle = Math.atan(coefs.m12 / coefs.m11) + (coefs.m11 < 0 ? Math.PI : 0);
-                            }
-                            var scale = Math.sqrt(coefs.m11 * coefs.m11 + coefs.m12 * coefs.m12),
-                                allTrans = getTransformDefault(origin),
-                                cosine = Math.cos(angle),
-                                sine = Math.sin(angle);
-                            scale = util.isAlmostOne(scale) ? 1 : getInvertedScale(scale); // scale is the inverted scale
-                            allTrans.ctmMatrix[0] = coefs.m11;
-                            allTrans.ctmMatrix[1] = coefs.m12;
-                            allTrans.ctmMatrix[2] = coefs.m21;
-                            allTrans.ctmMatrix[3] = coefs.m22;
+                    if (value.indexOf('matrix(') == 0 || value.indexOf('matrix3d(') == 0) {
+                        // slideIt assumes that all slides have origin in (0,0) but with translations (x,y) applied
+                        
+                        var coefs = getMatrixCoefs(value),
+                            allTrans = coefs.is3D? decompose3dMatrix(coefs) : decompose2dMatrix(coefs);
 
-                            if (!util.isAlmostOne(scale)) {
-                                allTrans.transformations.push({
-                                    id: transUtil.transID.SCALE,
-                                    valueIdent: 1,
-                                    valueInv: scale,
-                                    matrixInv: transUtil.getMatrixScale(scale)
-                                });
+                        if (allTrans == null) {
+                            // CSS matrix is too complex. Need more info from data-transform
+                            if (coefs.is3D) {
+                                util.warn('Unable to read transformation matrix for slide' + slideToString($slide) + ', due to an uneven scale or to the use of skew.\nDefine your transform style in a data-transform3D attribute instead.', true);
+                            } else {
+                                util.warn('Unable to read transformation matrix for slide' + slideToString($slide) + ', due to an uneven scaleX and scaleY or to the use of skew.\nDefine your transform style in a data-transform2D attribute instead.', true);
                             }
-                            if (!util.isAlmostZero(angle, 0.000000005)) {
-                                allTrans.transformations.push({
-                                    id: transUtil.transID.ROTATE,
-                                    valueIdent: 0,
-                                    valueInv: - angle,
-                                    matrixInv: transUtil.getMatrixRotate(- sine, cosine)
-                                });
-                            }
-                            return allTrans;
+                            return getTransformDefault(origin);
                         }
-                        // CSS matrix is too complex. Need more info from data-transform
-                        util.warn('Unable to read transformation matrix for slide' + slideToString($slide) + ', due to an uneven scaleX and scaleY or to the use of skew.\nDefine your transform style in a data-transform attribute instead.', true);
-                        return getTransformDefault(origin);
+                        return allTrans;
                     }
                     return getTransformFromData(value, origin);
                 },
@@ -2253,10 +2328,10 @@
                             }
                         } else {
                             // slides should have a non-zero dimension. In the rare case of zero size element, assume 1x1 instead. This is reasonable workaround. 
-                            this.getOtherSizes(slideSizes, $slide, 1, 1);
+                            load.getOtherSizes(slideSizes, $slide, 1, 1);
                             load.processSlide($slide, slideSizes);
                         }
-                    } else {                            
+                    } else {
                         load.processSlide($slide, slideSizes);
                     }
                 },
@@ -2308,33 +2383,17 @@
                     return sizes;
                 },
                 pushSlideData: function ($slide, slideSizes) {
-                    var cssTransforms = load.getTransformInfo($slide, slideSizes.outerSize),
-                        contRectOuter = contRectOuterAll = transUtil.getTransformedRect(slideSizes.outerSize, cssTransforms.ctmMatrix, cssTransforms.origin);
-                        
-                        if (slideSizes.outerSize.x !== slideSizes.outerSizeAll.x || slideSizes.outerSize.y !== slideSizes.outerSizeAll.y) {
-                            contRectOuterAll = transUtil.getTransformedRect(slideSizes.outerSizeAll, cssTransforms.ctmMatrix, cssTransforms.origin);
-                        }
+                    var cssTransforms = this.getTransformInfo($slide, slideSizes.outerSize),
+                        slideChildren = this.getChildren($slide);
 
                     data.slideData.push({
-                        center: { // center of element, with origin pointing to this element's topleft
+                        center: { // center of element, with origin pointing to this element's topleft (0,0,0)
                             x: slideSizes.outerSize.x / 2,
-                            y: slideSizes.outerSize.y / 2
+                            y: slideSizes.outerSize.y / 2,
+                            z: 0
                         },
-                        // centerTrans and centerTransParent are computed later
+                        // centerTrans is computed later
                         centerTrans: { x: 0, y: 0 }, // same as center but with transformations applied and origin set to (viewport.world.$elem) topleft
-                        centerTransParent: { x: 0, y: 0 }, // centerTrans transformed to the parent CTM (viewport.world.$elem) with a (0, 0) center
-                        sizeTrans: {
-                            x: Math.round(contRectOuter.bottomRight.x - contRectOuter.topLeft.x),
-                            y: Math.round(contRectOuter.bottomRight.y - contRectOuter.topLeft.y)
-                        },
-                        sizeTransAll: {
-                            x: Math.round(contRectOuterAll.bottomRight.x - contRectOuterAll.topLeft.x),
-                            y: Math.round(contRectOuterAll.bottomRight.y - contRectOuterAll.topLeft.y)
-                        },
-                        topLeftTrans: {
-                            left: contRectOuterAll.topLeft.x,
-                            top: contRectOuterAll.topLeft.y
-                        },
                         size: {
                             x: slideSizes.size.x,
                             y: slideSizes.size.y
@@ -2345,8 +2404,11 @@
                         },
                         padding: [util.toInt($slide.css('padding-top')), util.toInt($slide.css('padding-right')), util.toInt($slide.css('padding-bottom')), util.toInt($slide.css('padding-left'))],
                         caption: load.getCaption($slide),
-                        cssTransforms: cssTransforms
+                        cssTransforms: cssTransforms,
+                        nextSibling: viewport.world.$slides.index($slide.next(opts.selector.slide)),
+                        firstChild: slideChildren.length === 0 ? -1: viewport.world.$slides.index(slideChildren.eq(0))
                     });
+/*
                     if ($slide.css('display') == 'block') {
                         $slide.css('display', 'inline-block');
                     }
@@ -2354,14 +2416,199 @@
                         'width': slideSizes.size.x + 'px',
                         'height': slideSizes.size.y + 'px'
                     });
+*/
                 },
+                getChildren: function ($slide) {
+                    // Find all direct children of $slide (children with the given opts.selector.slide selector), but
+                    // those children might not necessarily be immediately below the parent, hierarchy speaking.
+                    // e.g., given this tree, where span are slides and div are not slides
+                    //                                  The function returns:
+                    //  span1                                 getChildren(span1) = []
+                    //  span2                                 getChildren(span2) = [span3]
+                    //    span3                               getChildren(span3) = []
+                    //  span4                                 getChildren(span4) = [span5, span6, span7]  (not span8, because only direct children)
+                    //    div
+                    //      span5                             getChildren(span5) = []
+                    //      span6                             getChildren(span6) = []
+                    //    span7                               getChildren(span7) = [span8]
+                    //      span8                             getChildren(span8) = []
+                    return $slide.
+                            find(opts.selector.slide).
+                            filter(function (i, e) {
+                                return $(e).parent().closest(opts.selector.slide).is($slide);
+                            });
+                },
+
                 setSlidePos: function () {
-                    var $slide, slideData, slidePos, parents;
+                    var $slide, slideData, slidePos, parents,
+                        worldOffset = viewport.world.$elem.offset(),
+                        getPosition = function ($slide) {
+                            var offset = $slide.offset();
+                            return {
+                                left: offset.left - worldOffset.left,
+                                top: offset.top - worldOffset.top
+                            };
+                        };
+
+                    viewport.world.setFinalSize();
+
+                    if (data.qtSlides > 0) {
+                        this.doSetSlidePos(0, getPosition, [], transUtil.getMatrixIdentity());
+                        console.log(data.slideData);
+                        zoomUtil.initZoom(opts.initialZoom, opts.zoomMin, opts.initialSlide);
+                        data.gotoSlide(opts.initialSlide);
+                        zoomUtil.calcLongestPath();
+                        $viewport.triggerHandler('create.rsSlideIt');
+                        load.ajax.doLoad();
+                    } else {
+                        $viewport.triggerHandler('create.rsSlideIt');
+                    }
+                },
+                doSetSlidePos: function(index, getPositionFunc, parents, parentCtmMatrix, parentPos) {
+                    var $slide, slideData, slidePos, topLeftOuter, ctmMatrix, childOriginRelativeToParent;
+                    do {
+                        $slide = viewport.world.$slides.eq(index);
+                        slideData = data.slideData[index];
+                        console.log('+', $slide.attr('id'));
+
+                        if (slideData.firstChild > -1) {
+                            $slide.css({
+                                '-webkit-transform-style': 'flat'
+                            });
+                        }
+                        if (parents.length > 0) {
+                            $slide.css({
+                                '-webkit-transform': 'none'
+                            });
+                        }
+                        slidePos = getPositionFunc($slide);
+
+                        if (slideData.firstChild > -1) {
+                            $slide.css({
+                                '-webkit-transform': 'none',
+                                '-webkit-transform-style': ''
+                            });
+                        }
+
+                        if (parents.length > 0) {
+                            console.log('>> parentPos=', parentPos.left, ',', parentPos.top, '   ',
+                                'childPos=', slidePos.left, ',', slidePos.top);
+
+                            slideData.centerTrans = transUtil.getTransformedPoint({
+                                x: slidePos.left - parentPos.left + slideData.center.x,
+                                y: slidePos.top - parentPos.top + slideData.center.y,
+                                z: 0
+                            }, parentCtmMatrix, data.slideData[parents[parents.length - 1]].cssTransforms.origin);
+                            slideData.centerTrans.x += parentPos.left;
+                            slideData.centerTrans.y += parentPos.top;
+                            // at this point, slideData.centerTrans is the absolute center position,
+                            // relatively to the parent transformation
+
+                            // get the client origin relatively to the parent transformation
+                            childOriginRelativeToParent = transUtil.getTransformedPoint({
+                                x: slidePos.left - parentPos.left + slideData.cssTransforms.origin.x,
+                                y: slidePos.top - parentPos.top + slideData.cssTransforms.origin.y,
+                                z: 0
+                            }, parentCtmMatrix, data.slideData[parents[parents.length - 1]].cssTransforms.origin);
+
+                            slideData.centerTrans = transUtil.getTransformedPoint(slideData.centerTrans, slideData.cssTransforms.ctmMatrix, {
+                                x: childOriginRelativeToParent.x + parentPos.left,
+                                y: childOriginRelativeToParent.y + parentPos.top,
+                                z: childOriginRelativeToParent.z
+                            });
+                            slideData.cssTransforms.ctmMatrix = util.multiplyMatrices(slideData.cssTransforms.ctmMatrix, parentCtmMatrix.slice());
+                            util.roundMatrixToTrigonometricBounds(slideData.cssTransforms.ctmMatrix);
+
+                            // push the parent transformations into this slide
+                            var parentTransfs = data.slideData[parents[parents.length - 1]].cssTransforms.transformations;
+                            for(var p = parentTransfs.length - 1; p > -1; --p) {
+                                slideData.cssTransforms.transformations.unshift({
+                                    id:         parentTransfs[p].id,
+                                    valueIdent: parentTransfs[p].valueIdent,
+                                    valueInv:   parentTransfs[p].valueInv, 
+                                    matrixInv:  parentTransfs[p].matrixInv.slice()
+                                });
+                            }
+                        } else {
+                            ctmMatrix = util.multiplyMatrices(slideData.cssTransforms.ctmMatrix, parentCtmMatrix.slice());
+                            topLeftOuter = transUtil.getTransformedRect(slideData.outerSize, ctmMatrix, slideData.cssTransforms.origin).topLeft;
+                            slideData.centerTrans = transUtil.getTransformedPoint(slideData.center, ctmMatrix, slideData.cssTransforms.origin);
+                            slideData.centerTrans.x += slidePos.left - topLeftOuter.x;
+                            slideData.centerTrans.y += slidePos.top - topLeftOuter.y;
+                        }
+
+                        if (slideData.firstChild > -1) {
+                            parents.push(index);
+                            this.doSetSlidePos(slideData.firstChild, getPositionFunc, parents, util.multiplyMatrices(slideData.cssTransforms.ctmMatrix, parentCtmMatrix.slice()), slidePos);
+                            parents.pop();
+                        }
+                        $slide.css({
+                            '-webkit-transform': '',
+                            '-webkit-transform-style': ''
+                        });
+                        console.log('-', $slide.attr('id'), ' slidePos=(',slidePos.left, ',', slidePos.top, ') $position=(', 
+                            $slide.position().left, ',', $slide.position().top, ') offset=(', $slide.offset().left,',', $slide.offset().top, ') centerTrans=', slideData.centerTrans);
+                        index = slideData.nextSibling;
+                    } while (index > -1);
+                },
+/*
+
+                setSlidePos: function () {
+                    var $slide, slideData, slidePos, parents, clientOriginTransfParent,
+                        worldOffset = viewport.world.$elem.offset(),
+                        getPosition = function ($slide) {
+                            var offset = $slide.offset();
+                            return {
+                                left: offset.left - worldOffset.left,
+                                top: offset.top - worldOffset.top
+                            };
+                        },
+                        transformDataStack = [],
+                        pushTransformData = function () {
+                            var childrenQt = load.getChildren($slide).length;
+                            if (childrenQt > 0) {
+                                transformDataStack.push({
+                                    parent: $slide,
+                                    childrenQt: childrenQt
+                                });
+                            }
+                            $slide.css({
+//                                '-webkit-transform': 'none',
+                                '-webkit-transform-style': 'initial'
+                            });
+                            return childrenQt;
+                        },
+                        popTransformData = function () {
+                            var stackSize = transformDataStack.length;
+                            while (stackSize > 0 &&
+                                   !transformDataStack[stackSize - 1].parent.is($slide) &&
+                                   --transformDataStack[stackSize - 1].childrenQt === 0) {
+                                transformDataStack.pop().parent.css({
+//                                    '-webkit-transform': '',
+                                    '-webkit-transform-style': ''
+                                });
+                                stackSize--;
+                            }
+                        };
+
                     for (var i = 0; i < data.qtSlides; ++i) {
                         $slide = viewport.world.$slides.eq(i);
                         slideData = data.slideData[i];
 
-                        slidePos = $slide.position();
+                        parents = $viewport.find($slide.parent().closest(opts.selector.slide)).map(function (i, e) {
+                            var index = viewport.world.$slides.index(e);
+                            return index === -1 ? null : index;
+                        }).get();
+                        var qtChildren = pushTransformData();
+                        slidePos = getPosition($slide);
+                        if (parents.length === 0) { // parents array has either zero or one elements
+                            $slide.css({
+//                                '-webkit-transform': ''
+                            });
+                        }
+                        $slide.css({
+                            '-webkit-transform-style': ''
+                        });
                         if (data.isMozilla11orBelow) {
                             // Mozilla (up to 11.0b8) returns incorrect position for transformed elements, so there is a need to make an adjustment
                             var topLeft = transUtil.getTransformedRect(slideData.size, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
@@ -2369,38 +2616,76 @@
                             slidePos.top += topLeft.y;
                         }
                         
-                        parents = $viewport.find($slide.parent().closest(opts.selector.slide)).map(function (i, e) {
-                            var index = viewport.world.$slides.index(e);
-                            return index === -1 ? null : index;
-                        }).get();
-                        var topLeftOuter;
 
-                        if (parents.length > 0) { // parents array has either zero or one elements
+                        if (parents.length > 0) {
                             var composedMatrix = transUtil.getMatrixIdentity();
-                            util.multiply2x2Matrices(data.slideData[parents[0]].cssTransforms.ctmMatrix, composedMatrix);
-                            util.multiply2x2Matrices(slideData.cssTransforms.ctmMatrix, composedMatrix);
+                            util.multiplyMatrices(data.slideData[parents[0]].cssTransforms.ctmMatrix, composedMatrix);
+                            if (qtChildren === 0 && false) {
+                                $slide.css({
+                                    '-webkit-transform': 'none'
+                                });
+                            }
+                            $slide.css({
+                                '-webkit-transform-style': 'initial'
+                            });
+                            slidePos = getPosition($slide);
+                            console.log('child pos = ', slidePos);
+                            if (qtChildren === 0 && false) {
+                                $slide.css({
+                                    '-webkit-transform': ''
+                                });
+                            }
+                            $slide.css({
+                                '-webkit-transform-style': ''
+                            });
+                            popTransformData();
+
+                            slideData.centerTrans = transUtil.getTransformedPoint({
+                                x: slidePos.left + slideData.center.x,
+                                y: slidePos.top + slideData.center.y,
+                                z:0
+                            }, composedMatrix, data.slideData[parents[0]].centerTrans);
+
+                            clientOriginTransfParent = transUtil.getTransformedPoint({
+                                x: slidePos.left + slideData.cssTransforms.origin.x,
+                                y: slidePos.top + slideData.cssTransforms.origin.y,
+                                z:0
+                            }, composedMatrix, data.slideData[parents[0]].centerTrans);
+
+                            slideData.centerTrans = transUtil.getTransformedPoint(slideData.centerTrans, slideData.cssTransforms.ctmMatrix, clientOriginTransfParent);
+                            util.multiplyMatrices(slideData.cssTransforms.ctmMatrix, composedMatrix);
                             slideData.cssTransforms.ctmMatrix = composedMatrix.slice(); // copies composedMatrix array into another (by value)
-                            var topLeft = transUtil.getTransformedRect(slideData.size, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
-                            slidePos.left -= topLeft.x;
-                            slidePos.top -= topLeft.y;
+
                             // push the parent transformations into this slide
                             var parentTransfs = data.slideData[parents[0]].cssTransforms.transformations;
                             for(var p = parentTransfs.length - 1; p > -1; --p) {
                                 slideData.cssTransforms.transformations.unshift({
                                     id:         parentTransfs[p].id,
-                                    matrixInv:  parentTransfs[p].matrixInv.slice(),
                                     valueIdent: parentTransfs[p].valueIdent,
-                                    valueInv:   parentTransfs[p].valueInv 
+                                    valueInv:   parentTransfs[p].valueInv, 
+                                    matrixInv:  parentTransfs[p].matrixInv.slice()
                                 });
                             }
-                            topLeftOuter = {x: 0, y: 0};
+                            
                         } else {
-                            topLeftOuter = transUtil.getTransformedRect(slideData.outerSize, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
-                        }
+                            //if (i==2) debugger;
 
-                        slideData.centerTrans = transUtil.getTransformedPoint(slideData.center, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin);
-                        slideData.centerTrans.x = Math.round(slideData.centerTrans.x + slidePos.left - topLeftOuter.x + util.toInt($slide.css('margin-left')));
-                        slideData.centerTrans.y = Math.round(slideData.centerTrans.y + slidePos.top - topLeftOuter.y + util.toInt($slide.css('margin-top')));
+                            if ($slide.hasClass("old")) {
+                                var topLeftOuter = transUtil.getTransformedRect(slideData.outerSize, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
+                                slideData.centerTrans = transUtil.getTransformedPoint(slideData.center, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin);
+                                slideData.centerTrans.x += slidePos.left - topLeftOuter.x;
+                                slideData.centerTrans.y += slidePos.top - topLeftOuter.y;
+                            } else {
+                                clientOriginTransfParent = {
+                                    x: slidePos.left + slideData.cssTransforms.origin.x,
+                                    y: slidePos.top + slideData.cssTransforms.origin.y,
+                                    z: 0
+                                };
+                                slideData.centerTrans = transUtil.getTransformedPoint({x: slidePos.left + slideData.center.x, y: slidePos.top + slideData.center.y, z:0}, slideData.cssTransforms.ctmMatrix, clientOriginTransfParent);
+                            }
+                            
+                            console.log('(' + slidePos.left + ',' + slidePos.top + ') ['+i+']' + slideData.centerTrans.x + ',' + slideData.centerTrans.y + ',' + slideData.centerTrans.z);
+                        }
                     }
 
                     viewport.world.setFinalSize();
@@ -2415,6 +2700,96 @@
                         $viewport.triggerHandler('create.rsSlideIt');
                     }
                 },
+*/
+
+
+
+                /*
+                setSlidePos: function () {
+                    var $slide, slideData, slidePos, parents,
+                        worldOffset = viewport.world.$elem.offset(),
+                        getPosition = function ($slide) {
+                            var offset = $slide.offset();
+                            return {
+                                left: offset.left - worldOffset.left,
+                                top: offset.top - worldOffset.top
+                            };
+                        };
+                    for (var i = 0; i < data.qtSlides; ++i) {
+                        $slide = viewport.world.$slides.eq(i);
+                        slideData = data.slideData[i];
+                        var $children = $slide.find(viewport.world.$slides),
+                            transformData = $slide.css('-webkit-transform');
+
+                        if ($children.length > 0) {
+                            $slide.css('-webkit-transform', 'none');
+                        }
+                        slidePos = getPosition($slide);
+                        if ($children.length > 0) {
+                            $slide.css('-webkit-transform', transformData);
+                        }
+                        if (data.isMozilla11orBelow) {
+                            // Mozilla (up to 11.0b8) returns incorrect position for transformed elements, so there is a need to make an adjustment
+                            var topLeft = transUtil.getTransformedRect(slideData.size, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
+                            slidePos.left += topLeft.x;
+                            slidePos.top += topLeft.y;
+                        }
+                        
+                        parents = $viewport.find($slide.parent().closest(opts.selector.slide)).map(function (i, e) {
+                            var index = viewport.world.$slides.index(e);
+                            return index === -1 ? null : index;
+                        }).get();
+
+                        if (parents.length > 0) { // parents array has either zero or one elements
+                            var composedMatrix = transUtil.getMatrixIdentity();
+                            util.multiplyMatrices(data.slideData[parents[0]].cssTransforms.ctmMatrix, composedMatrix);
+                        
+                            viewport.world.$slides.eq(parents[0]).add($slide).css('-webkit-transform', 'rotateX(0deg)');
+                            console.log('parent pos = ', getPosition(viewport.world.$slides.eq(parents[0])));
+                            slidePos = getPosition($slide);
+                            console.log('child pos = ', slidePos);
+                            viewport.world.$slides.eq(parents[0]).css('-webkit-transform', 'rotateX(-60deg)');
+                            $slide.css('-webkit-transform', 'rotateX(-40deg)');
+                            
+                            slideData.centerTrans = transUtil.getTransformedPoint({x: slidePos.left + slideData.center.x, y: slidePos.top + slideData.center.y, z:0}, composedMatrix, data.slideData[parents[0]].centerTrans);
+                            var clientOriginTransfParent = transUtil.getTransformedPoint({x: slidePos.left + slideData.cssTransforms.origin.x, y: slidePos.top + slideData.cssTransforms.origin.y, z:0}, composedMatrix, data.slideData[parents[0]].centerTrans);
+                            slideData.centerTrans = transUtil.getTransformedPoint(slideData.centerTrans, slideData.cssTransforms.ctmMatrix, clientOriginTransfParent);
+                            util.multiplyMatrices(slideData.cssTransforms.ctmMatrix, composedMatrix);
+                            slideData.cssTransforms.ctmMatrix = composedMatrix.slice(); // copies composedMatrix array into another (by value)
+                         
+                            console.log('CenterTrans: parent=', data.slideData[parents[0]].centerTrans, ' child=', slideData.centerTrans);
+   
+                        // push the parent transformations into this slide
+                            var parentTransfs = data.slideData[parents[0]].cssTransforms.transformations;
+                            for(var p = parentTransfs.length - 1; p > -1; --p) {
+                                slideData.cssTransforms.transformations.unshift({
+                                    id:         parentTransfs[p].id,
+                                    valueIdent: parentTransfs[p].valueIdent,
+                                    valueInv:   parentTransfs[p].valueInv, 
+                                    matrixInv:  parentTransfs[p].matrixInv.slice()
+                                });
+                            }
+                        } else {
+                            var topLeftOuter = transUtil.getTransformedRect(slideData.outerSize, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
+                            slideData.centerTrans = transUtil.getTransformedPoint(slideData.center, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin);
+                            slideData.centerTrans.x += slidePos.left - topLeftOuter.x;
+                            slideData.centerTrans.y += slidePos.top - topLeftOuter.y;
+                        }
+                    }
+
+                    viewport.world.setFinalSize();
+
+                    if (data.qtSlides > 0) {
+                        zoomUtil.initZoom(opts.initialZoom, opts.zoomMin, opts.initialSlide);
+                        data.gotoSlide(opts.initialSlide);
+                        zoomUtil.calcLongestPath();
+                        $viewport.triggerHandler('create.rsSlideIt');
+                        load.ajax.doLoad();
+                    } else {
+                        $viewport.triggerHandler('create.rsSlideIt');
+                    }
+                },
+                */
                 ajax: {
                     slidesArray: null,
                     toProcess: 0,
@@ -2475,20 +2850,14 @@
     $.fn.rsSlideIt = function (options) {
         var transitionTo = function (optionsGoto) {
             var optsGoto = $.extend({}, $.fn.rsSlideIt.defaultsTransition, optionsGoto);
-            return this.each(function () {
-                $(this).trigger('singleTransition.rsSlideIt', [optsGoto]);
-            });
+            this.trigger('singleTransition.rsSlideIt', [optsGoto]);
         },
         playPause = function (optionsSequence) {
             var optsSequence = $.extend({}, $.fn.rsSlideIt.defaultsPlayPause, optionsSequence);
-            return this.each(function () {
-                $(this).trigger('playPause.rsSlideIt', [optsSequence]);
-            });
+            this.trigger('playPause.rsSlideIt', [optsSequence]);
         },
         stop = function () {
-            return this.each(function () {
-                $(this).trigger('stop.rsSlideIt');
-            });
+            this.trigger('stop.rsSlideIt');
         },
         option = function (options) {
             if (typeof arguments[0] === 'string') {
@@ -2499,9 +2868,7 @@
             }
         },
         destroy = function () {
-            return this.each(function () {
-                $(this).trigger('destroy.rsSlideIt');
-            });
+            this.trigger('destroy.rsSlideIt');
         };
 
 
@@ -2517,6 +2884,7 @@
             }
         }
         var opts = $.extend({}, $.fn.rsSlideIt.defaults, options);
+        opts.data3D = $.extend({}, $.fn.rsSlideIt.defaults.data3D, options ? options.data3D : options);
         opts.selector = $.extend({}, $.fn.rsSlideIt.defaults.selector, options ? options.selector : options);
         opts.events = $.extend({}, $.fn.rsSlideIt.defaults.events, options ? options.events : options);
 
@@ -2543,6 +2911,10 @@
         mousePan: true,         // Determines whether mouse panning is allowed. Type: boolean.
         width: null,            // Viewport width in pixels. If null then uses the width defined in CSS. Type: integer.
         height: null,           // Viewport height in pixels. If null then uses the width defined in CSS. Type: integer.
+        data3D: {
+            viewportClass: 'transf3D', // Class(es) added to the viewport element if browser does support 3D transformations (requires Modernizr lib with "CSS 3D Transforms" detection feature). Type: string.
+            perspective: 500
+        },
         selector: {
             slide: 'img',           // jQuery selector string for all slide elements. Type: string.
             caption: '.caption',    // jQuery selector string for all text elements for each slide. Type: string.
@@ -2557,8 +2929,6 @@
             onChangeZoom: null,             // Fired when zoom changes, due to mouse wheel actions or by transitions. Type: function (event, zoom).
             onBeginPan: null,               // Fired when the user starts to pan around. Type: function (event).
             onEndPan: null,                 // Fired when the user finishes to pan around. Type: function (event).
-            onSelectSlide: null,            // Fired when a slide that was unselected becomes selected. Type: function (event, $slide, index, caption).
-            onUnselectSlide: null,          // Fired when a slide that was selected becomes unselected. Type: function (event, $slide, index).
             onClickSlide: null,             // Fired when a slide receives a single mouse click. Type: function (event, $slide, index).
             onDblClickSlide: function (event, $slide, index) { // Fired when a slide receives a double mouse click. Type: function (event, $slide, index).
                 $(event.target).rsSlideIt('transition', {   // Custom onDblClickSlide defined by default.
