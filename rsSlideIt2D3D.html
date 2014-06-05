@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>SlideIt plugin</title>
+    <link href="normalize.css" rel="stylesheet" type="text/css" />
+    <script src="jquery.2.0.0.min.js"></script>
+    <script src="modernizr.js"></script>
+    <script src="jquery.rsSlideIt.js"></script>
+    <script src="jquery.easing.1.3.js"></script>
+    <link href="rsSlideIt2D3D.css" rel="stylesheet" type="text/css" />
+    <script>
+        $(document).ready(function () {
+            var getRotate3d = function(x, y, z, deg) {
+                var radians = deg * Math.PI / 180.0,
+                    sq = Math.sin(radians/2),
+                    sc = sq * Math.cos(radians/2),
+                    len = Math.sqrt(x*x + y*y + z*z);
+                sq *= sq;
+                // normalize [x,y,z] vector
+                x /= len;
+                y /= len;
+                z /= len;
+                console.log(Math.sqrt(x*x + y*y + z*z));
+                return [
+                    1 - 2*(y*y + z*z)*sq,   2*(x*y*sq + z*sc),      2*(x*z*sq - y*sc),      0,
+                    2*(x*y*sq - z*sc),      1 - 2*(x*x + z*z)*sq,   2*(y*z*sq + x*sc),      0,
+                    2*(x*z*sq + y*sc),      2*(y*z*sq - x*sc),      1 - 2*(x*x + y*y)*sq,   0,
+                    0,                      0,                      0,                      1
+                ];
+            };
+            $("#viewport").rsSlideIt({
+              zoomMin:0,
+              initialSlide: 1,
+                selector: {
+                    slide: 'span'
+                }
+            });
+
+            $("#prev").click(function () {
+                $("#viewport").rsSlideIt('transition', { slide: 'prev', duration: 1000, zoomDest: 'current', zoomVertex: 10 });
+            });
+            $("#next").click(function () {
+                $("#viewport").rsSlideIt('transition', { slide: 'next', duration: 1000, zoomDest: 'fit', zoomVertex: 3 });
+            });
+            $("#play").click(function () {
+                $("#viewport").rsSlideIt('playPause', { duration: 1000, delayOnSlide: 1000 });
+            });
+            $("#stop").click(function () {
+                $("#viewport").rsSlideIt('stop');
+            });
+            $("#destroy").click(function () {
+                $("#viewport").rsSlideIt('destroy');
+            });
+        });
+
+/*
+translate(100px, 50px)  matrix(1, 0, 0, 1, 100, 50) = matrix3d(  1,  0, 0, 0,
+                                                                 0,  1, 0, 0,
+                                                                 0,  0, 1, 0,
+                                                               100, 50, 0, 1)
+
+translateX(100px)   matrix(1, 0, 0, 1, 100, 0) = matrix3d(  1, 0, 0, 0, 
+                                                            0, 1, 0, 0, 
+                                                            0, 0, 1, 0, 
+                                                          100, 0, 0, 1)
+
+translateY(100px)   matrix(1, 0, 0, 1, 0, 100) = matrix3d(1,   0, 0, 0, 
+                                                          0,   1, 0, 0, 
+                                                          0,   0, 1, 0, 
+                                                          0, 100, 0, 1)
+translateZ(100px)   matrix3d(1, 0,   0, 0, 
+                             0, 1,   0, 0,
+                             0, 0,   1, 0,
+                             0, 0, 100, 1)
+
+translate3d(50px, 100px, 150px) matrix3d( 1,   0,   0, 0,
+                                          0,   1,   0, 0, 
+                                          0,   0,   1, 0, 
+                                         50, 100, 150, 1)
+
+-------------------------
+
+scale(2)    matrix(2, 0, 0, 2, 0, 0) matrix3d(2, 0, 0, 0,
+                                              0, 2, 0, 0,
+                                              0, 0, 1, 0,
+                                              0, 0, 0, 1)
+
+scale(2,3)  matrix(2, 0, 0, 3, 0, 0) matrix3d(2, 0, 0, 0,
+                                              0, 3, 0, 0,
+                                              0, 0, 1, 0,
+                                              0, 0, 0, 1)
+
+scaleX(2)   matrix(2, 0, 0, 1, 0, 0) matrix3d(2, 0, 0, 0,
+                                              0, 1, 0, 0,
+                                              0, 0, 1, 0,
+                                              0, 0, 0, 1)
+
+scaleY(2)   matrix(1, 0, 0, 2, 0, 0) matrix3d(1, 0, 0, 0,
+                                              0, 2, 0, 0,
+                                              0, 0, 1, 0,
+                                              0, 0, 0, 1)
+
+scale3d(2,3,4)  matrix3d(2, 0, 0, 0,
+                         0, 3, 0, 0,
+                         0, 0, 4, 0,
+                         0, 0, 0, 1)
+
+-------------------------
+
+rotateX(60deg) rotate3d(1,0,0, 60deg)    matrix3d(1,  0,     0,     0,
+                                                  0,  0.5,   0.866, 0,
+                                                  0, -0.866, 0.5,   0,
+                                                  0,  0,     0,     1)
+
+rotateY(60deg) rotate3d(0,1,0, 60deg)    matrix3d(0.5,   0, -0.866, 0,
+                                                  0,     1,  0,     0,
+                                                  0.866, 0,  0.5,   0,
+                                                  0,     0,  0,     1)
+
+rotateZ(60deg) rotate3d(0,0,1, 60deg)  matrix(0.5, 0.866, -0.866, 0.5, 0, 0) = matrix3d( 0.5,   0.866, 0, 0,
+                                                                                        -0.866, 0.5,   0, 0,
+                                                                                         0,     0,     1, 0,
+                                                                                         0,     0,     0, 1)
+*/
+
+    </script>
+  </head>
+  <body>
+    <button id="prev">prev</button>
+    <button id="next">next</button>
+    <button id="play">play/pause</button>
+    <button id="stop">stop</button>
+    <button id="destroy">destroy</button>
+    <div id="viewport" class="rs2d">
+        <span id="s0"></span>
+        
+        <span id="s1">s1
+          <span id="s1-1">1.1 slide<i>italic</i></span>
+        </span>
+        
+        <span id="s2">2 slide
+          <span id="s2-0">2.0 slide</span>
+          <span id="s2-1" data-transform="rotate(130deg) scale(.9) skewX(-20deg)">2.1 slide
+            <span id="s2-1-0" data-transform="scale(.5) rotate(30deg) skewX(50deg) translateZ(0px)">2.1.0 slide</span>
+            <div>
+              <span id="s2-1-1">2.1.1 slide</span>
+            </div>
+          </span>
+          <span id="s2-2">2.2 slide</span>
+        </span>
+    </div>
+    <div id="guide"></div>
+  </body>
+</html>

@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+  <head>
+    <title>3D transformations</title>
+    <script src="jquery.2.0.0.min.js"></script>
+    <script src="jQuery.rsSlideIt.js"></script>
+    <style>
+    	#viewport {
+    		position: absolute;
+    		top: 0;
+    		right: 5%;
+    		bottom: 0;
+    		left: 5%;
+    		background-color: #ddd;
+    		-webkit-perspective: 500;
+    		-webkit-perspective-origin: 50% 50%;
+    	}
+    	#__viewport > div {
+    		position: absolute;
+    		_left: 50%;
+    		_top: 50%;
+    		_margin-left: -150px;
+    		_margin-top: -30px;
+    		width: 300px;
+    		height: 60px;
+    		border: 1px solid #bbb;
+    		-webkit-transform-style: preserve-3d;
+    		-_webkit-transform: rotateX(45deg);
+    		-webkit-backface-visibility: visible;
+    		-_webkit-transition: 2s;
+    	}
+    	span {
+    		display: block;
+    		width: 60px;
+    		height: 60px;
+    		position:relative;
+    		left: 100px;
+            background-color: rgb(155,105,0);
+    	}
+    	#s0 {
+    		background-color: cyan;
+            opacity: .5;
+    	}
+    	#s1 {
+    		background-color: grey;
+    		-webkit-transform: rotateX(-90deg) translateY(30px) translateZ(-30px);
+            -webkit-transform-origin: 30px 0;
+            -webkit-transform: rotateX(-90deg);
+    	}
+    	#s2 {
+    		background-color: red;
+    		-webkit-transform: rotateX(-90deg) rotateY(90deg) translate3d(120px,30px,30px);
+            -webkit-transform-origin: 0 0;
+            -webkit-transform: translateX(60px) translateY(-60px) rotateX(-90deg) rotateY(90deg);
+            height: 30px;
+            -webkit-transform-style: preserve-3d;
+    	}
+        #s20 {
+            background-color: rgba(255, 0, 0, .5);
+            -webkit-transform: rotateX(90deg);
+        }
+        #s3 {
+            background-color: cyan;
+            -webkit-transform: rotateX(40deg);
+            -webkit-transform-style: preserve-3d;
+            -webkit-transform-origin: 0px 0px;
+        }
+        #s30, #s300, #s301, #__s4 {
+            background-color: #aaa;
+            -webkit-transform: rotateX(180deg);
+            -webkit-transform-origin: 50px 50px;
+            -webkit-transform-style: preserve-3d;
+            left: -20px;
+            top: 50px;
+        }
+        #__s300 {
+            -webkit-transform: rotateX(60deg);
+        }
+        #s4 {
+            position: absolute;
+            background-color: rgba(60,255,60,.3);
+        }
+        #viewport > div div {
+            position: absolute;
+            left: 0px;
+            top: 0px;
+            width: 1px;
+            height: 1px;
+            background-color: red;
+        }
+        button {
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+        #next {
+            top: 20px;
+        }
+    </style>
+    <script>
+        $(document).ready(function () {
+            $("#viewport").rsSlideIt({
+                initialSlide:0,
+                initialZoom: 1,
+                selector: {
+                    slide: "span"
+                }
+            });
+
+            $("#prev").click(function() {
+                $("#viewport").rsSlideIt('transition', {
+                    slide: 'prev',
+                    duration: 3000
+                });
+            });
+            $("#next").click(function() {
+                $("#viewport").rsSlideIt('transition', {
+                    slide: 'next',
+                    //zoomDest: 'fit',
+                    duration: 1000
+                });
+            });
+        });
+    </script>
+  </head>
+  <body>
+    <button id="prev">prev</button>
+    <button id="next">next</button>
+  	<div id="viewport">
+		<span id="s0">first slide</span>
+		<!--span id="s2" data-transform="rotateX(-90deg) translateY(30px) translateZ(-30px)">second slide</span>
+		<span id="s3" data-transform="rotateX(-90deg) rotateY(90deg) translate3d(120px,30px,30px)">third slide</span-->
+        <span id="s1" data-transform="rotateX(-90deg)">second slide</span>
+        <span id="s2" data-transform="translateX(60px) translateY(-60px) rotateX(-90deg) rotateY(90deg)">third slide<span id="s20" data-transform="rotateX(90deg)">31</span></span>
+        <span id="s3" data-transform="rotateX(40deg)">fourth
+            <span id="s30" data-transform="rotateX(180deg)">41 slide
+                <!--div>
+                    <span id="s300" data-transform="rotateX(-40deg)">411 slide</span>
+                    <span id="s301" data-transform="rotateX(-40deg)">412 slide</span>
+                </div-->
+            </span>
+        </span>
+        <span id="s4" __data-transform="rotateX(-40deg)">555 slide</span>
+        <div></div>
+  	</div>
+  </body>
+</html>
