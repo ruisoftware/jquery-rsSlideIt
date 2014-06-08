@@ -1931,8 +1931,9 @@
                     }
                     return caption.length == 0 ? null : caption;
                 },
-                getTransformInfo: function ($slide, outerSize) {
-                    var getTransformFromCSSie = function (msFilter) {
+                getTransformFromCss: function ($slide) {
+                    var value,
+                        getTransformFromCSSie = function (msFilter) {
                             var lookup = "progid:dximagetransform.microsoft.matrix(",
                                 pos = msFilter.toLowerCase().indexOf(lookup);
                             if (pos > -1) {
@@ -1942,36 +1943,77 @@
                                 return 'matrix(' + coefs[0] + ', ' + coefs[2] + ', ' + coefs[1] + ', ' + coefs[3] + ')';
                             }
                             return null;
-                        },
-                        getTransformFromCss = function () {
-                            var value;
-                            if (data.isIE8orBelow) {
-                                value = $slide.css('filter');
+                        };
+                    if (data.isIE8orBelow) {
+                        value = $slide.css('filter');
+                        if (!util.isDefined(value)) {
+                            value = $slide.css('-ms-filter');
+                            if (!util.isDefined(value)) {
+                                return null;
+                            }
+                        }
+                        value = getTransformFromCSSie(value);
+                    } else {
+                        value = $slide.css('-webkit-transform');
+                        if (!util.isDefined(value)) {
+                            value = $slide.css('-moz-transform');
+                            if (!util.isDefined(value)) {
+                                value = $slide.css('-o-transform');
                                 if (!util.isDefined(value)) {
-                                    value = $slide.css('-ms-filter');
+                                    value = $slide.css('msTransform');
                                     if (!util.isDefined(value)) {
-                                        return null;
-                                    }
-                                }
-                                value = getTransformFromCSSie(value);
-                            } else {
-                                value = $slide.css('-webkit-transform');
-                                if (!util.isDefined(value)) {
-                                    value = $slide.css('-moz-transform');
-                                    if (!util.isDefined(value)) {
-                                        value = $slide.css('-o-transform');
-                                        if (!util.isDefined(value)) {
-                                            value = $slide.css('msTransform');
-                                            if (!util.isDefined(value)) {
-                                                value = $slide.css('transform');
-                                            }
-                                        }
+                                        value = $slide.css('transform');
                                     }
                                 }
                             }
-                            return !util.isDefined(value) ? null : value;
-                        },
-                        getTransformFromDataAttr = function () {
+                        }
+                    }
+                    return !util.isDefined(value) ? null : value;
+                },
+                getMatrixCoefs: function (value) {
+                    value = value.replace(/matrix(3d)?\(/gi, ''); // remove occurences of "matrix(" and "matrix3d("
+                    var coefs = value.split(',');
+                    if (coefs.length == 16) {
+                        return {
+                            // matrix3d(m11, m12, m13, 0, m21, m22, m23, 0, m31, m32, m33, 0, tx, ty, tz, 1)
+                            // | m11 m12 m13 0 |
+                            // | m21 m22 m23 0 |
+                            // | m31 m32 m33 0 |
+                            // |  tx  ty  tz 1 |
+                            is3D: true,
+                            m11: util.roundToTrigonometricBounds(util.toFloat(coefs[0])),
+                            m12: util.roundToTrigonometricBounds(util.toFloat(coefs[1])),
+                            m13: util.roundToTrigonometricBounds(util.toFloat(coefs[2])),
+
+                            m21: util.roundToTrigonometricBounds(util.toFloat(coefs[4])),
+                            m22: util.roundToTrigonometricBounds(util.toFloat(coefs[5])),
+                            m23: util.roundToTrigonometricBounds(util.toFloat(coefs[6])),
+
+                            m31: util.roundToTrigonometricBounds(util.toFloat(coefs[8])),
+                            m32: util.roundToTrigonometricBounds(util.toFloat(coefs[9])),
+                            m33: util.roundToTrigonometricBounds(util.toFloat(coefs[10])),
+
+                            tx: util.toInt(coefs[12]),
+                            ty: util.toInt(coefs[13]),
+                            tz: util.toInt(coefs[14])
+                        };
+                    }
+                    // matrix(m11, m12, m21, m22, tx, ty)
+                    // | m11 m12 0 |
+                    // | m21 m22 0 |
+                    // |  tx  ty 1 |
+                    return {
+                        is3D: false,
+                        m11: util.roundToTrigonometricBounds(util.toFloat(coefs[0])),
+                        m12: util.roundToTrigonometricBounds(util.toFloat(coefs[1])),
+                        m21: util.roundToTrigonometricBounds(util.toFloat(coefs[2])),
+                        m22: util.roundToTrigonometricBounds(util.toFloat(coefs[3])),
+                        tx: util.toInt(coefs[4]),
+                        ty: util.toInt(coefs[5])
+                    };
+                },
+                getTransformInfo: function ($slide, outerSize) {
+                    var getTransformFromDataAttr = function () {
                             var value = $slide.attr('data-transform');
                             if (!util.isDefined(value)) {
                                 value = $slide.attr('data-transform2D');
@@ -1981,42 +2023,6 @@
                                 }
                             }
                             return value;
-                        },
-                        getMatrixCoefs = function (value) {
-                            value = value.replace(/matrix(3d)?\(/gi, ''); // remove occurences of "matrix(" and "matrix3d("
-                            var coefs = value.split(',');
-                            if (coefs.length == 16) {
-                                return {
-                                    // matrix3d(m11, m12, m13, 0, m21, m22, m23, 0, m31, m32, m33, 0, tx, ty, tz, 1)
-                                    // | m11 m12 m13 0 |
-                                    // | m21 m22 m23 0 |
-                                    // | m31 m32 m33 0 |
-                                    // |  tx  ty  tz 1 |
-                                    is3D: true,
-                                    m11: util.roundToTrigonometricBounds(util.toFloat(coefs[0])),
-                                    m12: util.roundToTrigonometricBounds(util.toFloat(coefs[1])),
-                                    m13: util.roundToTrigonometricBounds(util.toFloat(coefs[2])),
-
-                                    m21: util.roundToTrigonometricBounds(util.toFloat(coefs[4])),
-                                    m22: util.roundToTrigonometricBounds(util.toFloat(coefs[5])),
-                                    m23: util.roundToTrigonometricBounds(util.toFloat(coefs[6])),
-
-                                    m31: util.roundToTrigonometricBounds(util.toFloat(coefs[8])),
-                                    m32: util.roundToTrigonometricBounds(util.toFloat(coefs[9])),
-                                    m33: util.roundToTrigonometricBounds(util.toFloat(coefs[10]))
-                                };
-                            }
-                            // matrix(m11, m12, m21, m22, tx, ty)
-                            // | m11 m12 0 |
-                            // | m21 m22 0 |
-                            // |  tx  ty 1 |
-                            return {
-                                is3D: false,
-                                m11: util.roundToTrigonometricBounds(util.toFloat(coefs[0])),
-                                m12: util.roundToTrigonometricBounds(util.toFloat(coefs[1])),
-                                m21: util.roundToTrigonometricBounds(util.toFloat(coefs[2])),
-                                m22: util.roundToTrigonometricBounds(util.toFloat(coefs[3]))
-                            };
                         },
                         getTransformRotate = function (value) {
                             var found = value.match(/rotate\([-|+]?[\d.]+(deg|rad|grad|turn)\)/i);
@@ -2269,7 +2275,7 @@
                         origin = transUtil.getTransformOriginCss($slide, outerSize);
 
                     if (value == null) {
-                        value = getTransformFromCss();
+                        value = load.getTransformFromCss($slide);
                         if (value == null) {
                             return getTransformDefault(origin);
                         }
@@ -2277,7 +2283,7 @@
                     if (value.indexOf('matrix(') == 0 || value.indexOf('matrix3d(') == 0) {
                         // slideIt assumes that all slides have origin in (0,0) but with translations (x,y) applied
                         
-                        var coefs = getMatrixCoefs(value),
+                        var coefs = load.getMatrixCoefs(value),
                             allTrans = coefs.is3D? decompose3dMatrix(coefs) : decompose2dMatrix(coefs);
 
                         if (allTrans == null) {
@@ -2448,12 +2454,21 @@
                                 left: offset.left - worldOffset.left,
                                 top: offset.top - worldOffset.top
                             };
+                        },
+                        getOffset = function ($slide) {
+                            var matrixCssStr = load.getTransformFromCss($slide);
+                            if (matrixCssStr !== null && (matrixCssStr.indexOf('matrix(') == 0 || matrixCssStr.indexOf('matrix3d(') == 0)) {
+                                var coefs = load.getMatrixCoefs(matrixCssStr);
+                                if (coefs.is3D) {
+                                    return { x: coefs.tx, y: coefs.ty, z: coefs.tz };
+                                }
+                                return { x: coefs.tx, y: coefs.ty, z: 0 };
+                            }
+                            return { x: 0, y: 0, z: 0 };
                         };
-
                     viewport.world.setFinalSize();
-
                     if (data.qtSlides > 0) {
-                        this.doSetSlidePos(0, getPosition, [], transUtil.getMatrixIdentity());
+                        this.doSetSlidePos(0, getPosition, getOffset, [], {x:0, y:0, z:0}, transUtil.getMatrixIdentity());
                         console.log(data.slideData);
                         zoomUtil.initZoom(opts.initialZoom, opts.zoomMin, opts.initialSlide);
                         data.gotoSlide(opts.initialSlide);
@@ -2464,11 +2479,15 @@
                         $viewport.triggerHandler('create.rsSlideIt');
                     }
                 },
-                doSetSlidePos: function(index, getPositionFunc, parents, parentCtmMatrix, parentPos) {
-                    var $slide, slideData, slidePos, topLeftOuter, ctmMatrix, childOriginRelativeToParent;
+                doSetSlidePos: function(index, getPositionFunc, getOffsetFunc, parents, totalOffset, parentCtmMatrix, parentPos) {
+                    var $slide, slideData, slidePos, topLeftOuter, ctmMatrix, childOriginRelativeToParent,
+                        parentOrigin, matrixOffset;
                     do {
                         $slide = viewport.world.$slides.eq(index);
+                        matrixOffset = getOffsetFunc($slide);
+                        matrixOffset = transUtil.getTransformedPoint(matrixOffset, parentCtmMatrix);
                         slideData = data.slideData[index];
+                        
                         console.log('+', $slide.attr('id'));
 
                         if (slideData.firstChild > -1) {
@@ -2494,28 +2513,27 @@
                             console.log('>> parentPos=', parentPos.left, ',', parentPos.top, '   ',
                                 'childPos=', slidePos.left, ',', slidePos.top);
 
+                            parentOrigin = {
+                                x: parentPos.left + data.slideData[parents[parents.length - 1]].cssTransforms.origin.x,
+                                y: parentPos.top + data.slideData[parents[parents.length - 1]].cssTransforms.origin.y                          
+                            };
                             slideData.centerTrans = transUtil.getTransformedPoint({
-                                x: slidePos.left - parentPos.left + slideData.center.x,
-                                y: slidePos.top - parentPos.top + slideData.center.y,
+                                x: slidePos.left + slideData.center.x,
+                                y: slidePos.top + slideData.center.y,
                                 z: 0
-                            }, parentCtmMatrix, data.slideData[parents[parents.length - 1]].cssTransforms.origin);
-                            slideData.centerTrans.x += parentPos.left;
-                            slideData.centerTrans.y += parentPos.top;
-                            // at this point, slideData.centerTrans is the absolute center position,
-                            // relatively to the parent transformation
+                            }, parentCtmMatrix, parentOrigin);
 
                             // get the client origin relatively to the parent transformation
                             childOriginRelativeToParent = transUtil.getTransformedPoint({
-                                x: slidePos.left - parentPos.left + slideData.cssTransforms.origin.x,
-                                y: slidePos.top - parentPos.top + slideData.cssTransforms.origin.y,
+                                x: slidePos.left + slideData.cssTransforms.origin.x,
+                                y: slidePos.top + slideData.cssTransforms.origin.y,
                                 z: 0
-                            }, parentCtmMatrix, data.slideData[parents[parents.length - 1]].cssTransforms.origin);
+                            }, parentCtmMatrix, parentOrigin);
 
-                            slideData.centerTrans = transUtil.getTransformedPoint(slideData.centerTrans, slideData.cssTransforms.ctmMatrix, {
-                                x: childOriginRelativeToParent.x + parentPos.left,
-                                y: childOriginRelativeToParent.y + parentPos.top,
-                                z: childOriginRelativeToParent.z
-                            });
+                            slideData.centerTrans = transUtil.getTransformedPoint(slideData.centerTrans, slideData.cssTransforms.ctmMatrix, childOriginRelativeToParent);
+                            slideData.centerTrans.x += totalOffset.x + matrixOffset.x;
+                            slideData.centerTrans.y += totalOffset.y + matrixOffset.y;
+                            slideData.centerTrans.z += totalOffset.z + matrixOffset.z;
                             slideData.cssTransforms.ctmMatrix = util.multiplyMatrices(slideData.cssTransforms.ctmMatrix, parentCtmMatrix.slice());
                             util.roundMatrixToTrigonometricBounds(slideData.cssTransforms.ctmMatrix);
 
@@ -2535,11 +2553,16 @@
                             slideData.centerTrans = transUtil.getTransformedPoint(slideData.center, ctmMatrix, slideData.cssTransforms.origin);
                             slideData.centerTrans.x += slidePos.left - topLeftOuter.x;
                             slideData.centerTrans.y += slidePos.top - topLeftOuter.y;
+                            slideData.centerTrans.z += matrixOffset.z;                            
                         }
 
                         if (slideData.firstChild > -1) {
                             parents.push(index);
-                            this.doSetSlidePos(slideData.firstChild, getPositionFunc, parents, util.multiplyMatrices(slideData.cssTransforms.ctmMatrix, parentCtmMatrix.slice()), slidePos);
+                            this.doSetSlidePos(slideData.firstChild, getPositionFunc, getOffsetFunc, parents, {
+                                x: totalOffset.x + matrixOffset.x,
+                                y: totalOffset.y + matrixOffset.y,
+                                z: totalOffset.z + matrixOffset.z
+                            }, util.multiplyMatrices(slideData.cssTransforms.ctmMatrix, parentCtmMatrix.slice()), getPositionFunc($slide));
                             parents.pop();
                         }
                         $slide.css({
