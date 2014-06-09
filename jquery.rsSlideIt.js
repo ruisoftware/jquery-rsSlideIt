@@ -3020,5 +3020,4 @@
         onBeginDelay: null,     // Fired when slideshow pauses for some time on a specific slide. Type: function(event, slide, delay)
         onEndDelay: null        // Fired when the delay performed on a specific slide has finished. Type: function(event, slide)
    };
-
 })(jQuery);
