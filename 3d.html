@@ -15,6 +15,7 @@
     		-webkit-perspective: 500;
     		-webkit-perspective-origin: 50% 50%;
     	}
+
     	#__viewport > div {
     		position: absolute;
     		_left: 50%;
@@ -50,7 +51,7 @@
     	#s2 {
     		background-color: red;
     		-webkit-transform: rotateX(-90deg) rotateY(90deg) translate3d(120px,30px,30px);
-            -webkit-transform-origin: 0 0;
+            -xxxxwebkit-transform-origin: 20px 40px;
             -webkit-transform: translateX(60px) translateY(-60px) rotateX(-90deg) translateZ(150px) rotateY(90deg);
             -webkit-transform: rotateX(-90deg) rotateY(90deg);
             height: 30px;
@@ -58,9 +59,22 @@
     	}
         #s20 {
             background-color: rgba(255, 0, 0, .5);
-            -webkit-transform-origin: 10px 0;
-            -webkit-transform: translateZ(200px) rotateX(90deg) translateX(100px);
+            -xxxxwebkit-transform-origin: 30px -90px;
+            -webkit-transform: translateX(160px) rotateX(90deg);
+            -webkit-transform: translateX(160px) translateZ(-200px) rotateX(90deg) translateY(-150px) rotateY(60deg);
             -webkit-transform: rotateX(90deg);
+            -webkit-transform-style: preserve-3d;
+        }
+        #s200 {
+            background-color: rgba(255, 255, 0, .5);
+            left: 10px;
+            -webkit-transform-origin: 0px 30px;
+            -webkit-transform: translateY(50px) rotateY(90deg) translateZ(-150px);
+            -webkit-transform: rotateY(90deg);
+        }
+        #s2000 {
+            background-color: rgba(10,10,10,.3);
+            -webkit-transform: rotateY(30deg);
         }
         #s3 {
             background-color: cyan;
@@ -76,9 +90,14 @@
             left: -20px;
             top: 50px;
         }
-        #__s300 {
-            -webkit-transform: rotateX(60deg);
+        #s300 {
+            -webkit-transform: rotateX(-40deg);
         }
+        #s301 {
+            -webkit-transform: rotateX(40deg);
+            -webkit-transform-origin: 0 0;
+        }
+
         #s4 {
             position: absolute;
             background-color: rgba(60,255,60,.3);
@@ -130,21 +149,22 @@
     <button id="prev">prev</button>
     <button id="next">next</button>
   	<div id="viewport">
-		<span id="s0">first slide</span>
-		<!--span id="s2" data-transform="rotateX(-90deg) translateY(30px) translateZ(-30px)">second slide</span>
-		<span id="s3" data-transform="rotateX(-90deg) rotateY(90deg) translate3d(120px,30px,30px)">third slide</span-->
-        <span id="s1" data-transform="translateZ(250px) rotateX(-90deg)">second slide</span>
-        <span id="s2" data-transform="rotateX(-90deg) rotateY(90deg)">third slide<span id="s20" data-transform="rotateX(90deg)">31</span></span>
-        <span id="s3" data-transform="rotateX(40deg)">fourth
+		<!--span id="s0">first slide</span>
+		<span id="s2" data-transform="rotateX(-90deg) translateY(30px) translateZ(-30px)">second slide</span>
+		<span id="s3" data-transform="rotateX(-90deg) rotateY(90deg) translate3d(120px,30px,30px)">third slide</span>
+
+        <span id="s1" data-transform="translateZ(250px) rotateX(-90deg)">second slide</span-->
+        <span id="s2" data-transform="rotateX(-90deg) rotateY(90deg)">third slide<span id="s20" data-transform="rotateX(90deg)">20<span id="s200" data-transform="rotateY(90deg)">200</span><span id="s2000" data-transform="rotateY(30deg)">2000</span></span></span>
+        <!--span id="s3" data-transform="rotateX(40deg)">fourth
             <span id="s30" data-transform="rotateX(180deg)">41 slide
-                <!--div>
+                <div>
                     <span id="s300" data-transform="rotateX(-40deg)">411 slide</span>
-                    <span id="s301" data-transform="rotateX(-40deg)">412 slide</span>
-                </div-->
+                    <span id="s301" data-transform="rotateX(40deg)">412 slide</span>
+                </div>
             </span>
         </span>
         <span id="s4" __data-transform="rotateX(-40deg)">555 slide</span>
-        <div></div>
+        <div></div-->
   	</div>
   </body>
 </html>
