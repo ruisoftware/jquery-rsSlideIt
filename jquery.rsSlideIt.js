@@ -2469,7 +2469,6 @@
                     viewport.world.setFinalSize();
                     if (data.qtSlides > 0) {
                         this.doSetSlidePos(0, getPosition, getOffset, [], {x:0, y:0, z:0});
-                        console.log(data.slideData);
                         zoomUtil.initZoom(opts.initialZoom, opts.zoomMin, opts.initialSlide);
                         data.gotoSlide(opts.initialSlide);
                         zoomUtil.calcLongestPath();
@@ -2479,15 +2478,13 @@
                         $viewport.triggerHandler('create.rsSlideIt');
                     }
                 },
+                
                 doSetSlidePos: function(index, getPositionFunc, getOffsetFunc, parents, totalOffset) {
-                    var $slide, slideData, slidePos, topLeftOuter,
-                        origin, matrixOffset, parentCtmMatrix;
+                    var $slide, slideData, slidePos, matrixOffset;
                     do {
                         $slide = viewport.world.$slides.eq(index);
                         matrixOffset = getOffsetFunc($slide);
                         slideData = data.slideData[index];
-                        
-                        console.log('+', $slide.attr('id'));
 
                         if (slideData.firstChild > -1) {
                             $slide.css({
@@ -2509,65 +2506,37 @@
                         }
 
                         if (parents.length > 0) {
-                            var centerTrans = {
-                                x: slidePos.left + slideData.center.x,
-                                y: slidePos.top + slideData.center.y,
-                                z: 0
-                            }, childOrigin = {
-                                x: slidePos.left + slideData.cssTransforms.origin.x,
-                                y: slidePos.top + slideData.cssTransforms.origin.y,
-                                z: 0
-                            }, parentSlideData = data.slideData[parents[0]];
-
-                            if (!data.slideData[parents[0]].originRelativeToParent) {
-                                var firstParentPos = getPositionFunc(viewport.world.$slides.eq(parents[0]))
-                                parentSlideData.originRelativeToParent = {
-                                    x: firstParentPos.left + parentSlideData.cssTransforms.origin.x,
-                                    y: firstParentPos.top + parentSlideData.cssTransforms.origin.y,
-                                    z: 0
-                                };
-                            }
-
-                            // this loop runs at least one time
-                            for (var parentIdx = 0; parentIdx < parents.length; ++parentIdx) {
-                                parentSlideData = data.slideData[parents[parentIdx]];
-                                if (parentIdx == 0) {
-                                    parentCtmMatrix = parentSlideData.cssTransforms.ctmMatrix;
-                                } else {
-                                    parentCtmMatrix = util.getInvertedMatrix(util.multiplyMatrices(
-                                        data.slideData[parents[parentIdx - 1]].cssTransforms.originalMatrix || data.slideData[parents[parentIdx - 1]].cssTransforms.ctmMatrix,
-                                        (parentSlideData.cssTransforms.originalMatrix || parentSlideData.cssTransforms.ctmMatrix).slice()));
-                                }
-                                if (!slideData.originRelativeToParent) {
-                                    centerTrans = transUtil.getTransformedPoint(centerTrans, parentCtmMatrix, parentSlideData.originRelativeToParent);
-                                    childOrigin = transUtil.getTransformedPoint(childOrigin, parentCtmMatrix, parentSlideData.originRelativeToParent);
-                                }
-                            }
-
-                            if (!slideData.originRelativeToParent) {
-                                slideData.centerTrans = centerTrans;
-                                slideData.originRelativeToParent = {
-                                    x: childOrigin.x,
-                                    y: childOrigin.y,
-                                    z: childOrigin.z
-                                };
-                            }
+                            var centerTrans = transUtil.getTransformedPoint({
+                                        x: slidePos.left + slideData.center.x,
+                                        y: slidePos.top + slideData.center.y,
+                                        z: 0
+                                    }, slideData.cssTransforms.ctmMatrix, {
+                                        x: slidePos.left + slideData.cssTransforms.origin.x,
+                                        y: slidePos.top + slideData.cssTransforms.origin.y,
+                                        z: 0
+                                    }
+                                ), parentSlideData = data.slideData[parents[parents.length - 1]],
+                                parentTransforms;
                             
-                            if (!slideData.cssTransforms.originalMatrix) {
-                                slideData.cssTransforms.originalMatrix = slideData.cssTransforms.ctmMatrix.slice();
+                            for (var parentIdx = parents.length - 1; parentIdx > -1; --parentIdx) {
+                                parentTransforms = data.slideData[parents[parentIdx]].cssTransforms;
+                                slidePos = getPositionFunc(viewport.world.$slides.eq(parents[parentIdx]));
+                                centerTrans = transUtil.getTransformedPoint(centerTrans, parentTransforms.originalMatrix || parentTransforms.ctmMatrix, {
+                                    x: slidePos.left + parentTransforms.origin.x,
+                                    y: slidePos.top + parentTransforms.origin.y,
+                                    z: 0
+                                });
                             }
+                            slideData.cssTransforms.originalMatrix = slideData.cssTransforms.ctmMatrix.slice();
                             slideData.cssTransforms.ctmMatrix = util.multiplyMatrices(slideData.cssTransforms.ctmMatrix, parentSlideData.cssTransforms.ctmMatrix.slice());
                             util.roundMatrixToTrigonometricBounds(slideData.cssTransforms.ctmMatrix);
-
                             matrixOffset = transUtil.getTransformedPoint(matrixOffset, parentSlideData.cssTransforms.ctmMatrix);
+                            slideData.centerTrans.x = centerTrans.x + totalOffset.x + matrixOffset.x;
+                            slideData.centerTrans.y = centerTrans.y + totalOffset.y + matrixOffset.y;
+                            slideData.centerTrans.z = centerTrans.z + totalOffset.z + matrixOffset.z;
 
-                            slideData.centerTrans = transUtil.getTransformedPoint(slideData.centerTrans, util.getInvertedMatrix(util.multiplyMatrices(parentCtmMatrix, slideData.cssTransforms.originalMatrix.slice())), slideData.originRelativeToParent);
-                            slideData.centerTrans.x += totalOffset.x + matrixOffset.x;
-                            slideData.centerTrans.y += totalOffset.y + matrixOffset.y;
-                            slideData.centerTrans.z += totalOffset.z + matrixOffset.z;
-                            
                             // push the parent transformations into this slide
-                            var parentTransfs = parentSlideData.cssTransforms.transformations;
+                            var parentTransfs = data.slideData[parents[parents.length - 1]].cssTransforms.transformations;
                             for(var p = parentTransfs.length - 1; p > -1; --p) {
                                 slideData.cssTransforms.transformations.unshift({
                                     id:         parentTransfs[p].id,
@@ -2577,7 +2546,7 @@
                                 });
                             }
                         } else {
-                            topLeftOuter = transUtil.getTransformedRect(slideData.outerSize, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
+                            var topLeftOuter = transUtil.getTransformedRect(slideData.outerSize, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
                             slideData.centerTrans = transUtil.getTransformedPoint(slideData.center, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin);
                             slideData.centerTrans.x += slidePos.left - topLeftOuter.x;
                             slideData.centerTrans.y += slidePos.top - topLeftOuter.y;
@@ -2597,250 +2566,10 @@
                             '-webkit-transform': '',
                             '-webkit-transform-style': ''
                         });
-                        console.log('-', $slide.attr('id'), ' slidePos=(',slidePos.left, ',', slidePos.top, ') $position=(', 
-                            $slide.position().left, ',', $slide.position().top, ') offset=(', $slide.offset().left,',', $slide.offset().top, ') centerTrans=', slideData.centerTrans);
                         index = slideData.nextSibling;
                     } while (index > -1);
                 },
-/*
 
-                setSlidePos: function () {
-                    var $slide, slideData, slidePos, parents, clientOriginTransfParent,
-                        worldOffset = viewport.world.$elem.offset(),
-                        getPosition = function ($slide) {
-                            var offset = $slide.offset();
-                            return {
-                                left: offset.left - worldOffset.left,
-                                top: offset.top - worldOffset.top
-                            };
-                        },
-                        transformDataStack = [],
-                        pushTransformData = function () {
-                            var childrenQt = load.getChildren($slide).length;
-                            if (childrenQt > 0) {
-                                transformDataStack.push({
-                                    parent: $slide,
-                                    childrenQt: childrenQt
-                                });
-                            }
-                            $slide.css({
-//                                '-webkit-transform': 'none',
-                                '-webkit-transform-style': 'initial'
-                            });
-                            return childrenQt;
-                        },
-                        popTransformData = function () {
-                            var stackSize = transformDataStack.length;
-                            while (stackSize > 0 &&
-                                   !transformDataStack[stackSize - 1].parent.is($slide) &&
-                                   --transformDataStack[stackSize - 1].childrenQt === 0) {
-                                transformDataStack.pop().parent.css({
-//                                    '-webkit-transform': '',
-                                    '-webkit-transform-style': ''
-                                });
-                                stackSize--;
-                            }
-                        };
-
-                    for (var i = 0; i < data.qtSlides; ++i) {
-                        $slide = viewport.world.$slides.eq(i);
-                        slideData = data.slideData[i];
-
-                        parents = $viewport.find($slide.parent().closest(opts.selector.slide)).map(function (i, e) {
-                            var index = viewport.world.$slides.index(e);
-                            return index === -1 ? null : index;
-                        }).get();
-                        var qtChildren = pushTransformData();
-                        slidePos = getPosition($slide);
-                        if (parents.length === 0) { // parents array has either zero or one elements
-                            $slide.css({
-//                                '-webkit-transform': ''
-                            });
-                        }
-                        $slide.css({
-                            '-webkit-transform-style': ''
-                        });
-                        if (data.isMozilla11orBelow) {
-                            // Mozilla (up to 11.0b8) returns incorrect position for transformed elements, so there is a need to make an adjustment
-                            var topLeft = transUtil.getTransformedRect(slideData.size, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
-                            slidePos.left += topLeft.x;
-                            slidePos.top += topLeft.y;
-                        }
-                        
-
-                        if (parents.length > 0) {
-                            var composedMatrix = transUtil.getMatrixIdentity();
-                            util.multiplyMatrices(data.slideData[parents[0]].cssTransforms.ctmMatrix, composedMatrix);
-                            if (qtChildren === 0 && false) {
-                                $slide.css({
-                                    '-webkit-transform': 'none'
-                                });
-                            }
-                            $slide.css({
-                                '-webkit-transform-style': 'initial'
-                            });
-                            slidePos = getPosition($slide);
-                            console.log('child pos = ', slidePos);
-                            if (qtChildren === 0 && false) {
-                                $slide.css({
-                                    '-webkit-transform': ''
-                                });
-                            }
-                            $slide.css({
-                                '-webkit-transform-style': ''
-                            });
-                            popTransformData();
-
-                            slideData.centerTrans = transUtil.getTransformedPoint({
-                                x: slidePos.left + slideData.center.x,
-                                y: slidePos.top + slideData.center.y,
-                                z:0
-                            }, composedMatrix, data.slideData[parents[0]].centerTrans);
-
-                            clientOriginTransfParent = transUtil.getTransformedPoint({
-                                x: slidePos.left + slideData.cssTransforms.origin.x,
-                                y: slidePos.top + slideData.cssTransforms.origin.y,
-                                z:0
-                            }, composedMatrix, data.slideData[parents[0]].centerTrans);
-
-                            slideData.centerTrans = transUtil.getTransformedPoint(slideData.centerTrans, slideData.cssTransforms.ctmMatrix, clientOriginTransfParent);
-                            util.multiplyMatrices(slideData.cssTransforms.ctmMatrix, composedMatrix);
-                            slideData.cssTransforms.ctmMatrix = composedMatrix.slice(); // copies composedMatrix array into another (by value)
-
-                            // push the parent transformations into this slide
-                            var parentTransfs = data.slideData[parents[0]].cssTransforms.transformations;
-                            for(var p = parentTransfs.length - 1; p > -1; --p) {
-                                slideData.cssTransforms.transformations.unshift({
-                                    id:         parentTransfs[p].id,
-                                    valueIdent: parentTransfs[p].valueIdent,
-                                    valueInv:   parentTransfs[p].valueInv, 
-                                    matrixInv:  parentTransfs[p].matrixInv.slice()
-                                });
-                            }
-                            
-                        } else {
-                            //if (i==2) debugger;
-
-                            if ($slide.hasClass("old")) {
-                                var topLeftOuter = transUtil.getTransformedRect(slideData.outerSize, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
-                                slideData.centerTrans = transUtil.getTransformedPoint(slideData.center, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin);
-                                slideData.centerTrans.x += slidePos.left - topLeftOuter.x;
-                                slideData.centerTrans.y += slidePos.top - topLeftOuter.y;
-                            } else {
-                                clientOriginTransfParent = {
-                                    x: slidePos.left + slideData.cssTransforms.origin.x,
-                                    y: slidePos.top + slideData.cssTransforms.origin.y,
-                                    z: 0
-                                };
-                                slideData.centerTrans = transUtil.getTransformedPoint({x: slidePos.left + slideData.center.x, y: slidePos.top + slideData.center.y, z:0}, slideData.cssTransforms.ctmMatrix, clientOriginTransfParent);
-                            }
-                            
-                            console.log('(' + slidePos.left + ',' + slidePos.top + ') ['+i+']' + slideData.centerTrans.x + ',' + slideData.centerTrans.y + ',' + slideData.centerTrans.z);
-                        }
-                    }
-
-                    viewport.world.setFinalSize();
-
-                    if (data.qtSlides > 0) {
-                        zoomUtil.initZoom(opts.initialZoom, opts.zoomMin, opts.initialSlide);
-                        data.gotoSlide(opts.initialSlide);
-                        zoomUtil.calcLongestPath();
-                        $viewport.triggerHandler('create.rsSlideIt');
-                        load.ajax.doLoad();
-                    } else {
-                        $viewport.triggerHandler('create.rsSlideIt');
-                    }
-                },
-*/
-
-
-
-                /*
-                setSlidePos: function () {
-                    var $slide, slideData, slidePos, parents,
-                        worldOffset = viewport.world.$elem.offset(),
-                        getPosition = function ($slide) {
-                            var offset = $slide.offset();
-                            return {
-                                left: offset.left - worldOffset.left,
-                                top: offset.top - worldOffset.top
-                            };
-                        };
-                    for (var i = 0; i < data.qtSlides; ++i) {
-                        $slide = viewport.world.$slides.eq(i);
-                        slideData = data.slideData[i];
-                        var $children = $slide.find(viewport.world.$slides),
-                            transformData = $slide.css('-webkit-transform');
-
-                        if ($children.length > 0) {
-                            $slide.css('-webkit-transform', 'none');
-                        }
-                        slidePos = getPosition($slide);
-                        if ($children.length > 0) {
-                            $slide.css('-webkit-transform', transformData);
-                        }
-                        if (data.isMozilla11orBelow) {
-                            // Mozilla (up to 11.0b8) returns incorrect position for transformed elements, so there is a need to make an adjustment
-                            var topLeft = transUtil.getTransformedRect(slideData.size, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
-                            slidePos.left += topLeft.x;
-                            slidePos.top += topLeft.y;
-                        }
-                        
-                        parents = $viewport.find($slide.parent().closest(opts.selector.slide)).map(function (i, e) {
-                            var index = viewport.world.$slides.index(e);
-                            return index === -1 ? null : index;
-                        }).get();
-
-                        if (parents.length > 0) { // parents array has either zero or one elements
-                            var composedMatrix = transUtil.getMatrixIdentity();
-                            util.multiplyMatrices(data.slideData[parents[0]].cssTransforms.ctmMatrix, composedMatrix);
-                        
-                            viewport.world.$slides.eq(parents[0]).add($slide).css('-webkit-transform', 'rotateX(0deg)');
-                            console.log('parent pos = ', getPosition(viewport.world.$slides.eq(parents[0])));
-                            slidePos = getPosition($slide);
-                            console.log('child pos = ', slidePos);
-                            viewport.world.$slides.eq(parents[0]).css('-webkit-transform', 'rotateX(-60deg)');
-                            $slide.css('-webkit-transform', 'rotateX(-40deg)');
-                            
-                            slideData.centerTrans = transUtil.getTransformedPoint({x: slidePos.left + slideData.center.x, y: slidePos.top + slideData.center.y, z:0}, composedMatrix, data.slideData[parents[0]].centerTrans);
-                            var clientOriginTransfParent = transUtil.getTransformedPoint({x: slidePos.left + slideData.cssTransforms.origin.x, y: slidePos.top + slideData.cssTransforms.origin.y, z:0}, composedMatrix, data.slideData[parents[0]].centerTrans);
-                            slideData.centerTrans = transUtil.getTransformedPoint(slideData.centerTrans, slideData.cssTransforms.ctmMatrix, clientOriginTransfParent);
-                            util.multiplyMatrices(slideData.cssTransforms.ctmMatrix, composedMatrix);
-                            slideData.cssTransforms.ctmMatrix = composedMatrix.slice(); // copies composedMatrix array into another (by value)
-                         
-                            console.log('CenterTrans: parent=', data.slideData[parents[0]].centerTrans, ' child=', slideData.centerTrans);
-   
-                        // push the parent transformations into this slide
-                            var parentTransfs = data.slideData[parents[0]].cssTransforms.transformations;
-                            for(var p = parentTransfs.length - 1; p > -1; --p) {
-                                slideData.cssTransforms.transformations.unshift({
-                                    id:         parentTransfs[p].id,
-                                    valueIdent: parentTransfs[p].valueIdent,
-                                    valueInv:   parentTransfs[p].valueInv, 
-                                    matrixInv:  parentTransfs[p].matrixInv.slice()
-                                });
-                            }
-                        } else {
-                            var topLeftOuter = transUtil.getTransformedRect(slideData.outerSize, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin).topLeft;
-                            slideData.centerTrans = transUtil.getTransformedPoint(slideData.center, slideData.cssTransforms.ctmMatrix, slideData.cssTransforms.origin);
-                            slideData.centerTrans.x += slidePos.left - topLeftOuter.x;
-                            slideData.centerTrans.y += slidePos.top - topLeftOuter.y;
-                        }
-                    }
-
-                    viewport.world.setFinalSize();
-
-                    if (data.qtSlides > 0) {
-                        zoomUtil.initZoom(opts.initialZoom, opts.zoomMin, opts.initialSlide);
-                        data.gotoSlide(opts.initialSlide);
-                        zoomUtil.calcLongestPath();
-                        $viewport.triggerHandler('create.rsSlideIt');
-                        load.ajax.doLoad();
-                    } else {
-                        $viewport.triggerHandler('create.rsSlideIt');
-                    }
-                },
-                */
                 ajax: {
                     slidesArray: null,
                     toProcess: 0,
