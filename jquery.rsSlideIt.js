@@ -2536,7 +2536,7 @@
                             slideData.centerTrans.z = centerTrans.z + totalOffset.z + matrixOffset.z;
 
                             // push the parent transformations into this slide
-                            var parentTransfs = data.slideData[parents[parents.length - 1]].cssTransforms.transformations;
+                            var parentTransfs = parentSlideData.cssTransforms.transformations;
                             for(var p = parentTransfs.length - 1; p > -1; --p) {
                                 slideData.cssTransforms.transformations.unshift({
                                     id:         parentTransfs[p].id,
