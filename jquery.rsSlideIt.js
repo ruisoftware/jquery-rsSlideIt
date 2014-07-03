@@ -244,6 +244,7 @@
                         if (data.isIE8orBelow) {
                             transUtil.trans.x = viewport.center.x - transUtil.orig.x;
                             transUtil.trans.y = viewport.center.y - transUtil.orig.y;
+                            transUtil.trans.z = - transUtil.orig.z;
                             transUtil.activeSlideCenterTrans.x = transUtil.orig.x;
                             transUtil.activeSlideCenterTrans.y = transUtil.orig.y;
                             transUtil.cache.refresh();
@@ -257,7 +258,31 @@
                     computeIntermediateMatrix: function (now, doEasing, toTransformations, noCalcInvMatrix, calcZoomValue) {
                         // doEasing is false for JS animations, because the $.animate() already takes care of easing.
                         // doEasing is true for CSS3 animations, since the easing needs to be handled manually
-                        var i, transformation, interpolateFactor, value, userZoom;
+                        var i, transformation, interpolateFactor, userZoom,
+                            calcMatrix = function (transformation, interpolate) {
+                                var value;
+                                switch (transformation.id) {
+                                    case transUtil.transID.MATRIX:
+                                        value = util.interpolateMatrix(transformation.valueIdent, transformation.valueInv, interpolate);
+                                        break;
+                                    case transUtil.transID.SCALEXY:
+                                        value = util.interpolatePoint({ x: transformation.valueIdent, y: transformation.valueIdent }, transformation.valueInv, interpolate);
+                                        break;
+                                    case transUtil.transID.SCALE3D:
+                                        value = util.interpolatePoint({ x: transformation.valueIdent, y: transformation.valueIdent, z: transformation.valueIdent }, transformation.valueInv, interpolate);
+                                        break;
+                                    case transUtil.transID.ROTATE3D:
+                                        value = util.interpolate(transformation.valueIdent, transformation.valueInv.rad, interpolate);
+                                        break;
+                                    default:
+                                        value = util.interpolate(transformation.valueIdent, transformation.valueInv, interpolate); 
+                                }
+                                if (transformation.id == transUtil.transID.ROTATE3D) {
+                                    util.multiplyMatrices(transUtil.getMatrix(transformation.id, {x: transformation.valueInv.x, y: transformation.valueInv.y, z: transformation.valueInv.z, rad: value}), transUtil.cache.matrixCTM);
+                                } else {
+                                    util.multiplyMatrices(transUtil.getMatrix(transformation.id, value), transUtil.cache.matrixCTM);
+                                }
+                            };
                         // from slide matrix to identity
                         transUtil.cache.matrixCTM = transUtil.getMatrixIdentity();
                         for (i = this.transfsFadeToIdentity.length - 1; i > -1; --i) {
@@ -267,21 +292,14 @@
                             if (doEasing) {
                                 interpolateFactor = util.getQuadraticValue(transformation.linearCoefs, interpolateFactor);
                             }
-                            value = transformation.id == transUtil.transID.SCALEXY ? 
-                                util.interpolatePoint({ x: transformation.valueIdent, y: transformation.valueIdent }, transformation.valueInv, interpolateFactor) :
-                                util.interpolate(transformation.valueIdent, transformation.valueInv, interpolateFactor);
-                            util.multiplyMatrices(transUtil.getMatrix(transformation.id, value), transUtil.cache.matrixCTM);
+                            calcMatrix(transformation, interpolateFactor);
                         }
 
                         var nowWithEasing = doEasing ? $.easing[transData.easing](now, transData.duration * now, 0, 1, transData.duration) : now;
                         // from identity to slide matrix
                         for (i = toTransformations.length - 1; i > -1; --i) {
                             transformation = toTransformations[i];
-
-                            value = transformation.id == transUtil.transID.SCALEXY ? 
-                                util.interpolatePoint({ x: transformation.valueIdent, y: transformation.valueIdent }, transformation.valueInv, nowWithEasing) :
-                                util.interpolate(transformation.valueIdent, transformation.valueInv, nowWithEasing);
-                            util.multiplyMatrices(transUtil.getMatrix(transformation.id, value), transUtil.cache.matrixCTM);
+                            calcMatrix(transformation, nowWithEasing);
                         }
 
                         userZoom = !!calcZoomValue ? util.getQuadraticValue(transData.anim.zoomCoefs, nowWithEasing) : zoomUtil.zoom;
@@ -346,7 +364,8 @@
                         transData.anim.centerPnt = transUtil.getTransformOriginCss(viewport.world.$elem);
                         transUtil.trans.x = viewport.center.x - transData.anim.centerPnt.x;
                         transUtil.trans.y = viewport.center.y - transData.anim.centerPnt.y;
-                        transUtil.setTransformOrigin(transData.anim.centerPnt.x, transData.anim.centerPnt.y);
+                        transUtil.trans.z =  - transData.anim.centerPnt.z;
+                        transUtil.setTransformOrigin(transData.anim.centerPnt.x, transData.anim.centerPnt.y, transData.anim.centerPnt.z);
 
                         transUtil.activeSlideCTMmatrix = util.getInvertedMatrix(transUtil.cache.matrixCTM);
                         util.multiplyMatrices(zoomUtil.getMatrixUserZoom(zoomUtil.zoom), transUtil.activeSlideCTMmatrix); // remove the user zoom
@@ -596,10 +615,11 @@
 
                             transUtil.trans.x = viewport.center.x - transData.anim.centerPnt.x;
                             transUtil.trans.y = viewport.center.y - transData.anim.centerPnt.y;
+                            transUtil.trans.z = - transData.anim.centerPnt.z;
                             if (data.isIE8orBelow) {
                                 transUtil.adjustTransIE(transData.anim.centerPnt);
                             }
-                            transUtil.setTransformOrigin(transData.anim.centerPnt.x, transData.anim.centerPnt.y);
+                            transUtil.setTransformOrigin(transData.anim.centerPnt.x, transData.anim.centerPnt.y, transData.anim.centerPnt.z);
                             viewport.world.$elem.css(transUtil.getTransformCSSstyle());
                             zoomUtil.invokeChangeZoom(prevZoom);
                         },
@@ -707,15 +727,31 @@
                 },
 
                 interpolate: function (from, to, percent) {
-                    return (to - from) * percent + from;
+                    return (to - from)*percent + from;
                 },
 
                 interpolatePoint: function (from, to, percent) {
                     return { 
-                        x: (to.x - from.x) * percent + from.x,
-                        y: (to.y - from.y) * percent + from.y,
-                        z: (to.z - from.z) * percent + from.z
+                        x: (to.x - from.x)*percent + from.x,
+                        y: (to.y - from.y)*percent + from.y,
+                        z: (to.z - from.z)*percent + from.z
                     };
+                },
+
+                interpolateMatrix: function (from, to, percent) {
+                    return [
+                        (to[0] - from[0])*percent + from[0],
+                        (to[1] - from[1])*percent + from[1],
+                        (to[2] - from[2])*percent + from[2],
+
+                        (to[3] - from[3])*percent + from[3],
+                        (to[4] - from[4])*percent + from[4],
+                        (to[5] - from[5])*percent + from[5],
+
+                        (to[6] - from[6])*percent + from[6],
+                        (to[7] - from[7])*percent + from[7],
+                        (to[8] - from[8])*percent + from[8]
+                    ];
                 },
 
                 getDistanceTwoPnts: function (pnt1, pnt2) {
@@ -1060,21 +1096,20 @@
 
             transUtil = {
                 transID: {
-                    ROTATE:      0,
-                    ROTATE3D:    1,
-                    ROTATEX:     2,
-                    ROTATEY:     3,
-                    ROTATEZ:     4,
-
-                    SCALE3D:     5,
-                    SCALE:       6,
-                    SCALEXY:     7,
-                    SCALEX:      8,
-                    SCALEY:      9,
-                    SCALEZ:     10,
-
-                    SKEWX:      11,
-                    SKEWY:      12
+                    MATRIX:    0,
+                    ROTATE:    1,
+                    ROTATE3D:  2,
+                    ROTATEX:   3,
+                    ROTATEY:   4,
+                    ROTATEZ:   5,
+                    SCALE3D:   6,
+                    SCALE:     7,
+                    SCALEXY:   8,
+                    SCALEX:    9,
+                    SCALEY:   10,
+                    SCALEZ:   11,
+                    SKEWX:    12,
+                    SKEWY:    13
                 },
                 orig: { x: viewport.center.x, y: viewport.center.y, z: 0 }, // transformation origin point
                 trans: { x: 0, y: 0, z: 0 },
@@ -1176,6 +1211,7 @@
 
                 getMatrix: function (id, value) {
                     switch (id) {
+                        case this.transID.MATRIX:   return value;
                         case this.transID.ROTATE:   return this.getMatrixRotate(Math.sin(value), Math.cos(value));
                         case this.transID.ROTATE3D: return this.getMatrixRotate3D(value.x, value.y, value.z, value.rad);
                         case this.transID.ROTATEX:  return this.getMatrixRotateX(value);
@@ -1356,8 +1392,8 @@
                     var values = value.split(" "),
                         origin = { x: 0, y: 0, z: 0 };
                     switch (values.length) {
-                        case 3: origin.z = util.toFloat(values[2]);
-                        case 2: origin.y = util.toFloat(values[1]);
+                        case 3: origin.z = util.toFloat(values[2]); // yeah, no need for break here
+                        case 2: origin.y = util.toFloat(values[1]); // and here
                         case 1: origin.x = util.toFloat(values[0]);
                     }
                     return origin;
@@ -1972,57 +2008,51 @@
                 },
                 getMatrixCoefs: function (value) {
                     value = value.replace(/matrix(3d)?\(/gi, ''); // remove occurences of "matrix(" and "matrix3d("
-                    var coefs = value.split(',');
-                    if (coefs.length == 16) {
-                        return {
-                            // matrix3d(m11, m12, m13, 0, m21, m22, m23, 0, m31, m32, m33, 0, tx, ty, tz, 1)
-                            // | m11 m12 m13 0 |
-                            // | m21 m22 m23 0 |
-                            // | m31 m32 m33 0 |
-                            // |  tx  ty  tz 1 |
-                            is3D: true,
-                            m11: util.roundToTrigonometricBounds(util.toFloat(coefs[0])),
-                            m12: util.roundToTrigonometricBounds(util.toFloat(coefs[1])),
-                            m13: util.roundToTrigonometricBounds(util.toFloat(coefs[2])),
+                    var coefs = value.split(','), is3D = coefs.length == 16;
+                    // 3D:
+                    // matrix3d(m11, m12, m13, 0, m21, m22, m23, 0, m31, m32, m33, 0, tx, ty, tz, 1)
+                    // | m11 m12 m13 0 |
+                    // | m21 m22 m23 0 |
+                    // | m31 m32 m33 0 |
+                    // |  tx  ty  tz 1 |
 
-                            m21: util.roundToTrigonometricBounds(util.toFloat(coefs[4])),
-                            m22: util.roundToTrigonometricBounds(util.toFloat(coefs[5])),
-                            m23: util.roundToTrigonometricBounds(util.toFloat(coefs[6])),
-
-                            m31: util.roundToTrigonometricBounds(util.toFloat(coefs[8])),
-                            m32: util.roundToTrigonometricBounds(util.toFloat(coefs[9])),
-                            m33: util.roundToTrigonometricBounds(util.toFloat(coefs[10])),
-
-                            tx: util.toInt(coefs[12]),
-                            ty: util.toInt(coefs[13]),
-                            tz: util.toInt(coefs[14])
-                        };
-                    }
+                    // 2D:
                     // matrix(m11, m12, m21, m22, tx, ty)
-                    // | m11 m12 0 |
-                    // | m21 m22 0 |
-                    // |  tx  ty 1 |
+                    // | m11 m12 0 |       | m11 m12  0  0 |
+                    // | m21 m22 0 |   =   | m21 m22  0  0 |
+                    // |  tx  ty 1 |       |   0   0  1  0 |
+                    //                     |  tx  ty  0  1 |
                     return {
-                        is3D: false,
                         m11: util.roundToTrigonometricBounds(util.toFloat(coefs[0])),
                         m12: util.roundToTrigonometricBounds(util.toFloat(coefs[1])),
-                        m21: util.roundToTrigonometricBounds(util.toFloat(coefs[2])),
-                        m22: util.roundToTrigonometricBounds(util.toFloat(coefs[3])),
-                        tx: util.toInt(coefs[4]),
-                        ty: util.toInt(coefs[5])
+                        m13: is3D? util.roundToTrigonometricBounds(util.toFloat(coefs[2])) : 0,
+
+                        m21: util.roundToTrigonometricBounds(util.toFloat(coefs[is3D? 4 : 2])),
+                        m22: util.roundToTrigonometricBounds(util.toFloat(coefs[is3D? 5 : 3])),
+                        m23: is3D? util.roundToTrigonometricBounds(util.toFloat(coefs[6])) : 0,
+
+                        m31: is3D? util.roundToTrigonometricBounds(util.toFloat(coefs[8])) : 0,
+                        m32: is3D? util.roundToTrigonometricBounds(util.toFloat(coefs[9])) : 0,
+                        m33: is3D? util.roundToTrigonometricBounds(util.toFloat(coefs[10])) : 1,
+
+                        tx: util.toInt(coefs[is3D? 12 : 4]),
+                        ty: util.toInt(coefs[is3D? 13 : 5]),
+                        tz: is3D? util.toInt(coefs[14]) : 0
                     };
                 },
                 getTransformInfo: function ($slide, outerSize) {
                     var getTransformFromDataAttr = function () {
-                            var value = $slide.attr('data-transform');
+                            var value = null;
+                            if (data.supportsCSSTransforms3D) {
+                                value = $slide.attr('data-transform3D');
+                            }
                             if (!util.isDefined(value)) {
                                 value = $slide.attr('data-transform2D');
-                                if (!util.isDefined(value)) {
-                                    value = $slide.attr('data-transform3D');
-                                    return !util.isDefined(value) ? null : value;
-                                }
                             }
-                            return value;
+                            if (!util.isDefined(value)) {
+                                value = $slide.attr('data-transform');
+                            }
+                            return !util.isDefined(value) ? null : value;
                         },
                         getTransformRotate = function (value) {
                             var found = value.match(/rotate\([-|+]?[\d.]+(deg|rad|grad|turn)\)/i);
@@ -2061,6 +2091,37 @@
                                     valueInv:   - angle,
                                     matrix:     transUtil.getMatrixRotateY(angle),
                                     matrixInv:  transUtil.getMatrixRotateY(- angle)
+                                };
+                            }
+                            found = value.match(/rotateZ\([-|+]?[\d.]+(deg|rad|grad|turn)\)/i);
+                            // try rotateZ(a) (3D)
+                            if (found && util.isDefined(found[0])) {
+                                var angle = util.getAngleRadians(value.replace(/rotateZ\(|\)/gi, ''));
+                                return { 
+                                    id:         transUtil.transID.ROTATEZ,
+                                    valueIdent: 0,
+                                    valueInv:   - angle,
+                                    matrix:     transUtil.getMatrixRotateZ(angle),
+                                    matrixInv:  transUtil.getMatrixRotateZ(- angle)
+                                };
+                            }
+                            found = value.match(/rotate3d\([-|+]?[\d.]+,[-|+]?[\d.]+,[-|+]?[\d.]+,[-|+]?[\d.]+(deg|rad|grad|turn)\)/i);
+                            // try rotate3d(x,y,z,a) (3D)
+                            if (found && util.isDefined(found[0])) {
+                                found = found[0].replace(/rotate3d\(|\)/gi, '').split(",");
+                                var angle = util.getAngleRadians(found[3]),
+                                    valInv = {
+                                        x: util.toFloat(found[0]),
+                                        y: util.toFloat(found[1]),
+                                        z: util.toFloat(found[2]),
+                                        rad: - angle
+                                    };
+                                return { 
+                                    id:         transUtil.transID.ROTATE3D,
+                                    valueIdent: 0,
+                                    valueInv:   valInv,
+                                    matrix:     transUtil.getMatrixRotate3D(valInv.x, valInv.y, valInv.z, - valInv.rad),
+                                    matrixInv:  transUtil.getMatrixRotate3D(valInv.x, valInv.y, valInv.z, valInv.rad)
                                 };
                             }
                             return null;
@@ -2111,7 +2172,7 @@
                             return util.isAlmostZero(scale) ? 20000 : (1.0 / scale);
                         },
                         getTransformScale = function (value) {
-                            var scaleX, scaleY, scaleXInv, scaleYInv,
+                            var scaleX, scaleY, scaleZ, scaleXInv, scaleYInv, scaleZInv,
                                 found = value.match(/scale\([-|+]?[\d.]+\)/i);
 
                             // try scale(s)
@@ -2142,7 +2203,7 @@
                                     matrix:     transUtil.getMatrixScaleXY(scaleX, scaleY),
                                     matrixInv:  transUtil.getMatrixScaleXY(scaleXInv, scaleYInv)
                                 };
-                            }        
+                            }
                             // try scaleX(x)
                             found = value.match(/scaleX\([-|+]?[\d.]+\)/i);
                             if (found && util.isDefined(found[0])) {
@@ -2169,11 +2230,42 @@
                                     matrixInv:  transUtil.getMatrixScaleY(scaleYInv)
                                 };
                             }
+                            // try scaleZ(y)
+                            found = value.match(/scaleZ\([-|+]?[\d.]+\)/i);
+                            if (found && util.isDefined(found[0])) {
+                                scaleZ = util.toFloat(value.replace(/scaleZ\(|\)/gi, ''));
+                                scaleZInv = getInvertedScale(scaleZ);
+                                return { 
+                                    id:         transUtil.transID.SCALEZ,
+                                    valueIdent: 1,
+                                    valueInv:   scaleZInv,
+                                    matrix:     transUtil.getMatrixScaleZ(scaleZ),
+                                    matrixInv:  transUtil.getMatrixScaleZ(scaleZInv)
+                                };
+                            }
+                            // try scale3d(x,y,z)
+                            found = value.match(/scale3d\([-|+]?[\d.]+,[-|+]?[\d.]+,[-|+]?[\d.]+\)/i);
+                            if (found && util.isDefined(found[0])) {
+                                var scales = value.replace(/scale3d\(|\)/gi, '').split(",");
+                                scaleX = util.toFloat(scales[0]);
+                                scaleY = util.toFloat(scales[1]);
+                                scaleZ = util.toFloat(scales[2]);
+                                scaleXInv = getInvertedScale(scaleX);
+                                scaleYInv = getInvertedScale(scaleY);
+                                scaleZInv = getInvertedScale(scaleZ);
+                                return {
+                                    id:         transUtil.transID.SCALE3D, 
+                                    valueIdent: 1,
+                                    valueInv:   { x: scaleXInv, y: scaleYInv, z: scaleZInv },
+                                    matrix:     transUtil.getMatrixScale3D(scaleX, scaleY, scaleZ),
+                                    matrixInv:  transUtil.getMatrixScale3D(scaleXInv, scaleYInv, scaleZInv)
+                                };
+                            }
                             return null;
                         },
                         getTransformDefault = function (origin) {
                             return  {
-                                origin: { x: origin.x, y: origin.y },
+                                origin: { x: origin.x, y: origin.y, z: origin.z },
                                 ctmMatrix: transUtil.getMatrixIdentity(),
                                 transformations: []
                             };
@@ -2184,7 +2276,8 @@
                                             // 2d
                                             replace(/\)scale/gi, ') scale').replace(/\)rotate/gi, ') rotate').replace(/\)skew/gi, ') skew').replace(/\)translate/gi, ') translate').
                                             // 3d
-                                            replace(/\)rotateX/gi, ') rotateX').replace(/\)rotateY/gi, ') rotateY').
+                                            replace(/\)scaleX/gi, ') scaleX').replace(/\)scaleY/gi, ') scaleY').replace(/\)scaleZ/gi, ') scaleZ').replace(/\)scale3d/gi, ') scale3d').
+                                            replace(/\)rotateX/gi, ') rotateX').replace(/\)rotateY/gi, ') rotateY').replace(/\)rotateZ/gi, ') rotateZ').replace(/\)rotate3d/gi, ') rotate3d').
                                             split(' '),
                                 allTrans = getTransformDefault(origin),
                                 cssData;
@@ -2196,21 +2289,16 @@
                                     case 'rotat':
                                         cssData = getTransformRotate(transfs[i]);
                                         break;
-                                    case 'skew(': 
+                                    case 'skew(':
                                         // no need calculate ctmMatrix, because skew() is a non-standard, thus ignored
                                         getTransformSkew(transfs[i]); // however, call the getter just to issue a warning to the user about this
                                         break;
-                                    case 'skewX': 
-                                    case 'skewY': 
+                                    case 'skewX':
+                                    case 'skewY':
                                         cssData = getTransformSkew(transfs[i]);
                                         break;
                                     case 'scale':
-                                        switch (transfs[i].substring(0, 6)) {
-                                            case 'scaleX': 
-                                            case 'scaleY': 
-                                            case 'scale(': 
-                                                cssData = getTransformScale(transfs[i]);
-                                        }
+                                        cssData = getTransformScale(transfs[i]);
                                 }
 
                                 if (cssData) {
@@ -2229,7 +2317,29 @@
                             var id = $s.attr('id');
                             return !!id ? ' #' + id : ' at index ' + viewport.world.$slides.index($s);
                         },
-                        decompose2dMatrix = function (coefs) {
+                        decomposeMatrix = function (value, origin) {
+                            var coefs = load.getMatrixCoefs(value),
+                                allTrans = getTransformDefault(origin);
+                            allTrans.ctmMatrix[0] = coefs.m11;
+                            allTrans.ctmMatrix[1] = coefs.m12;
+                            allTrans.ctmMatrix[2] = coefs.m13;
+                            allTrans.ctmMatrix[3] = coefs.m21;
+                            allTrans.ctmMatrix[4] = coefs.m22;
+                            allTrans.ctmMatrix[5] = coefs.m23;
+                            allTrans.ctmMatrix[6] = coefs.m31;
+                            allTrans.ctmMatrix[7] = coefs.m32;
+                            allTrans.ctmMatrix[8] = coefs.m33;
+                            var matrixInv = util.getInvertedMatrix(allTrans.ctmMatrix);
+                            allTrans.transformations.push({
+                                id: transUtil.transID.MATRIX,
+                                valueIdent: transUtil.getMatrixIdentity(),
+                                valueInv: matrixInv,
+                                matrix: allTrans.ctmMatrix.splice(),
+                                matrixInv: matrixInv
+                            });
+                            return allTrans;
+
+                            /*
                             // can the matrix be decomposed into rotation and scale matrices?
                             if (util.areTheSame(coefs.m11, coefs.m22) && util.areTheSame(coefs.m12, - coefs.m21)) {
                                 var angle;
@@ -2267,9 +2377,8 @@
                                 return allTrans;
                             }
                             return null;
-                        },
-                        decompose3dMatrix = function (coefs) {
-                            return null;
+                            */
+
                         },
                         value = getTransformFromDataAttr(),
                         origin = transUtil.getTransformOriginCss($slide, outerSize);
@@ -2281,21 +2390,7 @@
                         }
                     }
                     if (value.indexOf('matrix(') == 0 || value.indexOf('matrix3d(') == 0) {
-                        // slideIt assumes that all slides have origin in (0,0) but with translations (x,y) applied
-                        
-                        var coefs = load.getMatrixCoefs(value),
-                            allTrans = coefs.is3D? decompose3dMatrix(coefs) : decompose2dMatrix(coefs);
-
-                        if (allTrans == null) {
-                            // CSS matrix is too complex. Need more info from data-transform
-                            if (coefs.is3D) {
-                                util.warn('Unable to read transformation matrix for slide' + slideToString($slide) + ', due to an uneven scale or to the use of skew.\nDefine your transform style in a data-transform3D attribute instead.', true);
-                            } else {
-                                util.warn('Unable to read transformation matrix for slide' + slideToString($slide) + ', due to an uneven scaleX and scaleY or to the use of skew.\nDefine your transform style in a data-transform2D attribute instead.', true);
-                            }
-                            return getTransformDefault(origin);
-                        }
-                        return allTrans;
+                        return decomposeMatrix(value, origin);
                     }
                     return getTransformFromData(value, origin);
                 },
@@ -2459,10 +2554,7 @@
                             var matrixCssStr = load.getTransformFromCss($slide);
                             if (matrixCssStr !== null && (matrixCssStr.indexOf('matrix(') == 0 || matrixCssStr.indexOf('matrix3d(') == 0)) {
                                 var coefs = load.getMatrixCoefs(matrixCssStr);
-                                if (coefs.is3D) {
-                                    return { x: coefs.tx, y: coefs.ty, z: coefs.tz };
-                                }
-                                return { x: coefs.tx, y: coefs.ty, z: 0 };
+                                return { x: coefs.tx, y: coefs.ty, z: coefs.tz };
                             }
                             return { x: 0, y: 0, z: 0 };
                         };
