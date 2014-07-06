@@ -247,6 +247,7 @@
                             transUtil.trans.z = - transUtil.orig.z;
                             transUtil.activeSlideCenterTrans.x = transUtil.orig.x;
                             transUtil.activeSlideCenterTrans.y = transUtil.orig.y;
+                            transUtil.activeSlideCenterTrans.z = transUtil.orig.z;
                             transUtil.cache.refresh();
                             transUtil.adjustTransIE(transUtil.orig);
                         }
@@ -514,6 +515,7 @@
                     };
                     return fromCenterTrans.x != toCenterTrans.x ||
                            fromCenterTrans.y != toCenterTrans.y ||
+                           fromCenterTrans.z != toCenterTrans.z ||
                            !util.areTheSame(zoomUtil.zoom, zoomDest) ||
                            !sameMatrices(data.slideData[this.anim.gotoSlideIdx].cssTransforms.ctmMatrix, transUtil.cache.matrixCTM_inv);
                 },
@@ -577,7 +579,7 @@
 
                 doTransitionJS: function (event, optsTrans) {
                     var sameDestSlideIdx = this.prepareTransition(optsTrans),
-                        fromCenterTrans = { x: this.anim.centerPnt.x, y: this.anim.centerPnt.y },
+                        fromCenterTrans = { x: this.anim.centerPnt.x, y: this.anim.centerPnt.y, z: this.anim.centerPnt.z },
                         toCenterTrans = data.slideData[this.anim.gotoSlideIdx].centerTrans,
                         toTransformations = data.slideData[this.anim.gotoSlideIdx].cssTransforms.transformations,
                         zoomDest = zoomUtil.checkZoomBounds(zoomUtil.getZoomDest(optsTrans.zoomDest, this.anim.gotoSlideIdx)),
@@ -754,15 +756,16 @@
                     ];
                 },
 
-                getDistanceTwoPnts: function (pnt1, pnt2) {
-                    var pt = [pnt1.x - pnt2.x, pnt1.y - pnt2.y];
-                    return Math.sqrt(pt[0] * pt[0] + pt[1] * pt[1]);
+                getDistanceTwoPnts: function (p1, p2) {
+                    var pt = [p1.x - p2.x, p1.y - p2.y, p1.z - p2.z];
+                    return Math.sqrt(pt[0]*pt[0] + pt[1]*pt[1] + pt[2]*pt[2]);
                 },
 
-                // given 3 points, it uses interpolation to find out the coefficients [a, b, c] of the 
-                // quadratic function that intersects those 3 points.
+                // Given 3 points, it uses interpolation to find out the coefficients [a, b, c] of the 
+                // quadratic function that intersects these 3 points.
                 // These 3 points should be distinct and cannot share the same X
-                // f(x) = y = a(x^2) + bx + c
+                // The quadratic function is f(x) = y = ax^2 + bx + c
+                // which means that [a, b, c] are such, that f(p1.x)=p1.y and f(p2.x)=p2.y and f(p3.x)=p3.y
                 getQuadratic: function (p1, p2, p3) {
                     // is p2.y is the minimum/maximum y-coordinate among the 3 points?
                     if (Math.abs(Math.min(p2.y, Math.min(p1.y, p3.y)) - p2.y) < 0.000001 ||
@@ -799,7 +802,7 @@
                     return -coefs.b / (2 * coefs.a);
                 },
 
-                // given 2 points and the y-coordinate of the vertex point (point where function has its min or max value),
+                // Given 2 points and the y-coordinate of the vertex point (point where function has its min or max value),
                 // this function interpolates a quadratic function.
                 // It might need to make further approximations for the resulting f(x) reach the targeted p2yVertex
                 getQuadratic2PntsVertex: function (p1, p3, p2yVertex) {
@@ -1005,7 +1008,7 @@
 
             panUtil = {
                 startPage: { x: 0, y: 0 },
-                startTrans: { x: 0, y: 0 },
+                startTrans: { x: 0, y: 0, z: 0 },
                 isPanning: false,
                 elemPos: { x: 0, y: 0 },
                 width: 0,
@@ -1015,6 +1018,7 @@
                     panUtil.startPage.y = event.pageY;
                     panUtil.startTrans.x = transUtil.trans.x;
                     panUtil.startTrans.y = transUtil.trans.y;
+                    panUtil.startTrans.z = transUtil.trans.z;
                     panUtil.isPanning = true;
                     var worldRect = transUtil.getTransformedRect(viewport.world.IEorigSize),
                         viewportPos = $viewport.position();
@@ -1053,12 +1057,13 @@
                         panUtil.startPage.x += limits.left;
                     }
 
-                    var offset = { x: event.pageX - panUtil.startPage.x, y: event.pageY - panUtil.startPage.y };
+                    var offset = { x: event.pageX - panUtil.startPage.x, y: event.pageY - panUtil.startPage.y, z: 0 };
                     if (!data.isIE8orBelow) {
                         offset = transUtil.getTransformedPoint(offset, transUtil.cache.matrixCTM_inv);
                     }
                     transUtil.trans.x = panUtil.startTrans.x + offset.x;
                     transUtil.trans.y = panUtil.startTrans.y + offset.y;
+                    transUtil.trans.z = panUtil.startTrans.z + offset.z;
                     
                     if (data.isIE8orBelow) {
                         offset = transUtil.getTransformedPoint(offset, transUtil.cache.matrixCTM_inv);
@@ -1077,9 +1082,11 @@
                         var offset = { x: event.pageX - panUtil.startPage.x, y: event.pageY - panUtil.startPage.y };
                         transUtil.trans.x = panUtil.startTrans.x + offset.x;
                         transUtil.trans.y = panUtil.startTrans.y + offset.y;
+                        transUtil.trans.z = panUtil.startTrans.z + offset.z;
                         offset = transUtil.getTransformedPoint(offset, transUtil.cache.matrixCTM_inv);
                         transUtil.activeSlideCenterTrans.x -= offset.x;
                         transUtil.activeSlideCenterTrans.y -= offset.y;
+                        transUtil.activeSlideCenterTrans.z -= offset.z;
                     }
                     if (event.which == 1) {
                         panUtil.stopImmediately();
@@ -1344,6 +1351,7 @@
                     if (data.isIE8orBelow) {
                         this.activeSlideCenterTrans.x = slideData.centerTrans.x;
                         this.activeSlideCenterTrans.y = slideData.centerTrans.y;
+                        this.activeSlideCenterTrans.z = slideData.centerTrans.z;
                         this.adjustTransIE(slideData.centerTrans);
                     }
                 },
@@ -1358,7 +1366,8 @@
                         var rect = this.getTransformedRect(viewport.world.IEorigSize, this.cache.matrixCTM, 
                             offset === undefined ? this.activeSlideCenterTrans : {
                                 x: this.activeSlideCenterTrans.x - offset.x,
-                                y: this.activeSlideCenterTrans.y - offset.y
+                                y: this.activeSlideCenterTrans.y - offset.y,
+                                z: this.activeSlideCenterTrans.z - offset.z
                             });
                         this.orig.x += rect.topLeft.x;
                         this.orig.y += rect.topLeft.y;
@@ -2338,47 +2347,6 @@
                                 matrixInv: matrixInv
                             });
                             return allTrans;
-
-                            /*
-                            // can the matrix be decomposed into rotation and scale matrices?
-                            if (util.areTheSame(coefs.m11, coefs.m22) && util.areTheSame(coefs.m12, - coefs.m21)) {
-                                var angle;
-                                if (util.isAlmostZero(coefs.m11, 0.02)) {
-                                    angle = coefs.m12 > 0 ? Math.PI / 2 : - Math.PI / 2;
-                                } else {
-                                    angle = Math.atan(coefs.m12 / coefs.m11) + (coefs.m11 < 0 ? Math.PI : 0);
-                                }
-                                var scale = Math.sqrt(coefs.m11 * coefs.m11 + coefs.m12 * coefs.m12),
-                                    allTrans = getTransformDefault(origin),
-                                    cosine = Math.cos(angle),
-                                    sine = Math.sin(angle);
-                                scale = util.isAlmostOne(scale) ? 1 : getInvertedScale(scale); // scale is the inverted scale
-                                allTrans.ctmMatrix[0] = coefs.m11; // | a b |   | a b  . |
-                                allTrans.ctmMatrix[1] = coefs.m12; // | c d | = | c d  . |
-                                allTrans.ctmMatrix[3] = coefs.m21; //           | .  . . |
-                                allTrans.ctmMatrix[4] = coefs.m22;
-
-                                if (!util.isAlmostOne(scale)) {
-                                    allTrans.transformations.push({
-                                        id: transUtil.transID.SCALE,
-                                        valueIdent: 1,
-                                        valueInv: scale,
-                                        matrixInv: transUtil.getMatrixScale(scale)
-                                    });
-                                }
-                                if (!util.isAlmostZero(angle, 0.000000005)) {
-                                    allTrans.transformations.push({
-                                        id: transUtil.transID.ROTATE,
-                                        valueIdent: 0,
-                                        valueInv: - angle,
-                                        matrixInv: transUtil.getMatrixRotate(- sine, cosine)
-                                    });
-                                }
-                                return allTrans;
-                            }
-                            return null;
-                            */
-
                         },
                         value = getTransformFromDataAttr(),
                         origin = transUtil.getTransformOriginCss($slide, outerSize);
@@ -2494,7 +2462,7 @@
                             z: 0
                         },
                         // centerTrans is computed later
-                        centerTrans: { x: 0, y: 0 }, // same as center but with transformations applied and origin set to (viewport.world.$elem) topleft
+                        centerTrans: { x: 0, y: 0, z: 0 }, // same as center but with transformations applied and origin set to (viewport.world.$elem) topleft
                         size: {
                             x: slideSizes.size.x,
                             y: slideSizes.size.y
@@ -2506,6 +2474,7 @@
                         padding: [util.toInt($slide.css('padding-top')), util.toInt($slide.css('padding-right')), util.toInt($slide.css('padding-bottom')), util.toInt($slide.css('padding-left'))],
                         caption: load.getCaption($slide),
                         cssTransforms: cssTransforms,
+                        // TODO: fix nextSibling
                         nextSibling: viewport.world.$slides.index($slide.next(opts.selector.slide)),
                         firstChild: slideChildren.length === 0 ? -1: viewport.world.$slides.index(slideChildren.eq(0))
                     });
