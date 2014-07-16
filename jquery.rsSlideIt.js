@@ -62,7 +62,7 @@
             
             viewport = {
                 world: {
-                    $elem: null,                // this element is create dynamically as the child element of $viewport. World.$elem is the parent of all $slides
+                    $elem: null,                // this element is created dynamically as the child element of $viewport. World.$elem is the parent of all $slides
                     IEorigSize: { x: 0, y: 0 }, // IE needs to compute based on untransformed (original) viewport size
                     $slides: null,              // set with all slide elements
                     setFinalSize: function () {
@@ -1281,15 +1281,17 @@
                     this.orig.z = origZ;
                 },
                 getTransformCSSstyle: function () {
+                    var m = this.cache.matrixCTM.slice();
+                    util.roundMatrixToTrigonometricBounds(m);
                     if (data.isIE8orBelow) {
                         return {
                             'margin-left': this.trans.x,
                             'margin-top': this.trans.y,
                             'filter': 'progid:DXImageTransform.Microsoft.Matrix(' +
-                                        'M11=' + this.cache.matrixCTM[0] + 
-                                        ',M12=' + this.cache.matrixCTM[2] + // Second and third coefficients are swapped
-                                        ',M21=' + this.cache.matrixCTM[1] + 
-                                        ',M22=' + this.cache.matrixCTM[3] + 
+                                        'M11=' + m[0] + 
+                                        ',M12=' + m[2] + // Second and third coefficients are swapped
+                                        ',M21=' + m[1] + 
+                                        ',M22=' + m[3] + 
                                         // DX and DY translation do not work when SizingMethod is 'auto expand'. The workaround is using margins to simulate translation.
                                         // ', DX=0, DY=0' +   (leave as it is, do not uncomment this line)
                                         ',SizingMethod=\'auto expand\')'
@@ -1298,13 +1300,13 @@
                         // translate3d is used to enable hardware optimization on css animations
                         var matrixCss, origCss = this.orig.x.toFixed(0) + 'px ' + this.orig.y.toFixed(0) + 'px ' + this.orig.z.toFixed(0) + 'px';
                         if (data.supportsCSSTransforms3D) {
-                            matrixCss = 'matrix3d(' + this.cache.matrixCTM.slice(0, 3) + ',0, '
-                                                    + this.cache.matrixCTM.slice(3, 6) + ',0, '
-                                                    + this.cache.matrixCTM.slice(6, 9) + ',0, '
+                            matrixCss = 'matrix3d(' + m.slice(0, 3) + ',0, '
+                                                    + m.slice(3, 6) + ',0, '
+                                                    + m.slice(6, 9) + ',0, '
                                                     + this.trans.x + ',' + this.trans.y + ',' + this.trans.z +',1)';
                         } else {
-                            matrixCss = 'matrix(' + this.cache.matrixCTM.slice(0, 2) + ','
-                                                  + this.cache.matrixCTM.slice(3, 5) + ','
+                            matrixCss = 'matrix(' + m.slice(0, 2) + ','
+                                                  + m.slice(3, 5) + ','
                                                   + this.trans.x + ',' + this.trans.y + ') translate3d(0,0,0)';
                         }
                         return {
@@ -2453,7 +2455,8 @@
                 },
                 pushSlideData: function ($slide, slideSizes) {
                     var cssTransforms = this.getTransformInfo($slide, slideSizes.outerSize),
-                        slideChildren = this.getChildren($slide);
+                        slideChildren = this.getChildren($slide),
+                        $nextSibling = this.getNextSibling($slide);
 
                     data.slideData.push({
                         center: { // center of element, with origin pointing to this element's topleft (0,0,0)
@@ -2474,8 +2477,7 @@
                         padding: [util.toInt($slide.css('padding-top')), util.toInt($slide.css('padding-right')), util.toInt($slide.css('padding-bottom')), util.toInt($slide.css('padding-left'))],
                         caption: load.getCaption($slide),
                         cssTransforms: cssTransforms,
-                        // TODO: fix nextSibling
-                        nextSibling: viewport.world.$slides.index($slide.next(opts.selector.slide)),
+                        nextSibling: $nextSibling === null ? -1 : viewport.world.$slides.index($nextSibling),
                         firstChild: slideChildren.length === 0 ? -1: viewport.world.$slides.index(slideChildren.eq(0))
                     });
 /*
@@ -2487,6 +2489,46 @@
                         'height': slideSizes.size.y + 'px'
                     });
 */
+                },
+                getNextSibling: function ($slide) {
+                    // Returns the next sibling of $slide, but those siblings might not necessarily be immediately after the $slide.
+                    // E.g., given this tree, where span are slides and div are not slides
+                    //                                  The function returns:
+                    //  span1                                 getNextSibling(span1) = span2
+                    //  span2                                 getNextSibling(span2) = span4
+                    //    span3                               getNextSibling(span3) = null
+                    //  span4                                 getNextSibling(span4) = span9 (because div are not slides)
+                    //    div
+                    //      span5                             getNextSibling(span5) = span6
+                    //      span6                             getNextSibling(span6) = null
+                    //    span7                               getNextSibling(span7) = null
+                    //      span8                             getNextSibling(span8) = null
+                    //  div
+                    //    span9
+                    var $next = $slide,
+                        $candidateNext = $next.next(),
+                        $children;
+                    while ($candidateNext.length === 0 || $candidateNext.closest(viewport.world.$elem).length === 1) {
+                        while ($candidateNext.length === 0) {
+                            $candidateNext = $next.parent();
+                            if ($candidateNext.is(opts.selector.slide) || $candidateNext.parent().closest(viewport.world.$elem).length === 0) {
+                                return null;
+                            }
+                            $candidateNext = $next = $candidateNext.next();
+                        }
+                        $next = $candidateNext;
+                        
+                        if ($next.is(opts.selector.slide)) {
+                            return $next;
+                        }
+                        $children = $next.find(opts.selector.slide);
+                        if ($children.length > 0) { 
+                            $candidateNext = $next = $children.eq(0);
+                        } else {
+                            $candidateNext = $next.next();
+                        }
+                    }
+                    return null;
                 },
                 getChildren: function ($slide) {
                     // Find all direct children of $slide (children with the given opts.selector.slide selector), but
