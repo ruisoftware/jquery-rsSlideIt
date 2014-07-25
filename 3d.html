@@ -15,93 +15,54 @@
             -webkit-perspective: 500;
             -webkit-perspective-origin: 50% 50%;
         }
-
-        #__viewport > div {
-            position: absolute;
-            _left: 50%;
-            _top: 50%;
-            _margin-left: -150px;
-            _margin-top: -30px;
-            width: 300px;
-            height: 60px;
-            border: 1px solid #bbb;
-            -webkit-transform-style: preserve-3d;
-            -_webkit-transform: rotateX(45deg);
-            -webkit-backface-visibility: visible;
-            -_webkit-transition: 2s;
-        }
         span {
-            display: block;
-            width: 60px;
-            height: 60px;
-            position:relative;
-            left: 100px;
-            background-color: rgb(155,105,0);
-        }
-        #s0 {
-            background-color: cyan;
-            opacity: .5;
-            -webkit-transform: scale(2,3);
-        }
-        #s1 {
-            background-color: grey;
-            -webkit-transform: rotateX(-90deg) translateY(30px) translateZ(-30px);
-            -webkit-transform-origin: 30px 0;
-            -webkit-transform: translateZ(250px) rotate3d(1,2,3,-30deg);
-        }
-        #s2 {
-            background-color: red;
-            -webkit-transform: rotateX(-90deg) rotateY(90deg) translate3d(120px,30px,30px);
-            -webkit-transform-origin: 10px 40px;
-            -dwebkit-transform-origin: 0 0;
-            -webkit-transform: translateX(60px) translateY(-60px) rotateX(-90deg) translateZ(150px) rotateY(90deg);
-            -sswebkit-transform: rotateX(-90deg) rotateY(90deg);
-            height: 30px;
-            -webkit-transform-style: preserve-3d;
-        }
-        #s20 {
-            background-color: rgba(255, 0, 0, .5);
-            -webkit-transform-origin: 30px -90px;
-            -webkit-transform: translateX(160px) rotateX(90deg);
-            -webkit-transform: translateX(160px) translateZ(-200px) rotateX(90deg) translateY(-150px) rotateY(60deg);
-            -sswebkit-transform: rotateX(90deg);
-            -webkit-transform-style: preserve-3d;
-        }
-        #s200 {
-            background-color: rgba(255, 255, 0, .5);
-            left: 10px;
-            -webkit-transform-origin: -10px 130px;
-            -webkit-transform: translateY(50px) rotateY(90deg) translateZ(-150px);
-            -xxwebkit-transform: rotateY(90deg);
-        }
-        #s3 {
-            background-color: cyan;
-            -webkit-transform: rotateX(40deg);
-            -webkit-transform-style: preserve-3d;
-            -webkit-transform-origin: 0px 0px;
-        }
-        #s30, #s300, #s301, #__s4 {
+            display: inline-block;
+            width: 200px;
+            height: 200px;
             background-color: #aaa;
-            -webkit-transform: rotateX(180deg);
-            -webkit-transform-origin: 50px 50px;
+            position: relative;
             -webkit-transform-style: preserve-3d;
-            left: -20px;
-            top: 50px;
+            opacity: .8;
         }
-        #__s300 {
-            -webkit-transform: rotateX(60deg);
+        #top {
+            display: block;
         }
-        #s4 {
-            position: absolute;
-            background-color: rgba(60,255,60,.3);
+        #left, #front, #right, #back {
+            left: -200px;
         }
-        #viewport > div div {
-            position: absolute;
-            left: 0px;
-            top: 0px;
-            width: 1px;
-            height: 1px;
-            background-color: red;
+        #bottom1 {
+            left: -800px;
+        }
+        #bottom1, #bottom2 {
+            top: 200px;
+        }
+        #front, #bottom2 {
+            background-color: #bbb;
+        }
+        #top {
+            -webkit-transform-origin-y: bottom;
+            -webkit-transform: rotateX(90deg);
+        }
+        #left {
+            -webkit-transform-origin-x: right;
+            -webkit-transform: rotateY(-90deg);
+        }
+        #right {
+            -webkit-transform-origin-x: left;
+            -webkit-transform: rotateY(90deg);
+        }
+        #back {
+            left: 0;
+            -webkit-transform-origin-x: left;
+            -webkit-transform: rotateY(180deg) translateX(400px) translateZ(200px);
+        }
+        #bottom1 {
+            -webkit-transform-origin-y: top;
+            -webkit-transform: rotateX(-30deg);
+        }
+        #bottom2 {
+            -webkit-transform-origin-y: 0;
+            -webkit-transform: translateZ(-100px) translateY(-27px) rotateX(-150deg);
         }
         button {
             position: absolute;
@@ -142,20 +103,14 @@
     <button id="prev">prev</button>
     <button id="next">next</button>
     <div id="viewport">
-        <span id="s0" data-transform="scale(2,3)">first slide</span>
-
-        <span id="s1" _data-transform="translateZ(250px) rotate3d(1,2,3,-30deg)">second slide</span>
-        <span id="s2" data-transform="translateX(60px) translateY(-60px) rotateX(-90deg) translateZ(150px) rotateY(90deg)">third slide<span id="s20" data-transform="translateX(160px) translateZ(-200px) rotateX(90deg) translateY(-150px) rotateY(60deg)">20<span id="s200" data-transform="translateY(50px) rotateY(90deg) translateZ(-150px)">200</span></span></span>
-        <span id="s3" data-transform="rotateX(40deg)">fourth
-            <span id="s30" data-transform="rotateX(180deg)">41 slide
-                <!--div>
-                    <span id="s300" data-transform="rotateX(-40deg)">411 slide</span>
-                    <span id="s301" data-transform="rotateX(40deg)">412 slide</span>
-                </div-->
-            </span>
-        </span>
-        <span id="s4" __data-transform="rotateX(-40deg)">555 slide</span>
-        <div></div>
+        <span id="top">
+        top</span><span id="left" data-transform="rotateY(-90deg)">
+        left</span><span id="front">
+        front</span><span id="right" data-transform="rotateY(90deg)">
+        right</span><span id="back" data-transform="rotateY(180deg) translateX(400px) translateZ(200px)">
+        back</span><span id="bottom1" data-transform="rotateX(-30deg)">
+        bottom1</span><span id="bottom2" data-transform="translateZ(-100px) translateY(-27px) rotateX(-150deg)">
+        bottom2</span>
     </div>
   </body>
 </html>
