@@ -1036,26 +1036,6 @@
                     if (!panUtil.isPanning) {
                         panUtil.beginPan(event);
                     }
-                    
-                    var position = viewport.world.$elem.offset(),
-                        limits = {
-                            top: position.top - panUtil.elemPos.y + panUtil.height,
-                            right: position.left - panUtil.elemPos.x - viewport.center.x * 2,
-                            bottom: position.top - panUtil.elemPos.y - viewport.center.y * 2,  
-                            left: position.left - panUtil.elemPos.x + panUtil.width
-                        };
-                    if (limits.top < 0) {
-                        panUtil.startPage.y += limits.top;
-                    }
-                    if (limits.right > 0) {
-                        panUtil.startPage.x += limits.right;
-                    }
-                    if (limits.bottom > 0) {
-                        panUtil.startPage.y += limits.bottom;
-                    }
-                    if (limits.left < 0) {
-                        panUtil.startPage.x += limits.left;
-                    }
 
                     var offset = { x: event.pageX - panUtil.startPage.x, y: event.pageY - panUtil.startPage.y, z: 0 };
                     if (!data.isIE8orBelow) {
@@ -1411,8 +1391,7 @@
                 },
 
                 doMousePan: function (offset) {
-                    var css = this.getTransformCSS(offset);
-                    return css;
+                    return this.getTransformCSS(offset);
                 },
 
                 doMouseZoom: function (oldMouseZoom, newMouseZoom) {
