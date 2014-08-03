@@ -12,12 +12,12 @@
 (function ($, undefined) {
     var SlideItClass = function ($viewport, opts) {
         var data = {
-                $elemsOnTop: $(opts.selector.elementsOnTop),
+                $elemsOnTop: $(opts.elementsOnTopSelector),
                 $viewportAndTops: null,
                 slideData: [],
                 qtSlides: 0,
-                supportsCSSAnimation: true, //(typeof Modernizr !== 'undefined') && !!Modernizr.cssanimations,
-                supportsCSSTransforms3D: true, //(typeof Modernizr !== 'undefined') && !!Modernizr.csstransforms3d,
+                supportsCSSAnimation: (typeof Modernizr !== 'undefined') && !!Modernizr.cssanimations,
+                supportsCSSTransforms3D: (typeof Modernizr !== 'undefined') && !!Modernizr.csstransforms3d,
                 isIE8orBelow: false,
                 isIE9: false,
                 isMozilla11orBelow: false,
@@ -76,7 +76,7 @@
                             'position': 'absolute',
                             'z-index': 0 // fix for IE8 standards mode that, without this z-index, cannot transform child elements
                         })
-                        this.$slides = $(opts.selector.slide, this.$elem);
+                        this.$slides = $(opts.slideSelector, this.$elem);
                     }
                 },
                 center: { x: 0, y: 0 },
@@ -93,7 +93,6 @@
                 }
             },
 
-            // TODO check code
             seqData = { // data for the whole slide show currently running
                 idx: 0,      // current active slide while sequence runs
                 repeat: 0,   // how many cycles a sequence runs
@@ -166,8 +165,7 @@
                     runTransition();
                 }
             },
-            
-            // TODO check code
+
             transData = { // data for the current transition that is running
                 // Moving from slide A to slide B
                 // ==============================
@@ -695,43 +693,34 @@
                         }
                     }
                 },
-
                 isAlmostZero: function (a, maxDelta) {
                     return this.areTheSame(a, 0, maxDelta);
                 },
-
                 isAlmostOne: function (a, maxDelta) {
                     return this.areTheSame(a, 1, maxDelta);
                 },
-
                 areTheSame: function (a, b, maxDelta) {
                     return Math.abs(a - b) < (maxDelta === undefined ? 0.00005 : maxDelta);
                 },
-
                 roundToTrigonometricBounds: function (value) {
                     return util.isAlmostZero(value) ? 0 : (util.isAlmostOne(value) ? 1 : (util.isAlmostZero(value + 1) /* testing for -1 */ ? -1 : value));
                 },
-
                 roundMatrixToTrigonometricBounds: function (matrix) {
                     for (var i = 0, len = matrix.length; i < len; ++i) {
                         matrix[i] = this.roundToTrigonometricBounds(matrix[i]);
                     }
                 },
-
                 toInt: function (str) {
                     var value = !str || str == 'auto' || str == '' ? 0 : parseInt(str, 10);
                     return isNaN(value) ? 0 : value;
                 },
-
                 toFloat: function (str) {
                     var value = !str || str == 'auto' || str == '' ? 0.0 : parseFloat(str);
                     return isNaN(value) ? 0.0 : value;
                 },
-
                 interpolate: function (from, to, percent) {
                     return (to - from)*percent + from;
                 },
-
                 interpolatePoint: function (from, to, percent) {
                     return { 
                         x: (to.x - from.x)*percent + from.x,
@@ -739,7 +728,6 @@
                         z: (to.z - from.z)*percent + from.z
                     };
                 },
-
                 interpolateMatrix: function (from, to, percent) {
                     return [
                         (to[0] - from[0])*percent + from[0],
@@ -755,12 +743,10 @@
                         (to[8] - from[8])*percent + from[8]
                     ];
                 },
-
                 getDistanceTwoPnts: function (p1, p2) {
                     var pt = [p1.x - p2.x, p1.y - p2.y, p1.z - p2.z];
                     return Math.sqrt(pt[0]*pt[0] + pt[1]*pt[1] + pt[2]*pt[2]);
                 },
-
                 // Given 3 points, it uses interpolation to find out the coefficients [a, b, c] of the 
                 // quadratic function that intersects these 3 points.
                 // These 3 points should be distinct and cannot share the same X
@@ -783,7 +769,6 @@
                         return this.getLinear(p1, p3);
                     }
                 },
-
                 getLinear: function (p1, p3) {
                     var m = (p1.y - p3.y) / (p1.x - p3.x);
                     return {
@@ -792,16 +777,13 @@
                         c: p1.y - m * p1.x
                     };
                 },
-
                 getQuadraticValue: function (coefs, x) {
                     return coefs.a * x * x + coefs.b * x + coefs.c;
                 },
-
                 // returns the x-coordinate of the point that corresponds to the min/max value of a quadradic f(x) function (when f'(x) = 0) 
                 getVertexPointX: function (coefs) {
                     return -coefs.b / (2 * coefs.a);
                 },
-
                 // Given 2 points and the y-coordinate of the vertex point (point where function has its min or max value),
                 // this function interpolates a quadratic function.
                 // It might need to make further approximations for the resulting f(x) reach the targeted p2yVertex
@@ -812,11 +794,9 @@
                         return this.getQuadraticAprox(p1, { x: (p1.x + p3.x) / 2, y: p2yVertex }, p3);
                     }
                 },
-
                 getQuadraticAprox: function (p1, p2, p3) {
                     var coefs = this.getQuadratic(p1, p2, p3);
                     if (!this.isAlmostZero(coefs.a)) { // only continue if a is non zero (if it is a parabola)
-
                         var vertexPnt = {
                             x: this.getVertexPointX(coefs),
                             y: 0 // is computed below
@@ -832,7 +812,6 @@
                     }
                     return coefs;
                 },
-
                 // multiplies matrix1 by matrix2 and places result in matrix2. Also returns the result matrix
                 multiplyMatrices: function (matrix1, matrix2) {
                     // matrix1 and matrix2 are 3x3 matrices, with indexes as | 0 1 2 |
@@ -852,7 +831,6 @@
                     matrix2[8] = matrix1[6] * m2[2] + matrix1[7] * m2[5] + matrix1[8] * m2[8];
                     return matrix2;
                 },
-
                 areMatricesEqual: function (matrix1, matrix2) {
                     for (var i = 0; i < 9; ++i) {
                         if (!this.areTheSame(matrix1[i], matrix2[i])) {
@@ -861,7 +839,6 @@
                     }
                     return true;
                 },
-
                 // returns the inverse matrix of the given matrix, in such a way that matrix * matrixInv = matrixIdentity
                 getInvertedMatrix: function (m) {
                     var det = m[0]*(m[4]*m[8] - m[5]*m[7]) +
@@ -876,11 +853,9 @@
                         (m[3]*m[7] - m[4]*m[6])/det, (m[1]*m[6] - m[0]*m[7])/det, (m[0]*m[4] - m[1]*m[3])/det
                     ];
                 },
-
                 isDefined: function (value) {
                     return value && value != "" && value != "none";
                 },
-
                 getAngleRadians: function (value) {
                     var toRad = 0; // conversion rate to radians
                     // try radians
@@ -903,7 +878,6 @@
                     value = value.replace(/rad|deg|grad|turn/gi, '');
                     return util.toFloat(value) * toRad;
                 },
-
                 getSlideIdx: function (dest, currentSlideIdx) {
                     var currSlide = currentSlideIdx === undefined ? data.activeSlide.index : currentSlideIdx;
                     switch (dest) {
@@ -914,7 +888,6 @@
                         default: return dest;
                     }
                 },
-
                 getSpeedMs: function (speed) {
                     var ms = speed;
                     if (typeof speed === 'string') {
@@ -1112,7 +1085,6 @@
                         this.matrixCTM_inv = util.getInvertedMatrix(this.matrixCTM);
                     }
                 },
-
                 getMatrixIdentity: function () {
                     return [
                         1, 0, 0,
@@ -1134,7 +1106,7 @@
                         sc = sq*Math.cos(rad/2),
                         len = Math.sqrt(x*x + y*y + z*z),
                         trigRound = util.roundToTrigonometricBounds;
-                    if (util.isAlmostZero(len)) {
+                    if (util.isAlmostZero(len, 5e-7)) {
                         return this.getMatrixIdentity();
                     }
                     sq *= sq;
@@ -1157,7 +1129,6 @@
                 getMatrixRotateZ: function(rad) {
                     return this.getMatrixRotate3D(0, 0, 1, rad);
                 },
-
                 getMatrixScale3D: function (scaleX, scaleY, scaleZ) {
                     return [
                         scaleX, 0, 0,
@@ -1180,7 +1151,6 @@
                 getMatrixScaleZ: function (scale) {
                     return this.getMatrixScale3D(1, 1, scale);
                 },
-
                 getMatrixSkewX: function (tangent) {
                     return [
                         1, 0, 0, 
@@ -1195,7 +1165,6 @@
                         0, 0, 1
                     ];
                 },
-
                 getMatrix: function (id, value) {
                     switch (id) {
                         case this.transID.MATRIX:   return value;
@@ -1204,20 +1173,17 @@
                         case this.transID.ROTATEX:  return this.getMatrixRotateX(value);
                         case this.transID.ROTATEY:  return this.getMatrixRotateY(value);
                         case this.transID.ROTATEZ:  return this.getMatrixRotateZ(value);
-
                         case this.transID.SCALE3D:  return this.getMatrixScale3D(value.x, value.y, value.z);
                         case this.transID.SCALE:    return this.getMatrixScale(value);
                         case this.transID.SCALEXY:  return this.getMatrixScaleXY(value.x, value.y);
                         case this.transID.SCALEX:   return this.getMatrixScaleX(value);
                         case this.transID.SCALEY:   return this.getMatrixScaleY(value);
                         case this.transID.SCALEZ:   return this.getMatrixScaleZ(value);
-
                         case this.transID.SKEWX:    return this.getMatrixSkewX(Math.tan(value));
                         case this.transID.SKEWY:    return this.getMatrixSkewY(Math.tan(value));
                     }
                     return this.getMatrixIdentity();
                 },
-
                 getTransformedPoint: function(pnt, ctmMatrix, centerPnt) {
                     var ctm = ctmMatrix === undefined ? this.cache.matrixCTM : ctmMatrix;
                     if (centerPnt === undefined) {
@@ -1313,13 +1279,11 @@
                         };
                     }
                 },
-
                 adjustTransIE: function (centerPnt) {
                     var rect = this.getTransformedRect(viewport.world.IEorigSize, this.cache.matrixCTM, centerPnt);
                     this.trans.x += rect.topLeft.x;
                     this.trans.y += rect.topLeft.y;
                 },
-
                 setActiveSlide: function (slideIdx) {
                     data.activeSlide.index = this.activeSlideIndex = slideIdx;
                     data.activeSlide.$slide = viewport.world.$slides.eq(slideIdx);
@@ -1328,7 +1292,6 @@
                     this.trans.x = viewport.center.x - slideData.centerTrans.x;
                     this.trans.y = viewport.center.y - slideData.centerTrans.y;
                     this.trans.z = - slideData.centerTrans.z;
-
                     this.cache.refresh();
                     if (data.isIE8orBelow) {
                         this.activeSlideCenterTrans.x = slideData.centerTrans.x;
@@ -1337,7 +1300,6 @@
                         this.adjustTransIE(slideData.centerTrans);
                     }
                 },
-
                 getTransformCSS: function (offset) {
                     this.setTransformOrigin(
                         viewport.center.x - this.trans.x,
@@ -1356,7 +1318,6 @@
                     }
                     return this.getTransformCSSstyle();
                 },
-
                 getTransformOriginCss: function ($elem, outerSize) {
                     if (data.isIE8orBelow) {
                         // TODO check if in IE8 and below, the transform origin correctly maps to the margins
@@ -1389,11 +1350,9 @@
                     }
                     return origin;
                 },
-
                 doMousePan: function (offset) {
                     return this.getTransformCSS(offset);
                 },
-
                 doMouseZoom: function (oldMouseZoom, newMouseZoom) {
                     if (data.isIE8orBelow) {
                         // IE8 and below do not have transform-origin, so the workaround to properly center scale transformations is to apply a translation
@@ -1402,7 +1361,6 @@
                             deltaScale = newMouseZoom - oldMouseZoom;
                             deltaTrans = (viewport.center.x - this.trans.x) / oldMouseZoom;
                             this.trans.x -= deltaTrans * deltaScale;
-                            
                             deltaTrans = (viewport.center.y - this.trans.y) / oldMouseZoom;
                             this.trans.y -= deltaTrans * deltaScale;
                        }
@@ -1411,7 +1369,6 @@
                     return this.getTransformCSS();
                 }
             },
-
             events = {
                 onMouseWheel: function (event) {
                     var delta = {x: 0, y: 0};
@@ -1465,13 +1422,11 @@
                         transData.prevDuration = transData.duration;
                         transData.prevEasing = transData.easing;
                         transData.reset();
-                        
                         transData.duration = util.getSpeedMs(optsTrans.duration);
                         if (transData.prevDuration === null) {
                             transData.prevDuration = transData.duration;
                         }
                         optsTrans.duration = transData.duration;
-
                         transData.easing = optsTrans.easing;
                         if (transData.prevEasing === null) {
                             transData.prevEasing = transData.easing;
@@ -1564,7 +1519,7 @@
                         case 'zoomMin': return opts.zoomMin;
                         case 'zoomStep': return opts.zoomStep;
                         case 'zoomMax': return opts.zoomMax;
-                        case 'activeSlide': return data.activeSlide.index;
+                        case 'currentSlide': return data.activeSlide.index;
                         case 'center': return transUtil.getTransformOrigin();
                         case 'state': return seqData.state;
                         case 'events': return opts.events;
@@ -1606,7 +1561,7 @@
                             // get the element underneath
                             var $under = $(document.elementFromPoint(event.clientX, event.clientY));
                             data.$elemsOnTop.css('visibility', 'visible');
-                            if ($under.closest(opts.selector.slide).length === 1) {
+                            if ($under.closest(opts.slideSelector).length === 1) {
                                 return $under;
                             }
                         }
@@ -1620,7 +1575,7 @@
                     if (!panUtil.isPanning && opts.events.onClickSlide) {
                         var $slide = events.readUnderneath(event);
                         if ($slide) {
-                            $viewport.triggerHandler('clickSlide.rsSlideIt', [$slide, viewport.world.$slides.index($slide.closest(opts.selector.slide))]);
+                            $viewport.triggerHandler('clickSlide.rsSlideIt', [$slide, viewport.world.$slides.index($slide.closest(opts.slideSelector))]);
                         }
                     }
                 },
@@ -1628,7 +1583,7 @@
                     if (opts.events.onDblClickSlide) {
                         var $slide = events.readUnderneath(event);
                         if ($slide) {
-                            $viewport.triggerHandler('dblClickSlide.rsSlideIt', [$slide, viewport.world.$slides.index($slide.closest(opts.selector.slide))]);
+                            $viewport.triggerHandler('dblClickSlide.rsSlideIt', [$slide, viewport.world.$slides.index($slide.closest(opts.slideSelector))]);
                             event.stopPropagation();
                         }
                     }
@@ -1646,7 +1601,6 @@
                             transData.interrupt();
                         }
                     }
-
                     $viewport.
                         unbind('singleTransition.rsSlideIt', events.onSingleTransition).
                         unbind('transition.rsSlideIt', events.onTransition).
@@ -1911,7 +1865,7 @@
                                 bind('MSAnimationEnd.rsSlideIt', events.onCssAnimationEnd);
                         }
                     }
-                    
+
                     if (typeof Modernizr === 'undefined') {
                         util.warn('Moderniz lib not loaded! Unable to determine if browser supports CSS3 animations natively. Falling back to javascript animation!', false);
                     } else {
@@ -1922,10 +1876,9 @@
                             util.warn('Moderniz lib loaded, but missing the "CSS 3D Transforms" detection feature! Make sure Moderniz includes such feature.', false);
                         }
                     }
-
                     opts.initialSlide = data.checkSlideBounds(opts.initialSlide);
                     if (opts.zoomMax < opts.zoomMin) { var sw = opts.zoomMax; opts.zoomMax = opts.zoomMin; opts.zoomMin = sw; }
-                    
+
                     opts.initialZoom = opts.initialZoom < opts.Min ? opts.Min : (opts.initialZoom > opts.Max ? opts.Max : opts.initialZoom);
                     if (data.supportsCSSTransforms3D) {
                         if (opts.data3D.viewportClass) {
@@ -1942,20 +1895,6 @@
                             bind('loadSlide.rsSlideIt', this.onLoadSlide).
                             triggerHandler('loadSlide.rsSlideIt');
                     }
-                },
-                getCaption: function ($slide) {
-                    var caption = [];
-                    if (opts.selector.caption) {
-                        $slide.nextAll().each(function () {
-                            var $this = $(this);
-                            if ($this.is(opts.selector.caption)) {
-                                caption.push($this.html());
-                                return true;
-                            }
-                            return false;
-                        });
-                    }
-                    return caption.length == 0 ? null : caption;
                 },
                 getTransformFromCss: function ($slide) {
                     var value,
@@ -2035,9 +1974,10 @@
                             var value = null;
                             if (data.supportsCSSTransforms3D) {
                                 value = $slide.attr('data-transform3D');
-                            }
-                            if (!util.isDefined(value)) {
-                                value = $slide.attr('data-transform2D');
+                            } else {
+                                if (!util.isDefined(value)) {
+                                    value = $slide.attr('data-transform2D');
+                                }
                             }
                             if (!util.isDefined(value)) {
                                 value = $slide.attr('data-transform');
@@ -2144,7 +2084,6 @@
                                     matrixInv:  transUtil.getMatrixSkewY(- tangent)
                                 };
                             }
-
                             // try skew(x,y) -- non standard
                             found = value.match(/skew\([-|+]?[\d.]+(deg|rad|grad|turn),[-|+]?[\d.]+(deg|rad|grad|turn)\)/i);
                             if (found && util.isDefined(found[0])) {
@@ -2164,7 +2103,6 @@
                         getTransformScale = function (value) {
                             var scaleX, scaleY, scaleZ, scaleXInv, scaleYInv, scaleZInv,
                                 found = value.match(/scale\([-|+]?[\d.]+\)/i);
-
                             // try scale(s)
                             if (found && util.isDefined(found[0])) {
                                 var scale = util.toFloat(value.replace(/scale\(|\)/gi, '')),
@@ -2177,7 +2115,6 @@
                                     matrixInv:  transUtil.getMatrixScale(scaleInv)
                                 };
                             }
-
                             // try scale(x,y)
                             found = value.match(/scale\([-|+]?[\d.]+,[-|+]?[\d.]+\)/i);
                             if (found && util.isDefined(found[0])) {
@@ -2271,7 +2208,6 @@
                                             split(' '),
                                 allTrans = getTransformDefault(origin),
                                 cssData;
-
                             // translate transformations are ignored
                             for (var i = 0, len = transfs.length; i < len; ++i) {
                                 cssData = null;
@@ -2436,7 +2372,6 @@
                     var cssTransforms = this.getTransformInfo($slide, slideSizes.outerSize),
                         slideChildren = this.getChildren($slide),
                         $nextSibling = this.getNextSibling($slide);
-
                     data.slideData.push({
                         center: { // center of element, with origin pointing to this element's topleft (0,0,0)
                             x: slideSizes.outerSize.x / 2,
@@ -2454,20 +2389,10 @@
                             y: slideSizes.outerSize.y
                         },
                         padding: [util.toInt($slide.css('padding-top')), util.toInt($slide.css('padding-right')), util.toInt($slide.css('padding-bottom')), util.toInt($slide.css('padding-left'))],
-                        caption: load.getCaption($slide),
                         cssTransforms: cssTransforms,
                         nextSibling: $nextSibling === null ? -1 : viewport.world.$slides.index($nextSibling),
                         firstChild: slideChildren.length === 0 ? -1: viewport.world.$slides.index(slideChildren.eq(0))
                     });
-/*
-                    if ($slide.css('display') == 'block') {
-                        $slide.css('display', 'inline-block');
-                    }
-                    $slide.css({
-                        'width': slideSizes.size.x + 'px',
-                        'height': slideSizes.size.y + 'px'
-                    });
-*/
                 },
                 getNextSibling: function ($slide) {
                     // Returns the next sibling of $slide, but those siblings might not necessarily be immediately after the $slide.
@@ -2490,17 +2415,17 @@
                     while ($candidateNext.length === 0 || $candidateNext.closest(viewport.world.$elem).length === 1) {
                         while ($candidateNext.length === 0) {
                             $candidateNext = $next.parent();
-                            if ($candidateNext.is(opts.selector.slide) || $candidateNext.parent().closest(viewport.world.$elem).length === 0) {
+                            if ($candidateNext.is(opts.slideSelector) || $candidateNext.parent().closest(viewport.world.$elem).length === 0) {
                                 return null;
                             }
                             $candidateNext = $next = $candidateNext.next();
                         }
                         $next = $candidateNext;
                         
-                        if ($next.is(opts.selector.slide)) {
+                        if ($next.is(opts.slideSelector)) {
                             return $next;
                         }
-                        $children = $next.find(opts.selector.slide);
+                        $children = $next.find(opts.slideSelector);
                         if ($children.length > 0) { 
                             $candidateNext = $next = $children.eq(0);
                         } else {
@@ -2510,7 +2435,7 @@
                     return null;
                 },
                 getChildren: function ($slide) {
-                    // Find all direct children of $slide (children with the given opts.selector.slide selector), but
+                    // Find all direct children of $slide (children with the given opts.slideSelector), but
                     // those children might not necessarily be immediately below the parent, hierarchy speaking.
                     // e.g., given this tree, where span are slides and div are not slides
                     //                                  The function returns:
@@ -2524,12 +2449,11 @@
                     //    span7                               getChildren(span7) = [span8]
                     //      span8                             getChildren(span8) = []
                     return $slide.
-                            find(opts.selector.slide).
+                            find(opts.slideSelector).
                             filter(function (i, e) {
-                                return $(e).parent().closest(opts.selector.slide).is($slide);
+                                return $(e).parent().closest(opts.slideSelector).is($slide);
                             });
                 },
-
                 setSlidePos: function () {
                     var $slide, slideData, slidePos, parents,
                         worldOffset = viewport.world.$elem.offset(),
@@ -2560,7 +2484,6 @@
                         $viewport.triggerHandler('create.rsSlideIt');
                     }
                 },
-                
                 doSetSlidePos: function(index, getPositionFunc, getOffsetFunc, parents, totalOffset) {
                     var $slide, slideData, slidePos, matrixOffset;
                     do {
@@ -2599,7 +2522,7 @@
                                     }
                                 ), parentSlideData = data.slideData[parents[parents.length - 1]],
                                 parentTransforms;
-                            
+
                             for (var parentIdx = parents.length - 1; parentIdx > -1; --parentIdx) {
                                 parentTransforms = data.slideData[parents[parentIdx]].cssTransforms;
                                 slidePos = getPositionFunc(viewport.world.$slides.eq(parents[parentIdx]));
@@ -2733,7 +2656,6 @@
             this.trigger('destroy.rsSlideIt');
         };
 
-
         if (typeof options === 'string') {
             var otherArgs = Array.prototype.slice.call(arguments, 1);
             switch (options) {
@@ -2747,7 +2669,6 @@
         }
         var opts = $.extend({}, $.fn.rsSlideIt.defaults, options);
         opts.data3D = $.extend({}, $.fn.rsSlideIt.defaults.data3D, options ? options.data3D : options);
-        opts.selector = $.extend({}, $.fn.rsSlideIt.defaults.selector, options ? options.selector : options);
         opts.events = $.extend({}, $.fn.rsSlideIt.defaults.events, options ? options.events : options);
 
         return this.each(function () {
@@ -2759,7 +2680,6 @@
         PLAY: 1, // slide show is running, which stops the user from navigating around
         PAUSE: 2 // slide show is paused and another click to Play/Pause button will resume the slide show from the current point. User can navigate around (if userInteract is true).
     };
-
 
     // public access to the default input parameters
     $.fn.rsSlideIt.defaults = {
@@ -2777,11 +2697,8 @@
             viewportClass: 'transf3D', // Class(es) added to the viewport element if browser does support 3D transformations (requires Modernizr lib with "CSS 3D Transforms" detection feature). Type: string.
             perspective: 500
         },
-        selector: {
-            slide: 'img',           // jQuery selector string for all slide elements. Type: string.
-            caption: '.caption',    // jQuery selector string for all text elements for each slide. Type: string.
-            elementsOnTop: null     // jQuery selector string for the elements on top of the viewport element (if any). Type: string.
-        },
+        slideSelector: 'img',
+        elementsOnTopSelector: null,
         events: {
             onCreate: null,                 // Fired when plug-in has been initialized. Type: function (event).
             onAjaxLoadBegin: null,          // Fired before starting to make ajax requests. Type: function (event, qtTotal).
@@ -2801,7 +2718,6 @@
         }
     };
 
-    
     // Default options for the 'transition' method.
     $.fn.rsSlideIt.defaultsTransition = {
         slide: 'next',          // zero-based positive integer or 'prev' or 'next' or 'first' or 'last'. Type: positive integer or string.

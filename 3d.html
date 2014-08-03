@@ -3,6 +3,7 @@
   <head>
     <title>3D transformations</title>
     <script src="jquery.2.0.0.min.js"></script>
+    <script src="modernizr.js"></script>
     <script src="jQuery.rsSlideIt.js"></script>
     <style>
         #viewport {
@@ -30,11 +31,9 @@
         #left, #front, #right, #back {
             left: -200px;
         }
-        #bottom1 {
-            left: -800px;
-        }
-        #bottom1, #bottom2 {
+        #bottom2 {
             top: 200px;
+            left: -200px
         }
         #front, #bottom2 {
             background-color: #bbb;
@@ -72,15 +71,19 @@
         #next {
             top: 20px;
         }
+        #playPause {
+            top: 50px;
+        }
+        #stop {
+            top: 70px;
+        }
     </style>
     <script>
         $(document).ready(function () {
             $("#viewport").rsSlideIt({
                 initialSlide:0,
                 initialZoom: 1,
-                selector: {
-                    slide: "span"
-                }
+                slideSelector: "span"
             });
 
             $("#prev").click(function() {
@@ -93,8 +96,31 @@
                 $("#viewport").rsSlideIt('transition', {
                     slide: 'next',
                     //zoomDest: 'fit',
-                    duration: 1000
+                    duration: 1000,
+                    zoomVertex: .5
                 });
+            });
+            $("#playPause").click(function() {
+                $("#viewport").rsSlideIt('playPause', {
+                    sequence: 'next',       // Type: array of positive integers or a string 'prev' or a string 'next'
+                    delayOnSlide: [200, 500],    // positive integer or string or array of positive integers/strings.
+                    zoomDest: [1,.3],            // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'cover' or an array of positive real numbers and strings
+                    zoomVertex: 'out',   // positive real number or 'out' or 'in' or 'linear' or an arrays of positive real numbers and strings
+                    easing: 'swing',        // Easing function used in transitions (@see http://api.jquery.com/animate/#easing). Type: string or array of strings.
+                    duration: 600,          // positive integer or string or array of positive integers/strings.
+                    repeat: 'forever',      // positive integer or 'forever'
+                    userInteract: true,     // true: user can zoom and pan while slideshow is standing still; false: otherwise 
+                    onPlay: null,           // Fired when the sequence starts to run
+                    onStop: null,           // Fired when the whole sequence is completed (only if repeat is not 'forever')
+                    onPause: null,          // Fired when the sequence pauses in a specific slide
+                    onBeginTrans: null,     // Fired when the transition within the sequence starts to run
+                    onEndTrans: null,       // Fired when the transition within the sequence is completed
+                    onBeginDelay: null,     // Fired when slideshow pauses for some time on a specific slide. Type: function(event, slide, delay)
+                    onEndDelay: null        // Fired when the delay performed on a specific slide has finished. Type: function(event, slide)
+               });
+            });
+            $("#stop").click(function() {
+                $("#viewport").rsSlideIt('stop');
             });
         });
     </script>
@@ -102,6 +128,8 @@
   <body>
     <button id="prev">prev</button>
     <button id="next">next</button>
+    <button id="playPause">Play/Pause</button>
+    <button id="stop">Stop</button>
     <div id="viewport">
         <span id="top">
         top</span><span id="left" data-transform="rotateY(-90deg)">
