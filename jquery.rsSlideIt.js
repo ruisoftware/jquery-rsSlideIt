@@ -1561,40 +1561,19 @@
                     }
                     return events.onGetter(event, field);
                 },
-                readUnderneath: function (event) {
-                    var $target = $(event.target),
-                        firedOnOverlay = $target.is(data.$elemsOnTop);
-                    if (firedOnOverlay) {
-                        if (document.elementFromPoint) {
-                            data.$elemsOnTop.css('pointer-events', 'none');
-                            // get the element underneath
-                            var $under = $(document.elementFromPoint(event.clientX, event.clientY));
-                            data.$elemsOnTop.css('pointer-events', 'auto');
-                            if ($under.closest(opts.slideSelector).length === 1) {
-                                return $under;
-                            }
-                        }
-                        return null;
-                    }
-                    return $target;
-                },
                 onMouseupClick: function (event) {
                     // onClick is implemented as mouseUp, because a genuine click event is fired when users finishes to pan around with mouse.
                     // So, the workaroud is to catch the mouseup and fire the user onClickSlide
                     if (!panUtil.isPanning && opts.events.onClickSlide) {
-                        var $slide = events.readUnderneath(event);
-                        if ($slide) {
-                            $viewport.triggerHandler('clickSlide.rsSlideIt', [$slide, viewport.world.$slides.index($slide.closest(opts.slideSelector))]);
-                        }
+                        var $slide = $(this);
+                        $viewport.triggerHandler('clickSlide.rsSlideIt', [$slide, viewport.world.$slides.index($slide.closest(opts.slideSelector))]);
                     }
                 },
                 onDblClick: function (event) {
                     if (opts.events.onDblClickSlide) {
-                        var $slide = events.readUnderneath(event);
-                        if ($slide) {
-                            $viewport.triggerHandler('dblClickSlide.rsSlideIt', [$slide, viewport.world.$slides.index($slide.closest(opts.slideSelector))]);
-                            event.stopPropagation();
-                        }
+                        var $slide = $(this);
+                        $viewport.triggerHandler('dblClickSlide.rsSlideIt', [$slide, viewport.world.$slides.index($slide.closest(opts.slideSelector))]);
+                        event.stopPropagation();
                     }
                 },
                 onCreate: function (event) {
