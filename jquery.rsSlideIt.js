@@ -1566,10 +1566,10 @@
                         firedOnOverlay = $target.is(data.$elemsOnTop);
                     if (firedOnOverlay) {
                         if (document.elementFromPoint) {
-                            data.$elemsOnTop.css('visibility', 'hidden');
+                            data.$elemsOnTop.css('pointer-events', 'none');
                             // get the element underneath
                             var $under = $(document.elementFromPoint(event.clientX, event.clientY));
-                            data.$elemsOnTop.css('visibility', 'visible');
+                            data.$elemsOnTop.css('pointer-events', 'auto');
                             if ($under.closest(opts.slideSelector).length === 1) {
                                 return $under;
                             }
