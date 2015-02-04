@@ -12,8 +12,6 @@
 (function ($, undefined) {
     var SlideItClass = function ($viewport, opts) {
         var data = {
-                $elemsOnTop: $(opts.elementsOnTopSelector),
-                $viewportAndTops: null,
                 slideData: [],
                 qtSlides: 0,
                 supportsCSSAnimation: (typeof Modernizr !== 'undefined') && !!Modernizr.cssanimations,
@@ -27,10 +25,9 @@
                 },
                 init: function () {
                     this.qtSlides = viewport.world.$slides.length;
-                    this.$viewportAndTops = $viewport.add(this.$elemsOnTop);
 
                     // to prevent the default behaviour in IE when dragging an element
-                    this.$viewportAndTops.add(viewport.world.$elem).add(viewport.world.$slides).each(function () {
+                    $viewport.add(viewport.world.$elem).add(viewport.world.$slides).each(function () {
                         this.ondragstart = this.onselectstart = function () { return false; };
                     });
                     this.initBrowsers();
@@ -118,7 +115,7 @@
                     this.qt = {
                         sequences: (typeof optsSequence.sequence === 'object') ? optsSequence.sequence.length : (transData.isPrevOrNext ? data.qtSlides : 0),
                         delays: (typeof optsSequence.delayOnSlide === 'object') ? optsSequence.delayOnSlide.length : 0,
-                        zoomDests: (typeof optsSequence.zoomDest === 'object') ? optsSequence.zoomDest.length : 0,
+                        zooms: (typeof optsSequence.zoom === 'object') ? optsSequence.zoom.length : 0,
                         zoomVertexes: (typeof optsSequence.zoomVertex === 'object') ? optsSequence.zoomVertex.length : 0,
                         easings: (typeof optsSequence.easing === 'object') ? optsSequence.easing.length : 0,
                         durations: (typeof optsSequence.duration === 'object') ? optsSequence.duration.length : 0
@@ -389,7 +386,7 @@
                 slide: null,
                 prevDuration: null,
                 duration: null,
-                zoomDest: null,
+                zoom: null,
                 zoomVertex: null,
                 prevEasing: null,
                 easing: null,
@@ -405,14 +402,14 @@
                 },
                 
                 reset: function () {
-                    this.slide = this.duration = this.zoomDest = this.zoomVertex = this.easing = this.onEndTransSlideShow = null;
+                    this.slide = this.duration = this.zoom = this.zoomVertex = this.easing = this.onEndTransSlideShow = null;
                     this.cssAnim.totalTime = 0;
                 },
                 
                 setupNextTrans: function () {
                     this.slide = this.isPrevOrNext ? this.inputOpts.sequence : this.inputOpts.sequence[seqData.idx % seqData.qt.sequences];
                     this.prevDuration = this.duration = util.getSpeedMs(seqData.qt.durations == 0 ? this.inputOpts.duration : this.inputOpts.duration[seqData.idx % seqData.qt.durations]);
-                    this.zoomDest = seqData.qt.zoomDests == 0 ? this.inputOpts.zoomDest : this.inputOpts.zoomDest[seqData.idx % seqData.qt.zoomDests];
+                    this.zoom = seqData.qt.zooms == 0 ? this.inputOpts.zoom : this.inputOpts.zoom[seqData.idx % seqData.qt.zooms];
                     this.zoomVertex = seqData.qt.zoomVertexes == 0 ? this.inputOpts.zoomVertex : this.inputOpts.zoomVertex[seqData.idx % seqData.qt.zoomVertexes];
                     this.prevEasing = this.easing = seqData.qt.easings == 0 ? this.inputOpts.easing : this.inputOpts.easing[seqData.idx % seqData.qt.easings];
                 },
@@ -505,7 +502,7 @@
                     return sameDestSlideIdx;
                 },
 
-                animationWillRun: function (fromCenterTrans, toCenterTrans, zoomDest) {
+                animationWillRun: function (fromCenterTrans, toCenterTrans, zoom) {
                     var sameMatrices = function (matrix1, matrix2) {
                         var m2 = matrix2.slice();
                         util.multiplyMatrices(zoomUtil.getMatrixUserZoom(zoomUtil.zoom), m2);
@@ -514,23 +511,23 @@
                     return fromCenterTrans.x != toCenterTrans.x ||
                            fromCenterTrans.y != toCenterTrans.y ||
                            fromCenterTrans.z != toCenterTrans.z ||
-                           !util.areTheSame(zoomUtil.zoom, zoomDest) ||
+                           !util.areTheSame(zoomUtil.zoom, zoom) ||
                            !sameMatrices(data.slideData[this.anim.gotoSlideIdx].cssTransforms.ctmMatrix, transUtil.cache.matrixCTM_inv);
                 },
 
                 doTransitionCSS: function (event, optsTrans) {
                     var sameDestSlideIdx = this.prepareTransition(optsTrans),
                         toTransformations = data.slideData[this.anim.gotoSlideIdx].cssTransforms.transformations,
-                        zoomDest = zoomUtil.checkZoomBounds(zoomUtil.getZoomDest(optsTrans.zoomDest, this.anim.gotoSlideIdx)),
+                        zoom = zoomUtil.checkZoomBounds(zoomUtil.getZoom(optsTrans.zoom, this.anim.gotoSlideIdx)),
                         isLinearZoom = typeof optsTrans.zoomVertex === 'string' && optsTrans.zoomVertex == 'linear';
 
-                    if (this.animationWillRun(this.anim.centerPnt, data.slideData[this.anim.gotoSlideIdx].centerTrans, zoomDest)) {
+                    if (this.animationWillRun(this.anim.centerPnt, data.slideData[this.anim.gotoSlideIdx].centerTrans, zoom)) {
                         // medium (x, y) = (x=unknown for now, y=optsTrans.zoomVertex= min or max zoom represented by y-coordinate 
                         // that corresponds to minimum or maximun the function takes)
-                        zoomUtil.setZoomVertex(optsTrans.zoomVertex, this.anim.gotoSlideIdx, zoomDest);
+                        zoomUtil.setZoomVertex(optsTrans.zoomVertex, this.anim.gotoSlideIdx, zoom);
                         // get the coefficients [a, b, c] of a quadratic function that interpolates the following 3 points: 
 
-                        this.anim.zoomCoefs = util.getQuadratic2PntsVertex({ x: 0, y: zoomUtil.zoom }, { x: 1, y: zoomDest }, isLinearZoom ? 'linear' : zoomUtil.zoomVertex);
+                        this.anim.zoomCoefs = util.getQuadratic2PntsVertex({ x: 0, y: zoomUtil.zoom }, { x: 1, y: zoom }, isLinearZoom ? 'linear' : zoomUtil.zoomVertex);
                         var durationMs = optsTrans.duration * (sameDestSlideIdx ? 1 - this.anim.progress : 1),
                             animationName = 'rsSlideIt' + (+new Date()),
                             animData;
@@ -580,7 +577,7 @@
                         fromCenterTrans = { x: this.anim.centerPnt.x, y: this.anim.centerPnt.y, z: this.anim.centerPnt.z },
                         toCenterTrans = data.slideData[this.anim.gotoSlideIdx].centerTrans,
                         toTransformations = data.slideData[this.anim.gotoSlideIdx].cssTransforms.transformations,
-                        zoomDest = zoomUtil.checkZoomBounds(zoomUtil.getZoomDest(optsTrans.zoomDest, this.anim.gotoSlideIdx)),
+                        zoom = zoomUtil.checkZoomBounds(zoomUtil.getZoom(optsTrans.zoom, this.anim.gotoSlideIdx)),
                         isLinearZoom = typeof optsTrans.zoomVertex === 'string' && optsTrans.zoomVertex == 'linear',
                         durationMs = optsTrans.duration * (sameDestSlideIdx ? 1 - this.anim.progress : 1),
                         requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame,
@@ -627,12 +624,12 @@
                             transData.transitionDone(true);
                         };
 
-                    if (this.animationWillRun(fromCenterTrans, toCenterTrans, zoomDest)) {
+                    if (this.animationWillRun(fromCenterTrans, toCenterTrans, zoom)) {
                         // medium (x, y) = (x=unknown for now, y=optsTrans.zoomVertex= min or max zoom represented by y-coordinate 
                         // that corresponds to minimum or maximun the function takes)
-                        zoomUtil.setZoomVertex(optsTrans.zoomVertex, this.anim.gotoSlideIdx, zoomDest);
+                        zoomUtil.setZoomVertex(optsTrans.zoomVertex, this.anim.gotoSlideIdx, zoom);
                         // get the coefficients [a, b, c] of a quadratic function that interpolates the following 3 points: 
-                        this.anim.zoomCoefs = util.getQuadratic2PntsVertex({ x: 0, y: zoomUtil.zoom }, { x: 1, y: zoomDest }, isLinearZoom ? 'linear' : zoomUtil.zoomVertex);
+                        this.anim.zoomCoefs = util.getQuadratic2PntsVertex({ x: 0, y: zoomUtil.zoom }, { x: 1, y: zoom }, isLinearZoom ? 'linear' : zoomUtil.zoomVertex);
 
                         if ((seqData.state === $.fn.rsSlideIt.state.PLAY || !this.isThisPartOfSlideShow()) && optsTrans.onBegin) {
                             $viewport.triggerHandler('beginTrans.rsSlideIt', [data.activeSlide.index, this.anim.gotoSlideIdx]);
@@ -931,15 +928,15 @@
                         $viewport.triggerHandler('changeZoom.rsSlideIt', [this.zoom]);
                     }
                 },
-                setZoomVertex: function (zoomVertex, destSlide, zoomDest) {
+                setZoomVertex: function (zoomVertex, destSlide, zoom) {
                     if (typeof zoomVertex === 'string') {
                         switch (zoomVertex) {
                             case 'out':
-                                var min = Math.min(this.zoom, zoomDest);
+                                var min = Math.min(this.zoom, zoom);
                                 this.zoomVertex = min - (min - opts.zoomMin) * util.getDistanceTwoPnts(transData.anim.centerPnt, data.slideData[destSlide].center) / this.longestPath;
                                 break;
                             case 'in':
-                                var max = Math.max(this.zoom, zoomDest);
+                                var max = Math.max(this.zoom, zoom);
                                 this.zoomVertex = max + (opts.zoomMax - max) * util.getDistanceTwoPnts(transData.anim.centerPnt, data.slideData[destSlide].center) / this.longestPath;
                         }
                     } else {
@@ -947,7 +944,7 @@
                     }
                     this.zoomVertex = this.checkZoomBounds(this.zoomVertex);
                 },
-                getZoomDest: function (zDest, gotoSlideIdx) {
+                getZoom: function (zDest, gotoSlideIdx) {
                     if (typeof zDest === 'string') {
                         viewport.setCenterPos();
                         var slideData = data.slideData[gotoSlideIdx],
@@ -968,7 +965,7 @@
                 },
                 initZoom: function (z, zMin, slideIdx) {
                     this.zoom = zMin;
-                    this.zoom = this.checkZoomBounds(this.getZoomDest(z, slideIdx));
+                    this.zoom = this.checkZoomBounds(this.getZoom(z, slideIdx));
                 },
                 setterZoom: function (newZoom) {
                     viewport.setCenterPos();
@@ -986,6 +983,7 @@
                 elemPos: { x: 0, y: 0 },
                 width: 0,
                 height: 0,
+                mouseCoords: {},
                 beginPan: function (event) {
                     panUtil.startPage.x = event.pageX;
                     panUtil.startPage.y = event.pageY;
@@ -1003,34 +1001,46 @@
                 },
                 endPan: function () {
                     panUtil.isPanning = false;
+                    panUtil.mouseCoords = {};
                     $viewport.triggerHandler('endPan.rsSlideIt');
                 },
                 mousemove: function (event) {
-                    if (!panUtil.isPanning) {
-                        panUtil.beginPan(event);
-                    }
+                    // this condition is necessary to stop some browsers from firing mousemove when mouse is still (see Chrome on bind mousemove)
+                    var firstTime = !Object.keys(panUtil.mouseCoords).length;
+                    if (firstTime || panUtil.mouseCoords.x !== event.pageX || panUtil.mouseCoords.y !== event.pageY) {
+                        panUtil.mouseCoords.x = event.pageX;
+                        panUtil.mouseCoords.y = event.pageY;
+                        if (firstTime) {
+                            return;
+                        }
 
-                    var offset = { x: event.pageX - panUtil.startPage.x, y: event.pageY - panUtil.startPage.y, z: 0 };
-                    if (!data.isIE8orBelow) {
-                        offset = transUtil.getTransformedPoint(offset, transUtil.cache.matrixCTM_inv);
+                        if (!panUtil.isPanning) {
+                            panUtil.beginPan(event);
+                        }
+
+                        var offset = { x: event.pageX - panUtil.startPage.x, y: event.pageY - panUtil.startPage.y, z: 0 };
+                        if (!data.isIE8orBelow) {
+                            offset = transUtil.getTransformedPoint(offset, transUtil.cache.matrixCTM_inv);
+                        }
+                        transUtil.trans.x = panUtil.startTrans.x + offset.x;
+                        transUtil.trans.y = panUtil.startTrans.y + offset.y;
+                        transUtil.trans.z = panUtil.startTrans.z + offset.z;
+                        
+                        if (data.isIE8orBelow) {
+                            offset = transUtil.getTransformedPoint(offset, transUtil.cache.matrixCTM_inv);
+                        }
+                        viewport.world.$elem.css(transUtil.doMousePan(offset));
                     }
-                    transUtil.trans.x = panUtil.startTrans.x + offset.x;
-                    transUtil.trans.y = panUtil.startTrans.y + offset.y;
-                    transUtil.trans.z = panUtil.startTrans.z + offset.z;
-                    
-                    if (data.isIE8orBelow) {
-                        offset = transUtil.getTransformedPoint(offset, transUtil.cache.matrixCTM_inv);
-                    }
-                    viewport.world.$elem.css(transUtil.doMousePan(offset));
                 },
                 mousedown: function (event) {
+                    event.preventDefault();
                     if (event.which == 1) {
-                        data.$viewportAndTops.bind('mousemove.rsSlideIt', panUtil.mousemove);
+                        $viewport.bind('mousemove.rsSlideIt', panUtil.mousemove);
                         panUtil.isPanning = false;
                     }
-                    event.preventDefault();
                 },
                 mouseup: function (event) {
+                    event.preventDefault();
                     if (data.isIE8orBelow) {
                         var offset = { x: event.pageX - panUtil.startPage.x, y: event.pageY - panUtil.startPage.y };
                         transUtil.trans.x = panUtil.startTrans.x + offset.x;
@@ -1044,10 +1054,9 @@
                     if (event.which == 1) {
                         panUtil.stopImmediately();
                     }
-                    event.preventDefault();
                 },
                 stopImmediately: function () {
-                    data.$viewportAndTops.unbind('mousemove.rsSlideIt', panUtil.mousemove);
+                    $viewport.unbind('mousemove.rsSlideIt', panUtil.mousemove);
                     if (panUtil.isPanning) {
                         panUtil.endPan();
                     }
@@ -1411,7 +1420,7 @@
                 onMouseleave: function (event) {
                     if (panUtil.isPanning) {
                         var $mouseOn = $(document.elementFromPoint(event.clientX, event.clientY));
-                        if (!!$mouseOn && $mouseOn.closest(data.$viewportAndTops).length !== 1) {
+                        if (!!$mouseOn && $mouseOn.closest($viewport).length !== 1) {
                             event.which = 1;
                             panUtil.mouseup(event);
                         }
@@ -1497,21 +1506,21 @@
                 },
                 unbindMouseEvents: function () {
                     if (opts.mousePan) {
-                        data.$viewportAndTops.
+                        $viewport.
                             unbind('mousedown.rsSlideIt', this.onMousedown).
                             unbind('mouseup.rsSlideIt', this.onMouseup).
                             unbind('mouseleave.rsSlideIt', this.onMouseleave);
                     }
-                    data.$viewportAndTops.unbind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', events.onMouseWheel);
+                    $viewport.unbind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', events.onMouseWheel);
                 },
                 bindMouseEvents: function () {
                     if (opts.mousePan) {
-                        data.$viewportAndTops.
+                        $viewport.
                             bind('mousedown.rsSlideIt', this.onMousedown).
                             bind('mouseup.rsSlideIt', this.onMouseup).
                             bind('mouseleave.rsSlideIt', this.onMouseleave);
                     }
-                    data.$viewportAndTops.bind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', events.onMouseWheel);
+                    $viewport.bind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', events.onMouseWheel);
                 },
                 onGetter: function (event, field) {
                     switch (field) {
@@ -1626,7 +1635,7 @@
                         unbind('endDelay.rsSlideIt', events.onEndDelay).
                         unbind('userMousewheel.rsSlideIt', events.onUserMouseWheel);
 
-                    viewport.world.$slides.add(data.$elemsOnTop).
+                    viewport.world.$slides.
                         unbind('dblclick.rsSlideIt', events.onDblClick).
                         unbind('mouseup.rsSlideIt', events.onMouseupClick);
 
@@ -1649,7 +1658,7 @@
                         unbind('oanimationend.rsSlideIt', events.onCssAnimationEnd).
                         unbind('MSAnimationEnd.rsSlideIt', events.onCssAnimationEnd);
                     }
-                    data.$viewportAndTops.
+                    $viewport.
                         unbind('mousemove.rsSlideIt', panUtil.mousemove).
                         unbind('mousedown.rsSlideIt', this.onMousedown).
                         unbind('mouseup.rsSlideIt', this.onMouseup).
@@ -1851,7 +1860,9 @@
                             bind('endDelay.rsSlideIt', events.onEndDelay).
                             bind('userMousewheel.rsSlideIt', events.onUserMouseWheel);
 
-                        viewport.world.$slides.add(data.$elemsOnTop).bind('dblclick.rsSlideIt', events.onDblClick).bind('mouseup.rsSlideIt', events.onMouseupClick);
+                        viewport.world.$slides.
+                            bind('dblclick.rsSlideIt', events.onDblClick).
+                            bind('mouseup.rsSlideIt', events.onMouseupClick);
 
                         if (data.supportsCSSAnimation) { 
                             viewport.world.$elem.
@@ -2683,22 +2694,21 @@
 
     // public access to the default input parameters
     $.fn.rsSlideIt.defaults = {
+        slideSelector: 'img',   // jQuery selector string that specifies which elements are used as slides. Type: string.
+        initialSlide: 0,        // Active slide when plugin is initialized. Type: zero-based integer.
+        initialZoom: 1,         // Scale used when plugin is initialized. Type: positive floating point number or strings 'fitWidth' or 'fitHeight' or 'fit' or 'cover'.
+        width: null,            // Viewport width in pixels. If null then uses the width defined in CSS. Type: integer.
+        height: null,           // Viewport height in pixels. If null then uses the width defined in CSS. Type: integer.
+        mousePan: true,         // Determines whether mouse panning is allowed. Type: boolean.
+        mouseZoom: true,        // Determines whether mouse wheel is used to zoom in/out. The onMouseWheel event (see below) is called, even if mouseZoom is false. Type: boolean.
         zoomMin: 0.4,           // Minimum zoom possible. Type: floating point number greater than zero.
         zoomStep: 0.1,          // Value incremented to the current zoom, when mouse wheel moves up. When mouse wheel moves down, current zoom is decremented by this value.
                                 // To reverse direction, use negative zoomStep. To disable zoom on mouse wheel, do not set zoomStep to zero, but set mouseZoom to false instead. Type: floating point number.
         zoomMax: 30,            // Maximun zoom possible. Type: floating point number.
-        initialSlide: 0,        // Active slide when plugin is initialized. Type: zero-based integer.
-        initialZoom: 1,         // Scale used when plugin is initialized. Type: positive floating point number or strings 'fitWidth' or 'fitHeight' or 'fit' or 'cover'.
-        mouseZoom: true,        // Determines whether mouse wheel is used to zoom in/out. The onMouseWheel event (see below) is called, even if mouseZoom is false. Type: boolean.
-        mousePan: true,         // Determines whether mouse panning is allowed. Type: boolean.
-        width: null,            // Viewport width in pixels. If null then uses the width defined in CSS. Type: integer.
-        height: null,           // Viewport height in pixels. If null then uses the width defined in CSS. Type: integer.
         data3D: {
             viewportClass: 'transf3D', // Class(es) added to the viewport element if browser does support 3D transformations (requires Modernizr lib with "CSS 3D Transforms" detection feature). Type: string.
             perspective: 500
         },
-        slideSelector: 'img',
-        elementsOnTopSelector: null,
         events: {
             onCreate: null,                 // Fired when plug-in has been initialized. Type: function (event).
             onAjaxLoadBegin: null,          // Fired before starting to make ajax requests. Type: function (event, qtTotal).
@@ -2712,7 +2722,7 @@
             onDblClickSlide: function (event, $slide, index) { // Fired when a slide receives a double mouse click. Type: function (event, $slide, index).
                 $(event.target).rsSlideIt('transition', {   // Custom onDblClickSlide defined by default.
                     slide: index,
-                    zoomDest: 'fit'
+                    zoom: 'fit'
                 });
             }
         }
@@ -2722,7 +2732,7 @@
     $.fn.rsSlideIt.defaultsTransition = {
         slide: 'next',          // zero-based positive integer or 'prev' or 'next' or 'first' or 'last'. Type: positive integer or string.
         duration: 'normal',     // duration in milliseconds or a jQuery string alias. Type: positive integer or string.
-        zoomDest: 1,            // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'cover'. Type: positive floating point number or string.
+        zoom: 1,                // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'cover'. Type: positive floating point number or string.
         zoomVertex: 'linear',   // positive real number or 'out' or 'in' or 'linear'. Type: positive floating point number or string.
         easing: 'swing',        // Easing function (@see http://api.jquery.com/animate/#easing). Type: string.
         onBegin: null,          // event handler called when this transition starts to run. Type: function(event, fromSlide, toSlide)
@@ -2733,7 +2743,7 @@
     $.fn.rsSlideIt.defaultsPlayPause = {
         sequence: 'next',       // Type: array of positive integers or a string 'prev' or a string 'next'
         delayOnSlide: 2000,     // positive integer or string or array of positive integers/strings.
-        zoomDest: 1,            // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'cover' or an array of positive real numbers and strings
+        zoom: 1,                // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'cover' or an array of positive real numbers and strings
         zoomVertex: 'linear',   // positive real number or 'out' or 'in' or 'linear' or an arrays of positive real numbers and strings
         easing: 'swing',        // Easing function used in transitions (@see http://api.jquery.com/animate/#easing). Type: string or array of strings.
         duration: 600,          // positive integer or string or array of positive integers/strings.
