@@ -842,7 +842,7 @@
                               m[1]*(m[5]*m[6] - m[3]*m[8]) +
                               m[2]*(m[3]*m[7] - m[4]*m[6]);
                     if (this.isAlmostZero(det)) {
-                        return m.splice();
+                        return m.slice();
                     }
                     return [
                         (m[4]*m[8] - m[5]*m[7])/det, (m[2]*m[7] - m[1]*m[8])/det, (m[1]*m[5] - m[2]*m[4])/det,
@@ -924,7 +924,7 @@
                     }
                 },
                 invokeChangeZoom: function (prevZoom) {
-                    if (prevZoom != this.zoom && opts.events.onChangeZoom) {
+                    if (Math.abs(prevZoom - this.zoom) > 0.0005 && opts.events.onChangeZoom) {
                         $viewport.triggerHandler('changeZoom.rsSlideIt', [this.zoom]);
                     }
                 },
@@ -947,17 +947,11 @@
                 getZoom: function (zDest, gotoSlideIdx) {
                     if (typeof zDest === 'string') {
                         viewport.setCenterPos();
-                        var slideData = data.slideData[gotoSlideIdx],
-                            fit = {
-                                x: viewport.center.x * 2 / (slideData.padding[3] + slideData.size.x + slideData.padding[1]),
-                                y: viewport.center.y * 2 / (slideData.padding[0] + slideData.size.y + slideData.padding[2])
-                            };
+                        var slideData = data.slideData[gotoSlideIdx];
                         switch (zDest) {
                             case 'current': return this.zoom;
-                            case 'fitWidth': return fit.x;
-                            case 'fitHeight': return fit.y;
-                            case 'fit': return Math.min(fit.x, fit.y);
-                            case 'cover': return Math.max(viewport.center.x * 2 / slideData.size.x, viewport.center.y * 2 / slideData.size.y);
+                            case 'fit': return Math.min(viewport.center.x * 2 / (slideData.padding[3] + slideData.size.x + slideData.padding[1]), viewport.center.y * 2 / (slideData.padding[0] + slideData.size.y + slideData.padding[2]));
+                            case 'fill': return Math.max(viewport.center.x * 2 / slideData.size.x, viewport.center.y * 2 / slideData.size.y);
                             default: return this.zoom;
                         }
                     }
@@ -1019,14 +1013,14 @@
                         }
 
                         var offset = { x: event.pageX - panUtil.startPage.x, y: event.pageY - panUtil.startPage.y, z: 0 };
-                        if (!data.isIE8orBelow) {
+                        if (!data.isIE9 && !data.isIE8orBelow) {
                             offset = transUtil.getTransformedPoint(offset, transUtil.cache.matrixCTM_inv);
                         }
                         transUtil.trans.x = panUtil.startTrans.x + offset.x;
                         transUtil.trans.y = panUtil.startTrans.y + offset.y;
                         transUtil.trans.z = panUtil.startTrans.z + offset.z;
                         
-                        if (data.isIE8orBelow) {
+                        if (data.isIE9 || data.isIE8orBelow) {
                             offset = transUtil.getTransformedPoint(offset, transUtil.cache.matrixCTM_inv);
                         }
                         viewport.world.$elem.css(transUtil.doMousePan(offset));
@@ -1253,30 +1247,20 @@
                         };
                     } else {
                         // translate3d is used to enable hardware optimization on css animations
-                        var matrixCss, origCss = this.orig.x.toFixed(0) + 'px ' + this.orig.y.toFixed(0) + 'px ' + this.orig.z.toFixed(0) + 'px';
+                        var matrixCss, origCss;
                         if (data.supportsCSSTransforms3D) {
+                            origCss = this.orig.x.toFixed(0) + 'px ' + this.orig.y.toFixed(0) + 'px ' + this.orig.z.toFixed(0) + 'px';
                             matrixCss = 'matrix3d(' + m.slice(0, 3) + ',0, '
                                                     + m.slice(3, 6) + ',0, '
                                                     + m.slice(6, 9) + ',0, '
-                                                    + this.trans.x + ',' + this.trans.y + ',' + this.trans.z +',1)';
+                                                    + this.trans.x + ',' + this.trans.y + ',' + this.trans.z + ',1)';
                         } else {
+                            origCss = this.orig.x.toFixed(0) + 'px ' + this.orig.y.toFixed(0) + 'px';
                             matrixCss = 'matrix(' + m.slice(0, 2) + ','
                                                   + m.slice(3, 5) + ','
-                                                  + this.trans.x + ',' + this.trans.y + ') translate3d(0,0,0)';
+                                                  + this.trans.x + ',' + this.trans.y + ')';
                         }
                         return {
-                            '-webkit-transform-origin': origCss,
-                            '-moz-transform-origin': origCss,
-                            '-o-transform-origin': origCss,
-                            'msTransformOrigin': origCss,
-                            'transform-origin': origCss,
-                            
-                            '-webkit-transform': matrixCss,
-                            '-moz-transform': matrixCss,
-                            '-o-transform': matrixCss,
-                            'msTransform': matrixCss,
-                            'transform': matrixCss,
-
                             // prevents some flickering effect even in 2D css animations
                             '-webkit-backface-visibility': 'hidden',
                             '-moz-backface-visibility': 'hidden',
@@ -1284,7 +1268,19 @@
                             'backface-visibility': 'hidden',
                             '-webkit-transform-style': 'preserve-3d',
                             '-moz-transform-style': 'preserve-3d',
-                            'transform-style': 'preserve-3d'
+                            'transform-style': 'preserve-3d',
+
+                            '-webkit-transform': matrixCss,
+                            '-moz-transform': matrixCss,
+                            '-o-transform': matrixCss,
+                            'msTransform': matrixCss,
+                            'transform': matrixCss,
+
+                            '-webkit-transform-origin': origCss,
+                            '-moz-transform-origin': origCss,
+                            '-o-transform-origin': origCss,
+                            'msTransformOrigin': origCss,
+                            'transform-origin': origCss
                         };
                     }
                 },
@@ -1672,14 +1668,15 @@
                         });
                     }
                     if (data.supportsCSSTransforms3D) {
-                        if (opts.data3D.viewportClass) {
-                            $viewport.removeClass(opts.data3D.viewportClass);
-                        }
                         $viewport.css({
                             '-webkit-perspective': '',
                             '-moz-perspective': '',
                             'perspective': ''
                         });
+                    } else {
+                        if (opts.transf3D.no3DFalbackClass) {
+                            $viewport.removeClass(opts.transf3D.no3DFalbackClass);
+                        }
                     }
                     if (!!opts.width) { $viewport.css('width', ''); }
                     if (!!opts.height) { $viewport.css('height', ''); }
@@ -1871,14 +1868,15 @@
 
                     opts.initialZoom = opts.initialZoom < opts.Min ? opts.Min : (opts.initialZoom > opts.Max ? opts.Max : opts.initialZoom);
                     if (data.supportsCSSTransforms3D) {
-                        if (opts.data3D.viewportClass) {
-                            $viewport.addClass(opts.data3D.viewportClass);
-                        }
                         $viewport.css({
-                            '-webkit-perspective': opts.data3D.perspective + 'px',
-                            '-moz-perspective': opts.data3D.perspective + 'px',
-                            'perspective': opts.data3D.perspective + 'px'
+                            '-webkit-perspective': opts.transf3D.perspective + 'px',
+                            '-moz-perspective': opts.transf3D.perspective + 'px',
+                            'perspective': opts.transf3D.perspective + 'px'
                         });
+                    } else {
+                        if (opts.transf3D.no3DFalbackClass) {
+                            $viewport.addClass(opts.transf3D.no3DFalbackClass);
+                        }
                     }
                     if (data.qtSlides > 0) {
                         $viewport.
@@ -1961,14 +1959,7 @@
                 },
                 getTransformInfo: function ($slide, outerSize) {
                     var getTransformFromDataAttr = function () {
-                            var value = null;
-                            if (data.supportsCSSTransforms3D) {
-                                value = $slide.attr('data-transform3D');
-                            } else {
-                                if (!util.isDefined(value)) {
-                                    value = $slide.attr('data-transform2D');
-                                }
-                            }
+                            var value = $slide.attr(data.supportsCSSTransforms3D ? 'data-transform3D' : 'data-transform2D');
                             if (!util.isDefined(value)) {
                                 value = $slide.attr('data-transform');
                             }
@@ -2250,7 +2241,7 @@
                                 id: transUtil.transID.MATRIX,
                                 valueIdent: transUtil.getMatrixIdentity(),
                                 valueInv: matrixInv,
-                                matrix: allTrans.ctmMatrix.splice(),
+                                matrix: allTrans.ctmMatrix.slice(),
                                 matrixInv: matrixInv
                             });
                             return allTrans;
@@ -2658,7 +2649,7 @@
             }
         }
         var opts = $.extend({}, $.fn.rsSlideIt.defaults, options);
-        opts.data3D = $.extend({}, $.fn.rsSlideIt.defaults.data3D, options ? options.data3D : options);
+        opts.transf3D = $.extend({}, $.fn.rsSlideIt.defaults.transf3D, options ? options.transf3D : options);
         opts.events = $.extend({}, $.fn.rsSlideIt.defaults.events, options ? options.events : options);
 
         return this.each(function () {
@@ -2675,7 +2666,7 @@
     $.fn.rsSlideIt.defaults = {
         slideSelector: 'img',   // jQuery selector string that specifies which elements are used as slides. Type: string.
         initialSlide: 0,        // Active slide when plugin is initialized. Type: zero-based integer.
-        initialZoom: 1,         // Scale used when plugin is initialized. Type: positive floating point number or strings 'fitWidth' or 'fitHeight' or 'fit' or 'cover'.
+        initialZoom: 1,         // Scale used when plugin is initialized. Type: positive floating point number or strings 'fit' and 'fill'.
         width: null,            // Viewport width in pixels. If null then uses the width defined in CSS. Type: integer.
         height: null,           // Viewport height in pixels. If null then uses the width defined in CSS. Type: integer.
         mousePan: true,         // Determines whether mouse panning is allowed. Type: boolean.
@@ -2684,9 +2675,9 @@
         zoomStep: 0.1,          // Value incremented to the current zoom, when mouse wheel moves up. When mouse wheel moves down, current zoom is decremented by this value.
                                 // To reverse direction, use negative zoomStep. To disable zoom on mouse wheel, do not set zoomStep to zero, but set mouseZoom to false instead. Type: floating point number.
         zoomMax: 30,            // Maximun zoom possible. Type: floating point number.
-        data3D: {
-            viewportClass: 'transf3D', // Class(es) added to the viewport element if browser does support 3D transformations (requires Modernizr lib with "CSS 3D Transforms" detection feature). Type: string.
-            perspective: 500
+        transf3D: {
+            no3DFalbackClass: 'no3D', // Class(es) added to the viewport when 3D transformations are not supported (requires Modernizr lib with "CSS 3D Transforms" detection feature). Type: string.
+            perspective: 500          // CSS perspective property set to the viewport when 3D transformations are supported. Type: integer.
         },
         events: {
             onCreate: null,                 // Fired when plug-in has been initialized. Type: function (event).
@@ -2711,7 +2702,7 @@
     $.fn.rsSlideIt.defaultsTransition = {
         slide: 'next',          // zero-based positive integer or 'prev' or 'next' or 'first' or 'last'. Type: positive integer or string.
         duration: 'normal',     // duration in milliseconds or a jQuery string alias. Type: positive integer or string.
-        zoom: 1,                // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'cover'. Type: positive floating point number or string.
+        zoom: 1,                // positive real number or 'current' or 'fit' or 'fill'. Type: positive floating point number or string.
         zoomVertex: 'linear',   // positive real number or 'out' or 'in' or 'linear'. Type: positive floating point number or string.
         easing: 'swing',        // Easing function (@see http://api.jquery.com/animate/#easing). Type: string.
         onBegin: null,          // event handler called when this transition starts to run. Type: function(event, fromSlide, toSlide)
@@ -2722,7 +2713,7 @@
     $.fn.rsSlideIt.defaultsPlayPause = {
         sequence: 'next',       // Type: array of positive integers or a string 'prev' or a string 'next'
         delayOnSlide: 2000,     // positive integer or string or array of positive integers/strings.
-        zoom: 1,                // positive real number or 'current' or 'fitWidth' or 'fitHeight' or 'fit' or 'cover' or an array of positive real numbers and strings
+        zoom: 1,                // positive real number or 'current' or 'fit' or 'fill' or an array of positive real numbers and strings
         zoomVertex: 'linear',   // positive real number or 'out' or 'in' or 'linear' or an arrays of positive real numbers and strings
         easing: 'swing',        // Easing function used in transitions (@see http://api.jquery.com/animate/#easing). Type: string or array of strings.
         duration: 600,          // positive integer or string or array of positive integers/strings.
