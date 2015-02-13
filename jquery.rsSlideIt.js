@@ -1013,14 +1013,14 @@
                         }
 
                         var offset = { x: event.pageX - panUtil.startPage.x, y: event.pageY - panUtil.startPage.y, z: 0 };
-                        if (!data.isIE9 && !data.isIE8orBelow) {
+                        if (!data.isIE8orBelow) {
                             offset = transUtil.getTransformedPoint(offset, transUtil.cache.matrixCTM_inv);
                         }
                         transUtil.trans.x = panUtil.startTrans.x + offset.x;
                         transUtil.trans.y = panUtil.startTrans.y + offset.y;
                         transUtil.trans.z = panUtil.startTrans.z + offset.z;
                         
-                        if (data.isIE9 || data.isIE8orBelow) {
+                        if (data.isIE8orBelow) {
                             offset = transUtil.getTransformedPoint(offset, transUtil.cache.matrixCTM_inv);
                         }
                         viewport.world.$elem.css(transUtil.doMousePan(offset));
@@ -2691,8 +2691,7 @@
             onClickSlide: null,             // Fired when a slide receives a single mouse click. Type: function (event, $slide, index).
             onDblClickSlide: function (event, $slide, index) { // Fired when a slide receives a double mouse click. Type: function (event, $slide, index).
                 $(event.target).rsSlideIt('transition', {   // Custom onDblClickSlide defined by default.
-                    slide: index,
-                    zoom: 'fit'
+                    slide: index
                 });
             }
         }

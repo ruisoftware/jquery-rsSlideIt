@@ -83,7 +83,7 @@
         }
 
         .no3D #top {
-            -ms-transform: matrix(2,0,0,.5,0,0);
+            -ms-transform: rotate(30deg);
         }
         .no3D #left,
         .no3D #right,
@@ -140,7 +140,7 @@
             $("#next").click(function() {
                 $("#viewport").rsSlideIt('transition', {
                     slide: 'next',
-                    zoom: 'fit',
+                    zoom: 1,
                     duration: 1000,
                     zoomVertex: .5
                 });
