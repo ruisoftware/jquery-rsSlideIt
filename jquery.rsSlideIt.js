@@ -9,8 +9,8 @@
 *
 * For info, please scroll to the bottom.
 */
-(function ($, undefined) {
-    var SlideItClass = function ($viewport, opts) {
+(function($, undefined) {
+    var SlideItClass = function($viewport, opts) {
         var data = {
                 slideData: [],
                 qtSlides: 0,
@@ -23,16 +23,16 @@
                     $slide: null,
                     index: -1
                 },
-                init: function () {
+                init: function() {
                     this.qtSlides = viewport.world.$slides.length;
 
                     // to prevent the default behaviour in IE when dragging an element
-                    $viewport.add(viewport.world.$elem).add(viewport.world.$slides).each(function () {
-                        this.ondragstart = this.onselectstart = function () { return false; };
+                    $viewport.add(viewport.world.$elem).add(viewport.world.$slides).each(function() {
+                        this.ondragstart = this.onselectstart = function() { return false; };
                     });
                     this.initBrowsers();
                 },
-                initBrowsers: function () {
+                initBrowsers: function() {
                     var matches = navigator.userAgent.match(/MSIE (\d+\.\d+);/);
                     if (!!matches && matches.length === 2) {
                         var version = util.toInt(matches[1]);
@@ -45,10 +45,10 @@
                         }
                     }
                 },
-                checkSlideBounds: function (slideIdx) {
+                checkSlideBounds: function(slideIdx) {
                     return slideIdx < 0 ? 0 : (slideIdx > this.qtSlides - 1 ? data.qtSlides - 1 : slideIdx);
                 },
-                gotoSlide: function (slide) {
+                gotoSlide: function(slide) {
                     transUtil.setActiveSlide(slide);
                     viewport.world.$elem.css(transUtil.getTransformCSS());
                     if (seqData.userInteract) {
@@ -62,11 +62,11 @@
                     $elem: null,                // this element is created dynamically as the child element of $viewport. World.$elem is the parent of all $slides
                     IEorigSize: { x: 0, y: 0 }, // IE needs to compute based on untransformed (original) viewport size
                     $slides: null,              // set with all slide elements
-                    setFinalSize: function () {
+                    setFinalSize: function() {
                         this.IEorigSize.x = this.$elem.width();
                         this.IEorigSize.y = this.$elem.height();
                     },
-                    init: function () {
+                    init: function() {
                         $viewport.wrapInner('<div/>');
                         this.$elem = $('div:eq(0)', $viewport);
                         this.$elem.css({
@@ -77,11 +77,11 @@
                     }
                 },
                 center: { x: 0, y: 0 },
-                setCenterPos: function () {
+                setCenterPos: function() {
                     this.center.x = $viewport.width() / 2;
                     this.center.y = $viewport.height() / 2;
                 },
-                init: function () {
+                init: function() {
                     if (!!opts.width) { $viewport.css('width', opts.width); }
                     if (!!opts.height) { $viewport.css('height', opts.height); }
                     $viewport.css('overflow', 'hidden').scrollLeft(0).scrollTop(0);
@@ -100,7 +100,7 @@
                 userInteract: true,
                 onBeginDelay: null,
                 onEndDelay: null,
-                init: function (optsSequence) {
+                init: function(optsSequence) {
                     this.idx = 0;
                     this.state = $.fn.rsSlideIt.state.PLAY;
                     transData.reset();
@@ -122,9 +122,9 @@
                     };
                 },
 
-                doSlideshow: function (event) {
-                    var runTransition = function () {
-                        transData.onEndTransSlideShow = function () {
+                doSlideshow: function() {
+                    var runTransition = function() {
+                        transData.onEndTransSlideShow = function() {
                             if (seqData.state === $.fn.rsSlideIt.state.PAUSE ||
                                 seqData.state === $.fn.rsSlideIt.state.PLAY && (seqData.repeat == -1 || seqData.idx % seqData.qt.sequences > 0 || seqData.repeat-- > 0)) {
 
@@ -187,20 +187,20 @@
                     gotoSlideIdx: 0,
                     progressPausedOn: null,
                     zoomCoefs: null,
-                    start: function (center) {
+                    start: function(center) {
                         this.progress = 0;
                         this.centerPnt.x = center.x;
                         this.centerPnt.y = center.y;
                         this.centerPnt.z = center.z;
                     },
-                    setLastStep: function () {
+                    setLastStep: function() {
                         for (var i = this.transfsFadeToIdentity.length - 1; i > -1; --i) {
                             var transformation = this.transfsFadeToIdentity[i];
                             transformation.lastStep = util.interpolate(transformation.lastStep, 0, this.progress);
                         }
                         transData.animating = true;
                     },
-                    pushTransformations: function (transformationsArray, interruptedDuringTransition) {
+                    pushTransformations: function(transformationsArray, interruptedDuringTransition) {
                         var easingFunc = !!transData.prevEasing ? $.easing[transData.prevEasing] : null,
                             value = interruptedDuringTransition ? this.progress : 1,
                             valueWithEasing = !!easingFunc ? easingFunc(value, transData.prevDuration * value, 0, 1, transData.prevDuration) : value,
@@ -217,10 +217,10 @@
                             });
                         }
                     },
-                    clearTransformations: function () {
+                    clearTransformations: function() {
                         this.transfsFadeToIdentity = [];
                     },
-                    interrupt: function () {
+                    interrupt: function() {
                         // stops js request frame animation
                         if (this.requestIdAnimationFrame !== null) {
                             var cancelAnimationFrame = window.cancelAnimationFrame || window.mozCancelAnimationFrame || window.webkitCancelAnimationFrame || window.msCancelAnimationFrame
@@ -251,11 +251,11 @@
                         }
                         transData.finished(true, true);
                     },
-                    computeIntermediateMatrix: function (now, doEasing, toTransformations, noCalcInvMatrix, calcZoomValue) {
+                    computeIntermediateMatrix: function(now, doEasing, toTransformations, noCalcInvMatrix, calcZoomValue) {
                         // doEasing is false for JS animations, because the $.animate() already takes care of easing.
                         // doEasing is true for CSS3 animations, since the easing needs to be handled manually
                         var i, transformation, interpolateFactor, userZoom,
-                            calcMatrix = function (transformation, interpolate) {
+                            calcMatrix = function(transformation, interpolate) {
                                 var value;
                                 switch (transformation.id) {
                                     case transUtil.transID.MATRIX:
@@ -314,16 +314,16 @@
                     startTime: 0,
                     totalTime: 0,
                     intervalId: null,
-                    getFrames: function (fromCenterTrans, toCenterTrans, toTransformations, easing, durationMs) {
+                    getFrames: function(fromCenterTrans, toCenterTrans, toTransformations, easing, durationMs) {
                         var css = '', animEasingFunc, animValue,
-                            addMatrix = function (orig) {
+                            addMatrix = function(orig) {
                                 return 'XXtransform:matrix('
                                     + transUtil.cache.matrixCTM.slice(0, 2) + ','
                                     + transUtil.cache.matrixCTM.slice(3, 5) + ','
                                     + (viewport.center.x - orig.x).toFixed(2) + ','
                                     + (viewport.center.y - orig.y).toFixed(2) + ') translate3d(0,0,0);}\n';
                             },
-                            addMatrix3D = function (orig) {
+                            addMatrix3D = function(orig) {
                                 return 'XXtransform:matrix3d('
                                     + transUtil.cache.matrixCTM.slice(0, 3) + ',0,'
                                     + transUtil.cache.matrixCTM.slice(3, 6) + ',0,'
@@ -347,7 +347,7 @@
                         transUtil.cache.matrixCTM_inv = util.getInvertedMatrix(transUtil.cache.matrixCTM);
                         return css;
                     },
-                    interrupt: function () {
+                    interrupt: function() {
                         this.totalTime += +new Date() - this.startTime;
                         transData.anim.progress = this.totalTime / transData.prevDuration;
                         transData.anim.progress = transData.anim.progress > 1 ? 1 : transData.anim.progress;
@@ -374,7 +374,7 @@
                         }
                         transData.finished(true, true);
                     },
-                    resetCSSanimation: function () {
+                    resetCSSanimation: function() {
                         viewport.world.$elem.css(transUtil.getTransformCSSstyle()).css({
                             '-webkit-animation': '',
                             '-moz-animation': '',
@@ -397,16 +397,16 @@
                 isPrevOrNext: false,
                 animating: false,
                 
-                isThisPartOfSlideShow: function () { // slide show is running? (true) Or just a single transition is running? (false)
+                isThisPartOfSlideShow: function() { // slide show is running? (true) Or just a single transition is running? (false)
                     return !!this.onEndTransSlideShow;
                 },
                 
-                reset: function () {
+                reset: function() {
                     this.slide = this.duration = this.zoom = this.zoomVertex = this.easing = this.onEndTransSlideShow = null;
                     this.cssAnim.totalTime = 0;
                 },
                 
-                setupNextTrans: function () {
+                setupNextTrans: function() {
                     this.slide = this.isPrevOrNext ? this.inputOpts.sequence : this.inputOpts.sequence[seqData.idx % seqData.qt.sequences];
                     this.prevDuration = this.duration = util.getSpeedMs(seqData.qt.durations == 0 ? this.inputOpts.duration : this.inputOpts.duration[seqData.idx % seqData.qt.durations]);
                     this.zoom = seqData.qt.zooms == 0 ? this.inputOpts.zoom : this.inputOpts.zoom[seqData.idx % seqData.qt.zooms];
@@ -414,12 +414,12 @@
                     this.prevEasing = this.easing = seqData.qt.easings == 0 ? this.inputOpts.easing : this.inputOpts.easing[seqData.idx % seqData.qt.easings];
                 },
                 
-                interrupt: function () {
+                interrupt: function() {
                     data.supportsCSSAnimation ? this.cssAnim.interrupt() : this.anim.interrupt();
                 },
                 
-                finished: function (finishedWithAnimation, interrupted) {
-                    var done = function () {
+                finished: function(finishedWithAnimation, interrupted) {
+                    var done = function() {
                         if (seqData.timeoutId) {
                             $viewport.triggerHandler('endDelay.rsSlideIt', [transData.anim.gotoSlideIdx]);
                         }                            
@@ -456,11 +456,11 @@
                     }
                 },
                 
-                doTransition: function (event, optsTrans) {
+                doTransition: function(event, optsTrans) {
                     data.supportsCSSAnimation ? this.doTransitionCSS(event, optsTrans) : this.doTransitionJS(event, optsTrans);
                 },
 
-                prepareTransition: function (optsTrans) {
+                prepareTransition: function(optsTrans) {
                     var sameDestSlideIdx = false;
                     if (this.animating) {
                         if (this.isThisPartOfSlideShow()) { 
@@ -502,8 +502,8 @@
                     return sameDestSlideIdx;
                 },
 
-                animationWillRun: function (fromCenterTrans, toCenterTrans, zoom) {
-                    var sameMatrices = function (matrix1, matrix2) {
+                animationWillRun: function(fromCenterTrans, toCenterTrans, zoom) {
+                    var sameMatrices = function(matrix1, matrix2) {
                         var m2 = matrix2.slice();
                         util.multiplyMatrices(zoomUtil.getMatrixUserZoom(zoomUtil.zoom), m2);
                         return util.areMatricesEqual(matrix1, m2);
@@ -515,7 +515,7 @@
                            !sameMatrices(data.slideData[this.anim.gotoSlideIdx].cssTransforms.ctmMatrix, transUtil.cache.matrixCTM_inv);
                 },
 
-                doTransitionCSS: function (event, optsTrans) {
+                doTransitionCSS: function(event, optsTrans) {
                     var sameDestSlideIdx = this.prepareTransition(optsTrans),
                         toTransformations = data.slideData[this.anim.gotoSlideIdx].cssTransforms.transformations,
                         zoom = zoomUtil.checkZoomBounds(zoomUtil.getZoom(optsTrans.zoom, this.anim.gotoSlideIdx)),
@@ -553,7 +553,7 @@
                         '</style>');
 
                         // for some complex css3 animations, Chrome does not flush the whole animation data, hence the need for a timeout to fix this issue 
-                        setTimeout(function () {
+                        setTimeout(function() {
                             var animTrigger = animationName + ' ' + durationMs + 'ms linear forwards';
                             viewport.world.$elem.css({
                                 '-webkit-animation': animTrigger,
@@ -572,7 +572,7 @@
                     }
                 },
 
-                doTransitionJS: function (event, optsTrans) {
+                doTransitionJS: function(event, optsTrans) {
                     var sameDestSlideIdx = this.prepareTransition(optsTrans),
                         fromCenterTrans = { x: this.anim.centerPnt.x, y: this.anim.centerPnt.y, z: this.anim.centerPnt.z },
                         toCenterTrans = data.slideData[this.anim.gotoSlideIdx].centerTrans,
@@ -583,12 +583,12 @@
                         requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame,
                         startTimeStamp = null,
                         animEasingFunc = $.easing[optsTrans.easing],
-                        doRequestFirstFrame = function (timeStamp) {
+                        doRequestFirstFrame = function(timeStamp) {
                             startTimeStamp = timeStamp;
                             doStep(0);
                             transData.anim.requestIdAnimationFrame = requestAnimationFrame(doRequestFrame);
                         },
-                        doRequestFrame = function (timeStamp) {
+                        doRequestFrame = function(timeStamp) {
                             var now = (timeStamp - startTimeStamp)/durationMs;
                             if (now < 1) {
                                 doStep(animEasingFunc ? animEasingFunc(now, durationMs*now, 0, 1, durationMs) : now);
@@ -599,7 +599,7 @@
                                 doComplete();
                             }
                         },
-                        doStep = function (now) {
+                        doStep = function(now) {
                             var prevZoom = zoomUtil.zoom;
                             transData.anim.progress = now;
                             transData.anim.centerPnt = util.interpolatePoint(fromCenterTrans, toCenterTrans, now);
@@ -620,7 +620,7 @@
                             viewport.world.$elem.css(transUtil.getTransformCSSstyle());
                             zoomUtil.invokeChangeZoom(prevZoom);
                         },
-                        doComplete = function () {
+                        doComplete = function() {
                             transData.transitionDone(true);
                         };
 
@@ -665,7 +665,7 @@
                         this.transitionDone(false);
                     }
                 },
-                transitionDone: function (finishedWithAnimation) {
+                transitionDone: function(finishedWithAnimation) {
                     if (!!this.anim.zoomCoefs) {
                         zoomUtil.zoom = util.getQuadraticValue(this.anim.zoomCoefs, 1);
                     }
@@ -681,7 +681,7 @@
             },
 
             util = {
-                warn: function (msg, alertIfWarnNoSupported) {
+                warn: function(msg, alertIfWarnNoSupported) {
                     if (window.console) {
                         window.console.warn(msg);
                     } else {
@@ -690,42 +690,42 @@
                         }
                     }
                 },
-                isAlmostZero: function (a, maxDelta) {
+                isAlmostZero: function(a, maxDelta) {
                     return this.areTheSame(a, 0, maxDelta);
                 },
-                isAlmostOne: function (a, maxDelta) {
+                isAlmostOne: function(a, maxDelta) {
                     return this.areTheSame(a, 1, maxDelta);
                 },
-                areTheSame: function (a, b, maxDelta) {
+                areTheSame: function(a, b, maxDelta) {
                     return Math.abs(a - b) < (maxDelta === undefined ? 0.00005 : maxDelta);
                 },
-                roundToTrigonometricBounds: function (value) {
+                roundToTrigonometricBounds: function(value) {
                     return util.isAlmostZero(value) ? 0 : (util.isAlmostOne(value) ? 1 : (util.isAlmostZero(value + 1) /* testing for -1 */ ? -1 : value));
                 },
-                roundMatrixToTrigonometricBounds: function (matrix) {
+                roundMatrixToTrigonometricBounds: function(matrix) {
                     for (var i = 0, len = matrix.length; i < len; ++i) {
                         matrix[i] = this.roundToTrigonometricBounds(matrix[i]);
                     }
                 },
-                toInt: function (str) {
+                toInt: function(str) {
                     var value = !str || str == 'auto' || str == '' ? 0 : parseInt(str, 10);
                     return isNaN(value) ? 0 : value;
                 },
-                toFloat: function (str) {
+                toFloat: function(str) {
                     var value = !str || str == 'auto' || str == '' ? 0.0 : parseFloat(str);
                     return isNaN(value) ? 0.0 : value;
                 },
-                interpolate: function (from, to, percent) {
+                interpolate: function(from, to, percent) {
                     return (to - from)*percent + from;
                 },
-                interpolatePoint: function (from, to, percent) {
+                interpolatePoint: function(from, to, percent) {
                     return { 
                         x: (to.x - from.x)*percent + from.x,
                         y: (to.y - from.y)*percent + from.y,
                         z: (to.z - from.z)*percent + from.z
                     };
                 },
-                interpolateMatrix: function (from, to, percent) {
+                interpolateMatrix: function(from, to, percent) {
                     return [
                         (to[0] - from[0])*percent + from[0],
                         (to[1] - from[1])*percent + from[1],
@@ -740,7 +740,7 @@
                         (to[8] - from[8])*percent + from[8]
                     ];
                 },
-                getDistanceTwoPnts: function (p1, p2) {
+                getDistanceTwoPnts: function(p1, p2) {
                     var pt = [p1.x - p2.x, p1.y - p2.y, p1.z - p2.z];
                     return Math.sqrt(pt[0]*pt[0] + pt[1]*pt[1] + pt[2]*pt[2]);
                 },
@@ -749,7 +749,7 @@
                 // These 3 points should be distinct and cannot share the same X
                 // The quadratic function is f(x) = y = ax^2 + bx + c
                 // which means that [a, b, c] are such, that f(p1.x)=p1.y and f(p2.x)=p2.y and f(p3.x)=p3.y
-                getQuadratic: function (p1, p2, p3) {
+                getQuadratic: function(p1, p2, p3) {
                     // is p2.y is the minimum/maximum y-coordinate among the 3 points?
                     if (Math.abs(Math.min(p2.y, Math.min(p1.y, p3.y)) - p2.y) < 0.000001 ||
                         Math.abs(Math.max(p2.y, Math.max(p1.y, p3.y)) - p2.y) < 0.000001) {
@@ -766,7 +766,7 @@
                         return this.getLinear(p1, p3);
                     }
                 },
-                getLinear: function (p1, p3) {
+                getLinear: function(p1, p3) {
                     var m = (p1.y - p3.y) / (p1.x - p3.x);
                     return {
                         a: 0,
@@ -774,29 +774,28 @@
                         c: p1.y - m * p1.x
                     };
                 },
-                getQuadraticValue: function (coefs, x) {
+                getQuadraticValue: function(coefs, x) {
                     return coefs.a * x * x + coefs.b * x + coefs.c;
                 },
                 // returns the x-coordinate of the point that corresponds to the min/max value of a quadradic f(x) function (when f'(x) = 0) 
-                getVertexPointX: function (coefs) {
+                getVertexPointX: function(coefs) {
                     return -coefs.b / (2 * coefs.a);
                 },
                 // Given 2 points and the y-coordinate of the vertex point (point where function has its min or max value),
                 // this function interpolates a quadratic function.
                 // It might need to make further approximations for the resulting f(x) reach the targeted p2yVertex
-                getQuadratic2PntsVertex: function (p1, p3, p2yVertex) {
+                getQuadratic2PntsVertex: function(p1, p3, p2yVertex) {
                     if (typeof p2yVertex === 'string' && p2yVertex == 'linear') {
                         return this.getLinear(p1, p3);
                     } else {
                         return this.getQuadraticAprox(p1, { x: (p1.x + p3.x) / 2, y: p2yVertex }, p3);
                     }
                 },
-                getQuadraticAprox: function (p1, p2, p3) {
+                getQuadraticAprox: function(p1, p2, p3) {
                     var coefs = this.getQuadratic(p1, p2, p3);
                     if (!this.isAlmostZero(coefs.a)) { // only continue if a is non zero (if it is a parabola)
                         var vertexPnt = {
-                            x: this.getVertexPointX(coefs),
-                            y: 0 // is computed below
+                            x: this.getVertexPointX(coefs)
                         };
                         vertexPnt.y = this.getQuadraticValue(coefs, vertexPnt.x);
 
@@ -810,7 +809,7 @@
                     return coefs;
                 },
                 // multiplies matrix1 by matrix2 and places result in matrix2. Also returns the result matrix
-                multiplyMatrices: function (matrix1, matrix2) {
+                multiplyMatrices: function(matrix1, matrix2) {
                     // matrix1 and matrix2 are 3x3 matrices, with indexes as | 0 1 2 |
                     //                                                       | 3 4 5 |
                     //                                                       | 6 7 8 |
@@ -828,7 +827,7 @@
                     matrix2[8] = matrix1[6] * m2[2] + matrix1[7] * m2[5] + matrix1[8] * m2[8];
                     return matrix2;
                 },
-                areMatricesEqual: function (matrix1, matrix2) {
+                areMatricesEqual: function(matrix1, matrix2) {
                     for (var i = 0; i < 9; ++i) {
                         if (!this.areTheSame(matrix1[i], matrix2[i])) {
                             return false;
@@ -837,7 +836,7 @@
                     return true;
                 },
                 // returns the inverse matrix of the given matrix, in such a way that matrix * matrixInv = matrixIdentity
-                getInvertedMatrix: function (m) {
+                getInvertedMatrix: function(m) {
                     var det = m[0]*(m[4]*m[8] - m[5]*m[7]) +
                               m[1]*(m[5]*m[6] - m[3]*m[8]) +
                               m[2]*(m[3]*m[7] - m[4]*m[6]);
@@ -850,10 +849,10 @@
                         (m[3]*m[7] - m[4]*m[6])/det, (m[1]*m[6] - m[0]*m[7])/det, (m[0]*m[4] - m[1]*m[3])/det
                     ];
                 },
-                isDefined: function (value) {
+                isDefined: function(value) {
                     return value && value != "" && value != "none";
                 },
-                getAngleRadians: function (value) {
+                getAngleRadians: function(value) {
                     var toRad = 0; // conversion rate to radians
                     // try radians
                     var found = value.match(/[-|+]?[\d.]+rad/i);
@@ -875,7 +874,7 @@
                     value = value.replace(/rad|deg|grad|turn/gi, '');
                     return util.toFloat(value) * toRad;
                 },
-                getSlideIdx: function (dest, currentSlideIdx) {
+                getSlideIdx: function(dest, currentSlideIdx) {
                     var currSlide = currentSlideIdx === undefined ? data.activeSlide.index : currentSlideIdx;
                     switch (dest) {
                         case 'prev': return currSlide <= 0 ? data.qtSlides - 1 : currSlide - 1;
@@ -885,7 +884,7 @@
                         default: return dest;
                     }
                 },
-                getSpeedMs: function (speed) {
+                getSpeedMs: function(speed) {
                     var ms = speed;
                     if (typeof speed === 'string') {
                         ms = $.fx.speeds[speed];
@@ -904,10 +903,10 @@
                 zoom: 1.0,
                 zoomVertex: 0,
                 longestPath: 0, // used when zoomVertex is 'in' or 'out'
-                checkZoomBounds: function (zoomValue) {
+                checkZoomBounds: function(zoomValue) {
                     return (zoomValue > opts.zoomMax ? opts.zoomMax : (zoomValue < opts.zoomMin ? opts.zoomMin : zoomValue));
                 },
-                calcLongestPath: function () {
+                calcLongestPath: function() {
                     this.longestPath = 0;
                     for (var i = 0; i < data.qtSlides; ++i) {
                         for (var j = i + 1; j < data.qtSlides; ++j) {
@@ -915,7 +914,7 @@
                         }
                     }
                 },
-                doZoom: function (newZoom) {
+                doZoom: function(newZoom) {
                     var prevZoom = this.zoom;
                     this.zoom = this.checkZoomBounds(newZoom);
                     if (prevZoom != this.zoom) {
@@ -923,49 +922,49 @@
                         this.invokeChangeZoom(prevZoom);
                     }
                 },
-                invokeChangeZoom: function (prevZoom) {
+                invokeChangeZoom: function(prevZoom) {
                     if (Math.abs(prevZoom - this.zoom) > 0.0005 && opts.events.onChangeZoom) {
                         $viewport.triggerHandler('changeZoom.rsSlideIt', [this.zoom]);
                     }
                 },
-                setZoomVertex: function (zoomVertex, destSlide, zoom) {
+                setZoomVertex: function(zoomVertex, destSlide, zoom) {
                     if (typeof zoomVertex === 'string') {
                         switch (zoomVertex) {
                             case 'out':
                                 var min = Math.min(this.zoom, zoom);
-                                this.zoomVertex = min - (min - opts.zoomMin) * util.getDistanceTwoPnts(transData.anim.centerPnt, data.slideData[destSlide].center) / this.longestPath;
+                                this.zoomVertex = min - (min - opts.zoomMin)*util.getDistanceTwoPnts(transData.anim.centerPnt, data.slideData[destSlide].center)/this.longestPath;
                                 break;
                             case 'in':
                                 var max = Math.max(this.zoom, zoom);
-                                this.zoomVertex = max + (opts.zoomMax - max) * util.getDistanceTwoPnts(transData.anim.centerPnt, data.slideData[destSlide].center) / this.longestPath;
+                                this.zoomVertex = max + (opts.zoomMax - max)*util.getDistanceTwoPnts(transData.anim.centerPnt, data.slideData[destSlide].center)/this.longestPath;
                         }
                     } else {
                         this.zoomVertex = zoomVertex;
                     }
                     this.zoomVertex = this.checkZoomBounds(this.zoomVertex);
                 },
-                getZoom: function (zDest, gotoSlideIdx) {
+                getZoom: function(zDest, gotoSlideIdx) {
                     if (typeof zDest === 'string') {
                         viewport.setCenterPos();
                         var slideData = data.slideData[gotoSlideIdx];
                         switch (zDest) {
                             case 'current': return this.zoom;
-                            case 'fit': return Math.min(viewport.center.x * 2 / (slideData.padding[3] + slideData.size.x + slideData.padding[1]), viewport.center.y * 2 / (slideData.padding[0] + slideData.size.y + slideData.padding[2]));
-                            case 'fill': return Math.max(viewport.center.x * 2 / slideData.size.x, viewport.center.y * 2 / slideData.size.y);
+                            case 'fit': return Math.min(viewport.center.x*2/(slideData.padding[3] + slideData.size.x + slideData.padding[1]), viewport.center.y*2/(slideData.padding[0] + slideData.size.y + slideData.padding[2]));
+                            case 'fill': return Math.max(viewport.center.x*2/slideData.size.x, viewport.center.y*2/slideData.size.y);
                             default: return this.zoom;
                         }
                     }
                     return zDest;
                 },
-                initZoom: function (z, zMin, slideIdx) {
+                initZoom: function(z, zMin, slideIdx) {
                     this.zoom = zMin;
                     this.zoom = this.checkZoomBounds(this.getZoom(z, slideIdx));
                 },
-                setterZoom: function (newZoom) {
+                setterZoom: function(newZoom) {
                     viewport.setCenterPos();
                     this.doZoom(this.checkZoomBounds(newZoom));
                 },
-                getMatrixUserZoom: function (zoom) {
+                getMatrixUserZoom: function(zoom) {
                     return transUtil.getMatrixScale3D(zoom, zoom, zoom);
                 }
             },
@@ -978,7 +977,7 @@
                 width: 0,
                 height: 0,
                 mouseCoords: {},
-                beginPan: function (event) {
+                beginPan: function(event) {
                     panUtil.startPage.x = event.pageX;
                     panUtil.startPage.y = event.pageY;
                     panUtil.startTrans.x = transUtil.trans.x;
@@ -993,12 +992,12 @@
                     panUtil.elemPos.y = viewportPos.top;
                     $viewport.triggerHandler('beginPan.rsSlideIt');
                 },
-                endPan: function () {
+                endPan: function() {
                     panUtil.isPanning = false;
                     panUtil.mouseCoords = {};
                     $viewport.triggerHandler('endPan.rsSlideIt');
                 },
-                mousemove: function (event) {
+                mousemove: function(event) {
                     // this condition is necessary to stop some browsers from firing mousemove when mouse is still (see Chrome on bind mousemove)
                     var firstTime = !Object.keys(panUtil.mouseCoords).length;
                     if (firstTime || panUtil.mouseCoords.x !== event.pageX || panUtil.mouseCoords.y !== event.pageY) {
@@ -1026,14 +1025,14 @@
                         viewport.world.$elem.css(transUtil.doMousePan(offset));
                     }
                 },
-                mousedown: function (event) {
+                mousedown: function(event) {
                     event.preventDefault();
                     if (event.which == 1) {
                         $viewport.bind('mousemove.rsSlideIt', panUtil.mousemove);
                         panUtil.isPanning = false;
                     }
                 },
-                mouseup: function (event) {
+                mouseup: function(event) {
                     event.preventDefault();
                     if (data.isIE8orBelow) {
                         var offset = { x: event.pageX - panUtil.startPage.x, y: event.pageY - panUtil.startPage.y };
@@ -1049,7 +1048,7 @@
                         panUtil.stopImmediately();
                     }
                 },
-                stopImmediately: function () {
+                stopImmediately: function() {
                     $viewport.unbind('mousemove.rsSlideIt', panUtil.mousemove);
                     if (panUtil.isPanning) {
                         panUtil.endPan();
@@ -1059,7 +1058,7 @@
 
             transUtil = {
                 transID: {
-                    MATRIX:    0,
+                    MATRIX:    0, // used for matrix() and matrix3d()
                     ROTATE:    1,
                     ROTATE3D:  2,
                     ROTATEX:   3,
@@ -1082,20 +1081,20 @@
                 cache: { // caches some expensive function results
                     matrixCTM:     [1, 0, 0, 0, 1, 0, 0, 0, 1], // Current Transformation Matrix containing all the precalculated transformations, plus current zoom applied
                     matrixCTM_inv: [1, 0, 0, 0, 1, 0, 0, 0, 1], // Inversed matrixCTM, which means matrixCTM * matrixCTM_inv = Identity matrix. This matrixCTM_inv matches the current slide ctmMatrix, with user zoom applied.
-                    refresh: function () {
+                    refresh: function() {
                         this.matrixCTM = util.getInvertedMatrix(transUtil.activeSlideCTMmatrix);
                         util.multiplyMatrices(zoomUtil.getMatrixUserZoom(zoomUtil.zoom), this.matrixCTM); // final scale transformation related with the mouse zoom
                         this.matrixCTM_inv = util.getInvertedMatrix(this.matrixCTM);
                     }
                 },
-                getMatrixIdentity: function () {
+                getMatrixIdentity: function() {
                     return [
                         1, 0, 0,
                         0, 1, 0,
                         0, 0, 1
                     ];
                 },
-                getMatrixRotate: function (sine, cosine) {
+                getMatrixRotate: function(sine, cosine) {
                     sine = util.roundToTrigonometricBounds(sine);
                     cosine = util.roundToTrigonometricBounds(cosine);
                     return [
@@ -1132,43 +1131,43 @@
                 getMatrixRotateZ: function(rad) {
                     return this.getMatrixRotate3D(0, 0, 1, rad);
                 },
-                getMatrixScale3D: function (scaleX, scaleY, scaleZ) {
+                getMatrixScale3D: function(scaleX, scaleY, scaleZ) {
                     return [
                         scaleX, 0, 0,
                         0, scaleY, 0,
                         0, 0, scaleZ
                     ];
                 },
-                getMatrixScale: function (scale) {
+                getMatrixScale: function(scale) {
                     return this.getMatrixScale3D(scale, scale, 1);
                 },
-                getMatrixScaleXY: function (scaleX, scaleY) {
+                getMatrixScaleXY: function(scaleX, scaleY) {
                     return this.getMatrixScale3D(scaleX, scaleY, 1);
                 },
-                getMatrixScaleX: function (scale) {
+                getMatrixScaleX: function(scale) {
                     return this.getMatrixScale3D(scale, 1, 1);
                 },
-                getMatrixScaleY: function (scale) {
+                getMatrixScaleY: function(scale) {
                     return this.getMatrixScale3D(1, scale, 1);
                 },
-                getMatrixScaleZ: function (scale) {
+                getMatrixScaleZ: function(scale) {
                     return this.getMatrixScale3D(1, 1, scale);
                 },
-                getMatrixSkewX: function (tangent) {
+                getMatrixSkewX: function(tangent) {
                     return [
                         1, 0, 0, 
                         util.roundToTrigonometricBounds(tangent), 1, 0,
                         0, 0, 1
                     ];
                 },
-                getMatrixSkewY: function (tangent) {
+                getMatrixSkewY: function(tangent) {
                     return [
                         1, util.roundToTrigonometricBounds(tangent), 0,
                         0, 1, 0,
                         0, 0, 1
                     ];
                 },
-                getMatrix: function (id, value) {
+                getMatrix: function(id, value) {
                     switch (id) {
                         case this.transID.MATRIX:   return value;
                         case this.transID.ROTATE:   return this.getMatrixRotate(Math.sin(value), Math.cos(value));
@@ -1221,15 +1220,15 @@
                         }
                     };
                 },
-                getTransformOrigin: function () {
+                getTransformOrigin: function() {
                     return { x: this.orig.x, y: this.orig.y, z: this.orig.z };
                 },
-                setTransformOrigin: function (origX, origY, origZ) {
+                setTransformOrigin: function(origX, origY, origZ) {
                     this.orig.x = origX;
                     this.orig.y = origY;
                     this.orig.z = origZ;
                 },
-                getTransformCSSstyle: function () {
+                getTransformCSSstyle: function() {
                     var m = this.cache.matrixCTM.slice();
                     util.roundMatrixToTrigonometricBounds(m);
                     if (data.isIE8orBelow) {
@@ -1284,12 +1283,12 @@
                         };
                     }
                 },
-                adjustTransIE: function (centerPnt) {
+                adjustTransIE: function(centerPnt) {
                     var rect = this.getTransformedRect(viewport.world.IEorigSize, this.cache.matrixCTM, centerPnt);
                     this.trans.x += rect.topLeft.x;
                     this.trans.y += rect.topLeft.y;
                 },
-                setActiveSlide: function (slideIdx) {
+                setActiveSlide: function(slideIdx) {
                     data.activeSlide.index = this.activeSlideIndex = slideIdx;
                     data.activeSlide.$slide = viewport.world.$slides.eq(slideIdx);
                     var slideData = data.slideData[slideIdx];
@@ -1305,7 +1304,7 @@
                         this.adjustTransIE(slideData.centerTrans);
                     }
                 },
-                getTransformCSS: function (offset) {
+                getTransformCSS: function(offset) {
                     this.setTransformOrigin(
                         viewport.center.x - this.trans.x,
                         viewport.center.y - this.trans.y,
@@ -1323,7 +1322,7 @@
                     }
                     return this.getTransformCSSstyle();
                 },
-                getTransformOriginCss: function ($elem, outerSize) {
+                getTransformOriginCss: function($elem, outerSize) {
                     if (data.isIE8orBelow) {
                         // TODO check if in IE8 and below, the transform origin correctly maps to the margins
                         return { x: util.toFloat($elem.css('margin-left')), y: util.toFloat($elem.css('margin-top')), z: 0 };
@@ -1355,10 +1354,10 @@
                     }
                     return origin;
                 },
-                doMousePan: function (offset) {
+                doMousePan: function(offset) {
                     return this.getTransformCSS(offset);
                 },
-                doMouseZoom: function (oldMouseZoom, newMouseZoom) {
+                doMouseZoom: function(oldMouseZoom, newMouseZoom) {
                     if (data.isIE8orBelow) {
                         // IE8 and below do not have transform-origin, so the workaround to properly center scale transformations is to apply a translation
                         if (!util.isAlmostZero(oldMouseZoom)) {
@@ -1375,7 +1374,7 @@
                 }
             },
             events = {
-                onMouseWheel: function (event) {
+                onMouseWheel: function(event) {
                     var delta = {x: 0, y: 0};
                     if (event.wheelDelta === undefined && event.originalEvent !== undefined && (event.originalEvent.wheelDelta !== undefined || event.originalEvent.detail !== undefined)) { 
                         event = event.originalEvent;
@@ -1407,13 +1406,13 @@
                         $viewport.triggerHandler('userMousewheel.rsSlideIt', [delta.y > 0]);
                     }
                 },
-                onMousedown: function (event) {
+                onMousedown: function(event) {
                     panUtil.mousedown(event);
                 },
-                onMouseup: function (event) {
+                onMouseup: function(event) {
                     panUtil.mouseup(event);
                 },
-                onMouseleave: function (event) {
+                onMouseleave: function(event) {
                     if (panUtil.isPanning) {
                         var $mouseOn = $(document.elementFromPoint(event.clientX, event.clientY));
                         if (!!$mouseOn && $mouseOn.closest($viewport).length !== 1) {
@@ -1422,7 +1421,7 @@
                         }
                     }
                 },
-                onSingleTransition: function (event, optsTrans) {
+                onSingleTransition: function(event, optsTrans) {
                     if (!transData.isThisPartOfSlideShow()) {
                         transData.prevDuration = transData.duration;
                         transData.prevEasing = transData.easing;
@@ -1441,10 +1440,10 @@
                         transData.doTransition(event, optsTrans);
                     }
                 },
-                onTransition: function (event, optsTrans) {
+                onTransition: function(event, optsTrans) {
                     transData.doTransition(event, optsTrans);
                 },
-                onPlayPause: function (event, optsSequence) {
+                onPlayPause: function(event, optsSequence) {
                     if (seqData.state === $.fn.rsSlideIt.state.PLAY) {
                         seqData.state = $.fn.rsSlideIt.state.PAUSE;
                         if (seqData.timeoutId) {
@@ -1465,11 +1464,11 @@
                             seqData.init(optsSequence);
                         }
                         if (seqData.state === $.fn.rsSlideIt.state.PLAY || seqData.state === $.fn.rsSlideIt.state.PAUSE) {
-                            seqData.doSlideshow(event);
+                            seqData.doSlideshow();
                         }
                     }
                 },
-                onStop: function (event) {
+                onStop: function(event) {
                     // if "stop" is invoked when no playback is running, then transData.inputOpts is null
                     if (transData.inputOpts) {
                         if (seqData.timeoutId) {
@@ -1500,7 +1499,7 @@
                         transData.inputOpts = null;
                     }
                 },
-                unbindMouseEvents: function () {
+                unbindMouseEvents: function() {
                     if (opts.mousePan) {
                         $viewport.
                             unbind('mousedown.rsSlideIt', this.onMousedown).
@@ -1509,7 +1508,7 @@
                     }
                     $viewport.unbind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', events.onMouseWheel);
                 },
-                bindMouseEvents: function () {
+                bindMouseEvents: function() {
                     if (opts.mousePan) {
                         $viewport.
                             bind('mousedown.rsSlideIt', this.onMousedown).
@@ -1518,7 +1517,7 @@
                     }
                     $viewport.bind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', events.onMouseWheel);
                 },
-                onGetter: function (event, field) {
+                onGetter: function(event, field) {
                     switch (field) {
                         case 'zoom': return zoomUtil.zoom;
                         case 'zoomMin': return opts.zoomMin;
@@ -1531,7 +1530,7 @@
                     }
                     return null;
                 },
-                onSetter: function (event, field, value) {
+                onSetter: function(event, field, value) {
                     switch (field) {
                         case 'zoomMin':
                             opts.zoomMin = value;
@@ -1557,7 +1556,7 @@
                     }
                     return events.onGetter(event, field);
                 },
-                onMouseupClick: function (event) {
+                onMouseupClick: function(event) {
                     // onClick is implemented as mouseUp, because a genuine click event is fired when users finishes to pan around with mouse.
                     // So, the workaroud is to catch the mouseup and fire the user onClickSlide
                     if (!panUtil.isPanning && opts.events.onClickSlide) {
@@ -1565,19 +1564,19 @@
                         $viewport.triggerHandler('clickSlide.rsSlideIt', [$slide, viewport.world.$slides.index($slide.closest(opts.slideSelector))]);
                     }
                 },
-                onDblClick: function (event) {
+                onDblClick: function(event) {
                     if (opts.events.onDblClickSlide) {
                         var $slide = $(this);
                         $viewport.triggerHandler('dblClickSlide.rsSlideIt', [$slide, viewport.world.$slides.index($slide.closest(opts.slideSelector))]);
                         event.stopPropagation();
                     }
                 },
-                onCreate: function (event) {
+                onCreate: function(event) {
                     if (opts.events.onCreate) {
                         opts.events.onCreate(event);
                     }
                 },
-                onDestroy: function (event) {
+                onDestroy: function(event) {
                     if (transData.inputOpts) {
                         $viewport.trigger('stop.rsSlideIt'); // stop slideshow
                     } else {
@@ -1686,77 +1685,77 @@
                         'width': '',
                         'height': ''
                     });
-                    $viewport.add(viewport.world.$slides).filter(function () {
+                    $viewport.add(viewport.world.$slides).filter(function() {
                         return $(this).attr('style') === '';
                     }).removeAttr('style');
                     viewport.world.$slides.eq(0).unwrap();
                 },
-                onAjaxLoadBegin: function (event, qtTotal) {
+                onAjaxLoadBegin: function(event, qtTotal) {
                     if (opts.events.onAjaxLoadBegin) {
                         opts.events.onAjaxLoadBegin(event, qtTotal);
                     }
                 },
-                onAjaxLoadSlide: function (event, $ajaxSlide, index, success) {
+                onAjaxLoadSlide: function(event, $ajaxSlide, index, success) {
                     if (opts.events.onAjaxLoadSlide) {
                         opts.events.onAjaxLoadSlide(event, $ajaxSlide, index, success);
                     }
                 },
-                onAjaxLoadEnd: function (event) {
+                onAjaxLoadEnd: function(event) {
                     if (opts.events.onAjaxLoadEnd) {
                         opts.events.onAjaxLoadEnd(event);
                     }
                 },
-                onChangeZoom: function (event, zoom) {
+                onChangeZoom: function(event, zoom) {
                     if (opts.events.onChangeZoom) {
                         opts.events.onChangeZoom(event, zoom);
                     }
                 },
-                onClickSlide: function (event, $slide, index) {
+                onClickSlide: function(event, $slide, index) {
                     if (opts.events.onClickSlide) {
                         opts.events.onClickSlide(event, $slide, index);
                     }
                 }, 
-                onDblClickSlide: function (event, $slide, index) {
+                onDblClickSlide: function(event, $slide, index) {
                     if (opts.events.onDblClickSlide) {
                         opts.events.onDblClickSlide(event, $slide, index);
                     }
                 },
-                onUserMouseWheel: function (event, up) {
+                onUserMouseWheel: function(event, up) {
                     if (opts.events.onMouseWheel) {
                         opts.events.onMouseWheel(event, up);
                     }
                 },
-                onBeginPan: function (event) {
+                onBeginPan: function(event) {
                     if (opts.events.onBeginPan) {
                         opts.events.onBeginPan(event);
                     }
                 },
-                onEndPan: function (event) {
+                onEndPan: function(event) {
                     if (opts.events.onEndPan) {
                         opts.events.onEndPan(event);
                     }
                 },
-                onBeginTrans: function (event, fromSlide, toSlide) {
+                onBeginTrans: function(event, fromSlide, toSlide) {
                     if (transData.onBegin) {
                         transData.onBegin(event, fromSlide, toSlide);
                     }
                 },
-                onEndTrans: function (event, fromSlide, toSlide) {
+                onEndTrans: function(event, fromSlide, toSlide) {
                     if (transData.onEnd) {
                         transData.onEnd(event, fromSlide, toSlide);
                     }
                 },
-                onBeginDelay: function (event, slide, delay) {
+                onBeginDelay: function(event, slide, delay) {
                     if (seqData.onBeginDelay) {
                         seqData.onBeginDelay(event, slide, delay);
                     }
                 },
-                onEndDelay: function (event, slide) {
+                onEndDelay: function(event, slide) {
                     if (seqData.onEndDelay) {
                         seqData.onEndDelay(event, slide);
                     }
                 },
-                firePauseStopEvents: function () {
+                firePauseStopEvents: function() {
                     switch (seqData.state) {
                         case $.fn.rsSlideIt.state.PAUSE:
                             if (transData.inputOpts.onPause) {
@@ -1769,21 +1768,21 @@
                             }
                     }
                 },
-                onCssAnimationStart: function (e) {
+                onCssAnimationStart: function() {
                     transData.cssAnim.startTime = +new Date();
                     events.cssStartZoomEvents();
                 },
-                onCssAnimationEnd: function () {
+                onCssAnimationEnd: function() {
                     transData.cssAnim.resetCSSanimation();
                     transData.transitionDone(true);
                     events.cssEndZoomEvents();
                 },
-                cssStartZoomEvents: function () {
+                cssStartZoomEvents: function() {
                     if (opts.events.onChangeZoom) {
                         transData.cssAnim.intervalId = setInterval(events.fireCssZoomEvent, 70);
                     }
                 },
-                fireCssZoomEvent: function (noCalc) {
+                fireCssZoomEvent: function(noCalc) {
                     var prevZoom = zoomUtil.zoom,
                         ellapsedTime, progress;
                     
@@ -1797,7 +1796,7 @@
                         $viewport.triggerHandler('changeZoom.rsSlideIt', [zoomUtil.zoom]);
                     }
                 },
-                cssEndZoomEvents: function () {
+                cssEndZoomEvents: function() {
                     if (transData.cssAnim.intervalId !== null) {
                         clearInterval(transData.cssAnim.intervalId);
                         transData.cssAnim.intervalId = null;
@@ -1808,7 +1807,7 @@
 
             load = {
                 processedSlides: 0,
-                init: function () {
+                init: function() {
                     viewport.init();
                     data.init();
                     this.ajax.init();
@@ -1884,9 +1883,9 @@
                             triggerHandler('loadSlide.rsSlideIt');
                     }
                 },
-                getTransformFromCss: function ($slide) {
+                getTransformFromCss: function($slide) {
                     var value,
-                        getTransformFromCSSie = function (msFilter) {
+                        getTransformFromCSSie = function(msFilter) {
                             var lookup = "progid:dximagetransform.microsoft.matrix(",
                                 pos = msFilter.toLowerCase().indexOf(lookup);
                             if (pos > -1) {
@@ -1923,7 +1922,7 @@
                     }
                     return !util.isDefined(value) ? null : value;
                 },
-                getMatrixCoefs: function (value) {
+                getMatrixCoefs: function(value) {
                     value = value.replace(/matrix(3d)?\(/gi, ''); // remove occurences of "matrix(" and "matrix3d("
                     var coefs = value.split(','), is3D = coefs.length == 16;
                     // 3D:
@@ -1957,15 +1956,15 @@
                         tz: is3D? util.toInt(coefs[14]) : 0
                     };
                 },
-                getTransformInfo: function ($slide, outerSize) {
-                    var getTransformFromDataAttr = function () {
+                getTransformInfo: function($slide, outerSize) {
+                    var getTransformFromDataAttr = function() {
                             var value = $slide.attr(data.supportsCSSTransforms3D ? 'data-transform3D' : 'data-transform2D');
                             if (!util.isDefined(value)) {
                                 value = $slide.attr('data-transform');
                             }
                             return !util.isDefined(value) ? null : value;
                         },
-                        getTransformRotate = function (value) {
+                        getTransformRotate = function(value) {
                             var found = value.match(/rotate\([-|+]?[\d.]+(deg|rad|grad|turn)\)/i);
                             // try rotate(a)
                             if (found && util.isDefined(found[0])) {
@@ -2037,7 +2036,7 @@
                             }
                             return null;
                         },
-                        getTransformSkew = function (value) {
+                        getTransformSkew = function(value) {
                             // try skewX(x)
                             var found = value.match(/skewX\([-|+]?[\d.]+(deg|rad|grad|turn)\)/i),
                                 angle, tangent;
@@ -2078,10 +2077,10 @@
                             }
                             return null;
                         },
-                        getInvertedScale = function (scale) {
+                        getInvertedScale = function(scale) {
                             return util.isAlmostZero(scale) ? 20000 : (1.0 / scale);
                         },
-                        getTransformScale = function (value) {
+                        getTransformScale = function(value) {
                             var scaleX, scaleY, scaleZ, scaleXInv, scaleYInv, scaleZInv,
                                 found = value.match(/scale\([-|+]?[\d.]+\)/i);
                             // try scale(s)
@@ -2171,14 +2170,14 @@
                             }
                             return null;
                         },
-                        getTransformDefault = function (origin) {
+                        getTransformDefault = function(origin) {
                             return  {
                                 origin: { x: origin.x, y: origin.y, z: origin.z },
                                 ctmMatrix: transUtil.getMatrixIdentity(),
                                 transformations: []
                             };
                         },
-                        getTransformFromData = function (value, origin) {
+                        getTransformFromData = function(value, origin) {
                             // remove all spaces and then add a space before each scale, rotate, skew and translate
                             var transfs = value.replace(/ /g, '').
                                             // 2d
@@ -2220,11 +2219,11 @@
                             }
                             return allTrans;
                         },
-                        slideToString = function ($s) {
+                        slideToString = function($s) {
                             var id = $s.attr('id');
                             return !!id ? ' #' + id : ' at index ' + viewport.world.$slides.index($s);
                         },
-                        decomposeMatrix = function (value, origin) {
+                        decomposeMatrix = function(value, origin) {
                             var coefs = load.getMatrixCoefs(value),
                                 allTrans = getTransformDefault(origin);
                             allTrans.ctmMatrix[0] = coefs.m11;
@@ -2260,12 +2259,12 @@
                     }
                     return getTransformFromData(value, origin);
                 },
-                onLoadSlide: function (event) {
+                onLoadSlide: function() {
                     var $slide = viewport.world.$slides.eq(load.processedSlides),
-                        loadSuccess = function () {
+                        loadSuccess = function() {
                             loadSuccessExternal(this.complete, this.naturalWidth, this.naturalHeight);
                         },
-                        loadSuccessExternal = function (complete, naturalWidth, naturalHeight) {
+                        loadSuccessExternal = function(complete, naturalWidth, naturalHeight) {
                             if (complete && typeof naturalWidth != "undefined" && naturalWidth > 0) {
                                 load.getOtherSizes(slideSizes, $slide, naturalWidth, naturalHeight);
                                 load.processSlide($slide, slideSizes);
@@ -2274,7 +2273,7 @@
                                 load.processSlide($slide, slideSizes);
                             }
                         },
-                        loadFailure = function () {
+                        loadFailure = function() {
                             load.getOtherSizes(slideSizes, $slide, 1, 1);
                             load.processSlide($slide, slideSizes);
                         };
@@ -2302,7 +2301,7 @@
                         load.processSlide($slide, slideSizes);
                     }
                 },
-                processSlide: function ($slide, slideSizes) {
+                processSlide: function($slide, slideSizes) {
                     load.pushSlideData($slide, slideSizes);
                     if (++load.processedSlides < data.qtSlides) {
                         $viewport.triggerHandler('loadSlide.rsSlideIt');
@@ -2310,7 +2309,7 @@
                         load.setSlidePos();
                     }
                 },
-                getOtherSizes: function (sizes, $slide, newWidth, newHeight) {
+                getOtherSizes: function(sizes, $slide, newWidth, newHeight) {
                     if (newWidth > 0) {
                         sizes.size.x = newWidth;
                         sizes.outerSize.x = sizes.size.x + 
@@ -2328,7 +2327,7 @@
                             util.toInt($slide.css('margin-top')) + util.toInt($slide.css('margin-bottom'));
                     }
                 },
-                getSlideSizes: function ($slide) {
+                getSlideSizes: function($slide) {
                     var ieFilter, ieMsFilter;
                     if (data.isIE8orBelow) {
                         ieFilter = $slide.css('filter');
@@ -2349,7 +2348,7 @@
                     }
                     return sizes;
                 },
-                pushSlideData: function ($slide, slideSizes) {
+                pushSlideData: function($slide, slideSizes) {
                     var cssTransforms = this.getTransformInfo($slide, slideSizes.outerSize),
                         slideChildren = this.getChildren($slide),
                         $nextSibling = this.getNextSibling($slide);
@@ -2375,7 +2374,7 @@
                         firstChild: slideChildren.length === 0 ? -1: viewport.world.$slides.index(slideChildren.eq(0))
                     });
                 },
-                getNextSibling: function ($slide) {
+                getNextSibling: function($slide) {
                     // Returns the next sibling of $slide, but those siblings might not necessarily be immediately after the $slide.
                     // E.g., given this tree, where span are slides and div are not slides
                     //                                  The function returns:
@@ -2415,7 +2414,7 @@
                     }
                     return null;
                 },
-                getChildren: function ($slide) {
+                getChildren: function($slide) {
                     // Find all direct children of $slide (children with the given opts.slideSelector), but
                     // those children might not necessarily be immediately below the parent, hierarchy speaking.
                     // e.g., given this tree, where span are slides and div are not slides
@@ -2431,21 +2430,21 @@
                     //      span8                             getChildren(span8) = []
                     return $slide.
                             find(opts.slideSelector).
-                            filter(function (i, e) {
+                            filter(function(i, e) {
                                 return $(e).parent().closest(opts.slideSelector).is($slide);
                             });
                 },
-                setSlidePos: function () {
+                setSlidePos: function() {
                     var $slide, slideData, slidePos, parents,
                         worldOffset = viewport.world.$elem.offset(),
-                        getPosition = function ($slide) {
+                        getPosition = function($slide) {
                             var offset = $slide.offset();
                             return {
                                 left: offset.left - worldOffset.left,
                                 top: offset.top - worldOffset.top
                             };
                         },
-                        getOffset = function ($slide) {
+                        getOffset = function($slide) {
                             var matrixCssStr = load.getTransformFromCss($slide);
                             if (matrixCssStr !== null && (matrixCssStr.indexOf('matrix(') == 0 || matrixCssStr.indexOf('matrix3d(') == 0)) {
                                 var coefs = load.getMatrixCoefs(matrixCssStr);
@@ -2560,13 +2559,13 @@
                     slidesArray: null,
                     toProcess: 0,
                     quant: 0,
-                    init: function () {
+                    init: function() {
                         this.slidesArray = $.makeArray(viewport.world.$slides.filter($('img[data-src]')));
                         this.toProcess = this.quant = this.slidesArray.length;
                     },
-                    doLoad: function ($loadThisSlide, successEvent, failureEvent) {
-                        var doAjax = function ($slide) {
-                            $slide.load(function () {
+                    doLoad: function($loadThisSlide, successEvent, failureEvent) {
+                        var doAjax = function($slide) {
+                            $slide.load(function() {
                                 var success = this.complete && typeof this.naturalWidth != "undefined" && this.naturalWidth > 0;
                                 $viewport.triggerHandler('ajaxLoadSlide.rsSlideIt', [$slide, load.ajax.quant - load.ajax.toProcess + 1, success]);
                                 if (--load.ajax.toProcess == 0) {
@@ -2575,7 +2574,7 @@
                                 if (successEvent) {
                                     successEvent(this.complete, this.naturalWidth, this.naturalHeight);
                                 }
-                            }).error(function () {
+                            }).error(function() {
                                 $viewport.triggerHandler('ajaxLoadSlide.rsSlideIt', [$slide, load.ajax.quant - load.ajax.toProcess + 1, false]);
                                 if (--load.ajax.toProcess == 0) {
                                     $viewport.triggerHandler('ajaxLoadEnd.rsSlideIt');
@@ -2613,19 +2612,19 @@
         load.init();
     };
 
-    $.fn.rsSlideIt = function (options) {
-        var transitionTo = function (optionsGoto) {
+    $.fn.rsSlideIt = function(options) {
+        var transitionTo = function(optionsGoto) {
             var optsGoto = $.extend({}, $.fn.rsSlideIt.defaultsTransition, optionsGoto);
             this.trigger('singleTransition.rsSlideIt', [optsGoto]);
         },
-        playPause = function (optionsSequence) {
+        playPause = function(optionsSequence) {
             var optsSequence = $.extend({}, $.fn.rsSlideIt.defaultsPlayPause, optionsSequence);
             this.trigger('playPause.rsSlideIt', [optsSequence]);
         },
-        stop = function () {
+        stop = function() {
             this.trigger('stop.rsSlideIt');
         },
-        option = function (options) {
+        option = function(options) {
             if (typeof arguments[0] === 'string') {
                 var op = arguments.length == 1 ? 'getter' : (arguments.length == 2 ? 'setter' : null);
                 if (op) {
@@ -2633,7 +2632,7 @@
                 }
             }
         },
-        destroy = function () {
+        destroy = function() {
             this.trigger('destroy.rsSlideIt');
         };
 
@@ -2652,7 +2651,7 @@
         opts.transf3D = $.extend({}, $.fn.rsSlideIt.defaults.transf3D, options ? options.transf3D : options);
         opts.events = $.extend({}, $.fn.rsSlideIt.defaults.events, options ? options.events : options);
 
-        return this.each(function () {
+        return this.each(function() {
             new SlideItClass($(this), opts);
         });
     };
@@ -2689,7 +2688,7 @@
             onBeginPan: null,               // Fired when the user starts to pan around. Type: function (event).
             onEndPan: null,                 // Fired when the user finishes to pan around. Type: function (event).
             onClickSlide: null,             // Fired when a slide receives a single mouse click. Type: function (event, $slide, index).
-            onDblClickSlide: function (event, $slide, index) { // Fired when a slide receives a double mouse click. Type: function (event, $slide, index).
+            onDblClickSlide: function(event, $slide, index) { // Fired when a slide receives a double mouse click. Type: function (event, $slide, index).
                 $(event.target).rsSlideIt('transition', {   // Custom onDblClickSlide defined by default.
                     slide: index
                 });
