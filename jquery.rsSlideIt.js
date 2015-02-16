@@ -201,9 +201,9 @@
                         transData.animating = true;
                     },
                     pushTransformations: function(transformationsArray, interruptedDuringTransition) {
-                        var easingFunc = !!transData.prevEasing ? $.easing[transData.prevEasing] : null,
+                        var easingFunc = transData.prevEasing ? $.easing[transData.prevEasing] : null,
                             value = interruptedDuringTransition ? this.progress : 1,
-                            valueWithEasing = !!easingFunc ? easingFunc(value, transData.prevDuration * value, 0, 1, transData.prevDuration) : value,
+                            valueWithEasing = easingFunc ? easingFunc(value, transData.prevDuration * value, 0, 1, transData.prevDuration) : value,
                             funcCoefs = util.getLinear({ x: value, y: valueWithEasing }, { x: 0, y: 0 });
                             
                         for (var i = transformationsArray.length - 1; i > -1; --i) {
@@ -291,14 +291,15 @@
                             calcMatrix(transformation, interpolateFactor);
                         }
 
-                        var nowWithEasing = doEasing ? $.easing[transData.easing](now, transData.duration * now, 0, 1, transData.duration) : now;
+                        var easingFunc = doEasing ? $.easing[transData.easing] : undefined,
+                            nowWithEasing = easingFunc ? easingFunc(now, transData.duration * now, 0, 1, transData.duration) : now;
                         // from identity to slide matrix
                         for (i = toTransformations.length - 1; i > -1; --i) {
                             transformation = toTransformations[i];
                             calcMatrix(transformation, nowWithEasing);
                         }
 
-                        userZoom = !!calcZoomValue ? util.getQuadraticValue(transData.anim.zoomCoefs, nowWithEasing) : zoomUtil.zoom;
+                        userZoom = calcZoomValue ? util.getQuadraticValue(transData.anim.zoomCoefs, nowWithEasing) : zoomUtil.zoom;
                         util.multiplyMatrices(zoomUtil.getMatrixUserZoom(userZoom), transUtil.cache.matrixCTM);
                         util.roundMatrixToTrigonometricBounds(transUtil.cache.matrixCTM);
 
@@ -352,7 +353,7 @@
                         transData.anim.progress = this.totalTime / transData.prevDuration;
                         transData.anim.progress = transData.anim.progress > 1 ? 1 : transData.anim.progress;
                         var animEasingFunc = $.easing[transData.easing],
-                            animEasing = !!animEasingFunc ? animEasingFunc(transData.anim.progress, transData.prevDuration * transData.anim.progress, 0, 1, transData.prevDuration) : transData.anim.progress;
+                            animEasing = animEasingFunc ? animEasingFunc(transData.anim.progress, transData.prevDuration * transData.anim.progress, 0, 1, transData.prevDuration) : transData.anim.progress;
                         zoomUtil.zoom = util.getQuadraticValue(transData.anim.zoomCoefs, animEasing);
                         events.cssEndZoomEvents();
                         transData.anim.computeIntermediateMatrix(transData.anim.progress, true, data.slideData[transData.anim.gotoSlideIdx].cssTransforms.transformations);
@@ -666,7 +667,7 @@
                     }
                 },
                 transitionDone: function(finishedWithAnimation) {
-                    if (!!this.anim.zoomCoefs) {
+                    if (this.anim.zoomCoefs) {
                         zoomUtil.zoom = util.getQuadraticValue(this.anim.zoomCoefs, 1);
                     }
                     this.anim.progressPausedOn = null;
@@ -1337,7 +1338,7 @@
                                     if (!util.isDefined(value)) {
                                         value = $elem.css('transform-origin');
                                         if (!util.isDefined(value)) {
-                                            return !!outerSize ? 
+                                            return outerSize ? 
                                                 { x: outerSize.x / 2, y: outerSize.y / 2, z: 0 } : { x: viewport.world.IEorigSize.x / 2, y: viewport.world.IEorigSize.y / 2, z: 0 };
                                         }
                                     }
@@ -1415,7 +1416,7 @@
                 onMouseleave: function(event) {
                     if (panUtil.isPanning) {
                         var $mouseOn = $(document.elementFromPoint(event.clientX, event.clientY));
-                        if (!!$mouseOn && $mouseOn.closest($viewport).length !== 1) {
+                        if ($mouseOn && $mouseOn.closest($viewport).length !== 1) {
                             event.which = 1;
                             panUtil.mouseup(event);
                         }
@@ -1677,8 +1678,8 @@
                             $viewport.removeClass(opts.transf3D.no3DFalbackClass);
                         }
                     }
-                    if (!!opts.width) { $viewport.css('width', ''); }
-                    if (!!opts.height) { $viewport.css('height', ''); }
+                    if (opts.width) { $viewport.css('width', ''); }
+                    if (opts.height) { $viewport.css('height', ''); }
                     $viewport.css('overflow', '');
                     viewport.world.$slides.css({
                         'display': '',
@@ -1792,7 +1793,7 @@
                         progress = progress > 1 ? 1 : progress;
                         zoomUtil.zoom = util.getQuadraticValue(transData.anim.zoomCoefs, progress);
                     }
-                    if (!!noCalc || prevZoom != zoomUtil.zoom) {
+                    if (noCalc || prevZoom != zoomUtil.zoom) {
                         $viewport.triggerHandler('changeZoom.rsSlideIt', [zoomUtil.zoom]);
                     }
                 },
@@ -2221,7 +2222,7 @@
                         },
                         slideToString = function($s) {
                             var id = $s.attr('id');
-                            return !!id ? ' #' + id : ' at index ' + viewport.world.$slides.index($s);
+                            return id ? ' #' + id : ' at index ' + viewport.world.$slides.index($s);
                         },
                         decomposeMatrix = function(value, origin) {
                             var coefs = load.getMatrixCoefs(value),
@@ -2589,7 +2590,7 @@
                             if (this.toProcess == this.quant) {
                                 $viewport.triggerHandler('ajaxLoadBegin.rsSlideIt', [this.quant]);
                             }
-                            if (!!$loadThisSlide) {
+                            if ($loadThisSlide) {
                                 var idx = this.slidesArray.indexOf($loadThisSlide[0]);
                                 if (idx > -1) {
                                     this.slidesArray[idx] = null;
