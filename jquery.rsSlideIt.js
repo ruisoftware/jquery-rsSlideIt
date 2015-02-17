@@ -14,8 +14,8 @@
         var data = {
                 slideData: [],
                 qtSlides: 0,
-                supportsCSSAnimation: (typeof Modernizr !== 'undefined') && !!Modernizr.cssanimations,
-                supportsCSSTransforms3D: (typeof Modernizr !== 'undefined') && !!Modernizr.csstransforms3d,
+                supportsCSSAnimation: (typeof Modernizr !== 'undefined') && Modernizr.cssanimations,
+                supportsCSSTransforms3D: (typeof Modernizr !== 'undefined') && Modernizr.csstransforms3d,
                 isIE8orBelow: false,
                 isIE9: false,
                 isMozilla11orBelow: false,
@@ -34,13 +34,13 @@
                 },
                 initBrowsers: function() {
                     var matches = navigator.userAgent.match(/MSIE (\d+\.\d+);/);
-                    if (!!matches && matches.length === 2) {
+                    if (matches && matches.length === 2) {
                         var version = util.toInt(matches[1]);
                         this.isIE8orBelow = version < 9;
                         this.isIE9 = version === 9;
                     } else {
                         matches = navigator.userAgent.match(/Firefox[\/\s](\d+\.\d+)/);
-                        if (!!matches && matches.length === 2) {
+                        if (matches && matches.length === 2) {
                             this.isMozilla11orBelow = util.toInt(matches[1]) < 12;
                         }
                     }
@@ -82,8 +82,8 @@
                     this.center.y = $viewport.height() / 2;
                 },
                 init: function() {
-                    if (!!opts.width) { $viewport.css('width', opts.width); }
-                    if (!!opts.height) { $viewport.css('height', opts.height); }
+                    if (opts.width) { $viewport.css('width', opts.width); }
+                    if (opts.height) { $viewport.css('height', opts.height); }
                     $viewport.css('overflow', 'hidden').scrollLeft(0).scrollTop(0);
                     this.setCenterPos();
                     this.world.init();
@@ -1000,7 +1000,7 @@
                 },
                 mousemove: function(event) {
                     // this condition is necessary to stop some browsers from firing mousemove when mouse is still (see Chrome on bind mousemove)
-                    var firstTime = !Object.keys(panUtil.mouseCoords).length;
+                    var firstTime = panUtil.mouseCoords.x === undefined;
                     if (firstTime || panUtil.mouseCoords.x !== event.pageX || panUtil.mouseCoords.y !== event.pageY) {
                         panUtil.mouseCoords.x = event.pageX;
                         panUtil.mouseCoords.y = event.pageY;
@@ -1238,9 +1238,9 @@
                             'margin-top': this.trans.y,
                             'filter': 'progid:DXImageTransform.Microsoft.Matrix(' +
                                         'M11=' + m[0] + 
-                                        ',M12=' + m[2] + // Second and third coefficients are swapped
+                                        ',M12=' + m[3] + // Second and third coefficients are swapped
                                         ',M21=' + m[1] + 
-                                        ',M22=' + m[3] + 
+                                        ',M22=' + m[4] + 
                                         // DX and DY translation do not work when SizingMethod is 'auto expand'. The workaround is using margins to simulate translation.
                                         // ', DX=0, DY=0' +   (leave as it is, do not uncomment this line)
                                         ',SizingMethod=\'auto expand\')'
@@ -1899,7 +1899,7 @@
                         };
                     if (data.isIE8orBelow) {
                         value = $slide.css('filter');
-                        if (!util.isDefined(value)) {
+                        if (value === "auto" || !util.isDefined(value)) {
                             value = $slide.css('-ms-filter');
                             if (!util.isDefined(value)) {
                                 return null;
@@ -2345,7 +2345,12 @@
                         this.getOtherSizes(sizes, $slide, util.toInt($slide.attr('width')), util.toInt($slide.attr('height')));
                     }
                     if (data.isIE8orBelow) {
-                        $slide.css({ 'filter': ieFilter, '-ms-filter': ieMsFilter });
+                        if (ieFilter) {
+                            $slide.css('filter', ieFilter);
+                        }
+                        if (ieMsFilter) {
+                            $slide.css('-ms-filter', ieMsFilter);
+                        }
                     }
                     return sizes;
                 },
@@ -2436,8 +2441,7 @@
                             });
                 },
                 setSlidePos: function() {
-                    var $slide, slideData, slidePos, parents,
-                        worldOffset = viewport.world.$elem.offset(),
+                    var worldOffset = viewport.world.$elem.offset(),
                         getPosition = function($slide) {
                             var offset = $slide.offset();
                             return {
