@@ -1674,8 +1674,8 @@
                             'perspective': ''
                         });
                     } else {
-                        if (opts.transf3D.no3DFalbackClass) {
-                            $viewport.removeClass(opts.transf3D.no3DFalbackClass);
+                        if (opts.transf3D.no3DFallbackClass) {
+                            $viewport.removeClass(opts.transf3D.no3DFallbackClass);
                         }
                     }
                     if (opts.width) { $viewport.css('width', ''); }
@@ -1874,8 +1874,8 @@
                             'perspective': opts.transf3D.perspective + 'px'
                         });
                     } else {
-                        if (opts.transf3D.no3DFalbackClass) {
-                            $viewport.addClass(opts.transf3D.no3DFalbackClass);
+                        if (opts.transf3D.no3DFallbackClass) {
+                            $viewport.addClass(opts.transf3D.no3DFallbackClass);
                         }
                     }
                     if (data.qtSlides > 0) {
@@ -2680,8 +2680,8 @@
                                 // To reverse direction, use negative zoomStep. To disable zoom on mouse wheel, do not set zoomStep to zero, but set mouseZoom to false instead. Type: floating point number.
         zoomMax: 30,            // Maximun zoom possible. Type: floating point number.
         transf3D: {
-            no3DFalbackClass: 'no3D', // Class(es) added to the viewport when 3D transformations are not supported (requires Modernizr lib with "CSS 3D Transforms" detection feature). Type: string.
-            perspective: 500          // CSS perspective property set to the viewport when 3D transformations are supported. Type: integer.
+            no3DFallbackClass: 'no3D', // Class(es) added to the viewport when 3D transformations are not supported (requires Modernizr lib with "CSS 3D Transforms" detection feature). Type: string.
+            perspective: 500           // CSS perspective property set to the viewport when 3D transformations are supported. Type: integer.
         },
         events: {
             onCreate: null,                 // Fired when plug-in has been initialized. Type: function (event).
