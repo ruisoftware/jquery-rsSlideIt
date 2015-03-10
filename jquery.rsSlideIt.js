@@ -70,7 +70,11 @@
                         $viewport.wrapInner('<div/>');
                         this.$elem = $('div:eq(0)', $viewport);
                         this.$elem.css({
-                            'position': 'absolute',
+                            position: 'absolute',
+                            top: 0,
+                            right: 0,
+                            bottom: 0,
+                            left: 0,
                             'z-index': 0 // fix for IE8 standards mode that, without this z-index, cannot transform child elements
                         })
                         this.$slides = $(opts.slideSelector, this.$elem);
@@ -85,6 +89,9 @@
                     if (opts.width) { $viewport.css('width', opts.width); }
                     if (opts.height) { $viewport.css('height', opts.height); }
                     $viewport.css('overflow', 'hidden').scrollLeft(0).scrollTop(0);
+                    if ($viewport.css('position') === 'static') {
+                        $viewport.css('position', 'relative');
+                    }
                     this.setCenterPos();
                     this.world.init();
                 }
@@ -318,19 +325,19 @@
                     getFrames: function(fromCenterTrans, toCenterTrans, toTransformations, easing, durationMs) {
                         var css = '', animEasingFunc, animValue,
                             addMatrix = function(orig) {
-                                return 'XXtransform:matrix('
+                                return 'XXtransform:translate(50%, 50%) matrix('
                                     + transUtil.cache.matrixCTM.slice(0, 2) + ','
                                     + transUtil.cache.matrixCTM.slice(3, 5) + ','
-                                    + (viewport.center.x - orig.x).toFixed(2) + ','
-                                    + (viewport.center.y - orig.y).toFixed(2) + ') translate3d(0,0,0);}\n';
+                                    + (- orig.x).toFixed(2) + ','
+                                    + (- orig.y).toFixed(2) + ') translate3d(0,0,0);}\n';
                             },
                             addMatrix3D = function(orig) {
-                                return 'XXtransform:matrix3d('
+                                return 'XXtransform:translate(50%, 50%) matrix3d('
                                     + transUtil.cache.matrixCTM.slice(0, 3) + ',0,'
                                     + transUtil.cache.matrixCTM.slice(3, 6) + ',0,'
                                     + transUtil.cache.matrixCTM.slice(6, 9) + ',0,'
-                                    + (viewport.center.x - orig.x).toFixed(2) + ','
-                                    + (viewport.center.y - orig.y).toFixed(2) + ','
+                                    + (- orig.x).toFixed(2) + ','
+                                    + (- orig.y).toFixed(2) + ','
                                     + (- orig.z).toFixed(2) + ',1);}\n';
                             },
                             doAddMatrix = data.supportsCSSTransforms3D ? addMatrix3D : addMatrix;
@@ -1250,15 +1257,14 @@
                         var matrixCss, origCss;
                         if (data.supportsCSSTransforms3D) {
                             origCss = this.orig.x.toFixed(0) + 'px ' + this.orig.y.toFixed(0) + 'px ' + this.orig.z.toFixed(0) + 'px';
-                            matrixCss = 'matrix3d(' + m.slice(0, 3) + ',0, '
+                            matrixCss = 'translate(50%, 50%) matrix3d(' + m.slice(0, 3) + ',0, '
                                                     + m.slice(3, 6) + ',0, '
                                                     + m.slice(6, 9) + ',0, '
-                                                    + this.trans.x + ',' + this.trans.y + ',' + this.trans.z + ',1)';
+                                                    + (this.trans.x - viewport.center.x) + ',' + (this.trans.y - viewport.center.y) + ',' + this.trans.z + ',1)';
                         } else {
                             origCss = this.orig.x.toFixed(0) + 'px ' + this.orig.y.toFixed(0) + 'px';
-                            matrixCss = 'matrix(' + m.slice(0, 2) + ','
-                                                  + m.slice(3, 5) + ','
-                                                  + this.trans.x + ',' + this.trans.y + ')';
+                            matrixCss = 'translate(50%, 50%) matrix(' + m.slice(0, 2) + ',' + m.slice(3, 5) + ','
+                                                  + (this.trans.x - viewport.center.x) + ',' + (this.trans.y - viewport.center.y) + ')';
                         }
                         return {
                             // prevents some flickering effect even in 2D css animations
