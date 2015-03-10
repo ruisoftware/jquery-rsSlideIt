@@ -976,10 +976,16 @@
                 getZoom: function(zDest, gotoSlideIdx) {
                     if (typeof zDest === 'string') {
                         viewport.setCenterPos();
-                        var slideData = data.slideData[gotoSlideIdx];
+                        var slideData = data.slideData[gotoSlideIdx],
+                            fit = {
+                                x: viewport.center.x*2 / (slideData.padding[3] + slideData.size.x + slideData.padding[1]),
+                                y: viewport.center.y*2 / (slideData.padding[0] + slideData.size.y + slideData.padding[2])
+                            };
                         switch (zDest) {
                             case 'current': return this.zoom;
-                            case 'fit': return Math.min(viewport.center.x*2/(slideData.padding[3] + slideData.size.x + slideData.padding[1]), viewport.center.y*2/(slideData.padding[0] + slideData.size.y + slideData.padding[2]));
+                            case 'fitWidth': return fit.x;
+                            case 'fitHeight': return fit.y;
+                            case 'fit': return Math.min(fit.x, fit.y);
                             case 'fill': return Math.max(viewport.center.x*2/slideData.size.x, viewport.center.y*2/slideData.size.y);
                             default: return this.zoom;
                         }
@@ -2651,14 +2657,14 @@
     $.fn.rsSlideIt = function(options) {
         var transitionTo = function(optionsGoto) {
             var optsGoto = $.extend({}, $.fn.rsSlideIt.defaultsTransition, optionsGoto);
-            this.trigger('singleTransition.rsSlideIt', [optsGoto]);
+            return this.trigger('singleTransition.rsSlideIt', [optsGoto]);
         },
         playPause = function(optionsSequence) {
             var optsSequence = $.extend({}, $.fn.rsSlideIt.defaultsPlayPause, optionsSequence);
-            this.trigger('playPause.rsSlideIt', [optsSequence]);
+            return this.trigger('playPause.rsSlideIt', [optsSequence]);
         },
         stop = function() {
-            this.trigger('stop.rsSlideIt');
+            return this.trigger('stop.rsSlideIt');
         },
         option = function(options) {
             if (typeof arguments[0] === 'string') {
@@ -2669,7 +2675,7 @@
             }
         },
         destroy = function() {
-            this.trigger('destroy.rsSlideIt');
+            return this.trigger('destroy.rsSlideIt');
         };
 
         if (typeof options === 'string') {
@@ -2701,7 +2707,7 @@
     $.fn.rsSlideIt.defaults = {
         slideSelector: 'img',   // jQuery selector string that specifies which elements are used as slides. Type: string.
         initialSlide: 0,        // Active slide when plugin is initialized. Type: zero-based integer.
-        initialZoom: 1,         // Scale used when plugin is initialized. Type: positive floating point number or strings 'fit' and 'fill'.
+        initialZoom: 1,         // Scale used when plugin is initialized. Type: positive floating point number or strings 'fit', 'fitWidth', 'fitHeight', 'fill'.
         width: null,            // Viewport width in pixels. If null then uses the width defined in CSS. Type: integer.
         height: null,           // Viewport height in pixels. If null then uses the width defined in CSS. Type: integer.
         mousePan: true,         // Determines whether mouse panning is allowed. Type: boolean.
@@ -2737,7 +2743,7 @@
     $.fn.rsSlideIt.defaultsTransition = {
         slide: 'next',          // zero-based positive integer or 'prev' or 'next' or 'first' or 'last'. Type: positive integer or string.
         duration: 'normal',     // duration in milliseconds or a jQuery string alias. Type: positive integer or string.
-        zoom: 1,                // positive real number or 'current' or 'fit' or 'fill'. Type: positive floating point number or string.
+        zoom: 1,                // positive real number or 'current', 'fit', 'fitWidth', 'fitHeight', 'fill'. Type: positive floating point number or string.
         zoomVertex: 'linear',   // positive real number or 'out' or 'in' or 'linear'. Type: positive floating point number or string.
         easing: 'swing',        // Easing function (@see http://api.jquery.com/animate/#easing). Type: string.
         onBegin: null,          // event handler called when this transition starts to run. Type: function(event, fromSlide, toSlide)
@@ -2748,7 +2754,7 @@
     $.fn.rsSlideIt.defaultsPlayPause = {
         sequence: 'next',       // Type: array of positive integers or a string 'prev' or a string 'next'
         delayOnSlide: 2000,     // positive integer or string or array of positive integers/strings.
-        zoom: 1,                // positive real number or 'current' or 'fit' or 'fill' or an array of positive real numbers and strings
+        zoom: 1,                // positive real number or 'current', 'fit', 'fitWidth', 'fitHeight', 'fill' or an array of positive real numbers and strings
         zoomVertex: 'linear',   // positive real number or 'out' or 'in' or 'linear' or an arrays of positive real numbers and strings
         easing: 'swing',        // Easing function used in transitions (@see http://api.jquery.com/animate/#easing). Type: string or array of strings.
         duration: 600,          // positive integer or string or array of positive integers/strings.
