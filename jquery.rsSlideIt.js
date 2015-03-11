@@ -71,16 +71,12 @@
                         this.$elem = $('div:eq(0)', $viewport);
                         this.$elem.css({
                             position: 'absolute',
+                            top: 0,
+                            right: 0,
+                            bottom: 0,
+                            left: 0,
                             'z-index': 0 // fix for IE8 standards mode that, without this z-index, cannot transform child elements
                         });
-                        if (opts.autoCenter) {
-                            this.$elem.css({
-                                top: 0,
-                                right: 0,
-                                bottom: 0,
-                                left: 0
-                            });
-                        }
                         this.$slides = $(opts.slideSelector, this.$elem);
                     }
                 },
@@ -93,7 +89,7 @@
                     if (opts.width) { $viewport.css('width', opts.width); }
                     if (opts.height) { $viewport.css('height', opts.height); }
                     $viewport.css('overflow', 'hidden').scrollLeft(0).scrollTop(0);
-                    if (opts.autoCenter && $viewport.css('position') === 'static') {
+                    if ($viewport.css('position') === 'static') {
                         $viewport.css('position', 'relative');
                     }
                     this.setCenterPos();
@@ -328,40 +324,22 @@
                     intervalId: null,
                     getFrames: function(fromCenterTrans, toCenterTrans, toTransformations, easing, durationMs) {
                         var css = '', animEasingFunc, animValue,
-                            addMatrix = opts.autoCenter ?
-                                function(orig) {
-                                    return 'XXtransform:translate(50%, 50%) matrix('
-                                        + transUtil.cache.matrixCTM.slice(0, 2) + ','
-                                        + transUtil.cache.matrixCTM.slice(3, 5) + ','
-                                        + (- orig.x).toFixed(0) + ','
-                                        + (- orig.y).toFixed(0) + ') translate3d(0,0,0);}\n';
-                                } :
-                                function(orig) {
-                                    return 'XXtransform:matrix('
-                                        + transUtil.cache.matrixCTM.slice(0, 2) + ','
-                                        + transUtil.cache.matrixCTM.slice(3, 5) + ','
-                                        + (viewport.center.x - orig.x).toFixed(0) + ','
-                                        + (viewport.center.y - orig.y).toFixed(0) + ') translate3d(0,0,0);}\n';
-                                },
-                            addMatrix3D = opts.autoCenter ?
-                                function(orig) {
-                                    return 'XXtransform:translate(50%, 50%) matrix3d('
-                                        + transUtil.cache.matrixCTM.slice(0, 3) + ',0,'
-                                        + transUtil.cache.matrixCTM.slice(3, 6) + ',0,'
-                                        + transUtil.cache.matrixCTM.slice(6, 9) + ',0,'
-                                        + (- orig.x).toFixed(0) + ','
-                                        + (- orig.y).toFixed(0) + ','
-                                        + (- orig.z).toFixed(0) + ',1);}\n';
-                                } :
-                                function(orig) {
-                                    return 'XXtransform:matrix3d('
-                                        + transUtil.cache.matrixCTM.slice(0, 3) + ',0,'
-                                        + transUtil.cache.matrixCTM.slice(3, 6) + ',0,'
-                                        + transUtil.cache.matrixCTM.slice(6, 9) + ',0,'
-                                        + (viewport.center.x - orig.x).toFixed(0) + ','
-                                        + (viewport.center.y - orig.y).toFixed(0) + ','
-                                        + (- orig.z).toFixed(0) + ',1);}\n';
-                                },
+                            addMatrix = function(orig) {
+                                            return 'XXtransform:translate(50%, 50%) matrix('
+                                                + transUtil.cache.matrixCTM.slice(0, 2) + ','
+                                                + transUtil.cache.matrixCTM.slice(3, 5) + ','
+                                                + (- orig.x).toFixed(0) + ','
+                                                + (- orig.y).toFixed(0) + ') translate3d(0,0,0);}\n';
+                                        },
+                            addMatrix3D = function(orig) {
+                                            return 'XXtransform:translate(50%, 50%) matrix3d('
+                                                + transUtil.cache.matrixCTM.slice(0, 3) + ',0,'
+                                                + transUtil.cache.matrixCTM.slice(3, 6) + ',0,'
+                                                + transUtil.cache.matrixCTM.slice(6, 9) + ',0,'
+                                                + (- orig.x).toFixed(0) + ','
+                                                + (- orig.y).toFixed(0) + ','
+                                                + (- orig.z).toFixed(0) + ',1);}\n';
+                                          },
                             doAddMatrix = data.supportsCSSTransforms3D ? addMatrix3D : addMatrix;
 
                         for (var anim = 0; anim < 1.005; anim += 0.01) {
@@ -1285,17 +1263,17 @@
                         var matrixCss, origCss;
                         if (data.supportsCSSTransforms3D) {
                             origCss = this.orig.x.toFixed(0) + 'px ' + this.orig.y.toFixed(0) + 'px ' + this.orig.z.toFixed(0) + 'px';
-                            matrixCss = (opts.autoCenter ? 'translate(50%, 50%) ' : '') + 'matrix3d(' + m.slice(0, 3) + ',0, '
+                            matrixCss = 'translate(50%,50%) matrix3d(' + m.slice(0, 3) + ',0, '
                                                     + m.slice(3, 6) + ',0, '
                                                     + m.slice(6, 9) + ',0, '
-                                                    + (this.trans.x - (opts.autoCenter ? viewport.center.x : 0)).toFixed(0) + ','
-                                                    + (this.trans.y - (opts.autoCenter ? viewport.center.y : 0)).toFixed(0) + ','
+                                                    + (this.trans.x - viewport.center.x).toFixed(0) + ','
+                                                    + (this.trans.y - viewport.center.y).toFixed(0) + ','
                                                     + (this.trans.z).toFixed(0) + ',1)';
                         } else {
                             origCss = this.orig.x.toFixed(0) + 'px ' + this.orig.y.toFixed(0) + 'px';
-                            matrixCss = (opts.autoCenter ? 'translate(50%, 50%) ' : '') + 'matrix(' + m.slice(0, 2) + ',' + m.slice(3, 5) + ','
-                                      + (this.trans.x - (opts.autoCenter ? viewport.center.x : 0)).toFixed(0) + ','
-                                      + (this.trans.y - (opts.autoCenter ? viewport.center.y : 0)).toFixed(0) + ')';
+                            matrixCss = 'translate(50%,50%) matrix(' + m.slice(0, 2) + ',' + m.slice(3, 5) + ','
+                                      + (this.trans.x - viewport.center.x).toFixed(0) + ','
+                                      + (this.trans.y - viewport.center.y).toFixed(0) + ')';
                         }
                         return {
                             // prevents some flickering effect even in 2D css animations
@@ -2716,7 +2694,6 @@
         zoomStep: 0.1,          // Value incremented to the current zoom, when mouse wheel moves up. When mouse wheel moves down, current zoom is decremented by this value.
                                 // To reverse direction, use negative zoomStep. To disable zoom on mouse wheel, do not set zoomStep to zero, but set mouseZoom to false instead. Type: floating point number.
         zoomMax: 30,            // Maximun zoom possible. Type: floating point number.
-        autoCenter: false,      // If true, the plug-in centers slides for you. If you are centering on your own (your style) leave it as false.
         transf3D: {
             no3DFallbackClass: 'no3D', // Class(es) added to the viewport when 3D transformations are not supported (requires Modernizr lib with "CSS 3D Transforms" detection feature). Type: string.
             perspective: 500           // CSS perspective property set to the viewport when 3D transformations are supported. Type: integer.
