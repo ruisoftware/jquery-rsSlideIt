@@ -306,7 +306,7 @@
                             calcMatrix(transformation, nowWithEasing);
                         }
 
-                        userZoom = calcZoomValue ? util.getQuadraticValue(transData.anim.zoomCoefs, nowWithEasing) : zoomUtil.zoom;
+                        userZoom = calcZoomValue ? util.getQuadraticValue(transData.anim.zoomCoefs, now) : zoomUtil.zoom;
                         util.multiplyMatrices(zoomUtil.getMatrixUserZoom(userZoom), transUtil.cache.matrixCTM);
                         util.roundMatrixToTrigonometricBounds(transUtil.cache.matrixCTM);
 
@@ -359,9 +359,7 @@
                         this.totalTime += +new Date() - this.startTime;
                         transData.anim.progress = this.totalTime / transData.prevDuration;
                         transData.anim.progress = transData.anim.progress > 1 ? 1 : transData.anim.progress;
-                        var animEasingFunc = $.easing[transData.easing],
-                            animEasing = animEasingFunc ? animEasingFunc(transData.anim.progress, transData.prevDuration * transData.anim.progress, 0, 1, transData.prevDuration) : transData.anim.progress;
-                        zoomUtil.zoom = util.getQuadraticValue(transData.anim.zoomCoefs, animEasing);
+                        zoomUtil.zoom = util.getQuadraticValue(transData.anim.zoomCoefs, transData.anim.progress);
                         events.cssEndZoomEvents();
                         transData.anim.computeIntermediateMatrix(transData.anim.progress, true, data.slideData[transData.anim.gotoSlideIdx].cssTransforms.transformations);
 
@@ -469,7 +467,7 @@
                 },
 
                 prepareTransition: function(optsTrans) {
-                    var sameDestSlideIdx = false;
+                    var sameDestSlideIdx = false, prevGotoSlideIdx;
                     if (this.animating) {
                         if (this.isThisPartOfSlideShow()) { 
                             // slideshow was paused, and now it is going to resume
@@ -484,11 +482,12 @@
                             }
                             this.anim.centerPnt.x = transUtil.orig.x;
                             this.anim.centerPnt.y = transUtil.orig.y;
+                            this.anim.centerPnt.z = transUtil.orig.z;
                         } else {
                             // the single transition that is currently running, will stop and another single transition will start
                             this.interrupt();
                             this.anim.setLastStep();
-                            var prevGotoSlideIdx = this.anim.gotoSlideIdx;
+                            prevGotoSlideIdx = this.anim.gotoSlideIdx;
                             this.anim.pushTransformations(data.slideData[prevGotoSlideIdx].cssTransforms.transformations, true);
                             this.anim.gotoSlideIdx = util.getSlideIdx(optsTrans.slide, this.anim.gotoSlideIdx);
                             sameDestSlideIdx = prevGotoSlideIdx == this.anim.gotoSlideIdx;
@@ -501,7 +500,9 @@
                         if (seqData.userInteract) {
                             events.unbindMouseEvents();
                         }
+                        prevGotoSlideIdx = this.anim.gotoSlideIdx;
                         this.anim.gotoSlideIdx = util.getSlideIdx(optsTrans.slide);
+                        sameDestSlideIdx = prevGotoSlideIdx == this.anim.gotoSlideIdx;
                     }
 
                     // if user is currently panning around when transition kicks in, then stop panning
@@ -533,10 +534,9 @@
                         // medium (x, y) = (x=unknown for now, y=optsTrans.zoomVertex= min or max zoom represented by y-coordinate 
                         // that corresponds to minimum or maximun the function takes)
                         zoomUtil.setZoomVertex(optsTrans.zoomVertex, this.anim.gotoSlideIdx, zoom);
-                        // get the coefficients [a, b, c] of a quadratic function that interpolates the following 3 points: 
-
-                        this.anim.zoomCoefs = util.getQuadratic2PntsVertex({ x: 0, y: zoomUtil.zoom }, { x: 1, y: zoom }, isLinearZoom ? 'linear' : zoomUtil.zoomVertex);
-                        var durationMs = optsTrans.duration * (sameDestSlideIdx ? 1 - this.anim.progress : 1),
+                        // get the coefficients [a, b, c] of a quadratic function that interpolates the following 3 points:
+                        this.anim.zoomCoefs = util.getQuadratic2PntsVertex({ x: (this.anim.progressPausedOn === null ? 0 : this.anim.progress), y: zoomUtil.zoom }, { x: 1, y: zoom }, isLinearZoom ? 'linear' : zoomUtil.zoomVertex);
+                        var durationMs = optsTrans.duration * (sameDestSlideIdx ? 1 - this.anim.progress: 1),
                             animationName = 'rsSlideIt' + (+new Date()),
                             animData;
 
@@ -918,8 +918,11 @@
                     this.longestPath = 0;
                     for (var i = 0; i < data.qtSlides; ++i) {
                         for (var j = i + 1; j < data.qtSlides; ++j) {
-                            this.longestPath = Math.max(this.longestPath, util.getDistanceTwoPnts(data.slideData[i].center, data.slideData[j].center));
+                            this.longestPath = Math.max(this.longestPath, util.getDistanceTwoPnts(data.slideData[i].centerTrans, data.slideData[j].centerTrans));
                         }
+                    }
+                    if (this.longestPath < 1) {
+                        this.longestPath = 1;
                     }
                 },
                 doZoom: function(newZoom) {
@@ -1503,7 +1506,7 @@
                         }
                         transData.anim.progressPausedOn = null;
                         if (seqData.state === $.fn.rsSlideIt.state.PAUSE) {
-                            seqData.state = $.fn.rsSlideIt.state.STOP;    
+                            seqData.state = $.fn.rsSlideIt.state.STOP;
                             transUtil.activeSlideIndex = transData.anim.gotoSlideIdx;
                             transData.finished(true, true);
                         } else {
@@ -1600,34 +1603,9 @@
                             transData.interrupt();
                         }
                     }
-                    $viewport.
-                        unbind('singleTransition.rsSlideIt', events.onSingleTransition).
-                        unbind('transition.rsSlideIt', events.onTransition).
-                        unbind('playPause.rsSlideIt', events.onPlayPause).
-                        unbind('stop.rsSlideIt', events.onStop).
-                        unbind('destroy.rsSlideIt', events.onDestroy).
-                        unbind('getter.rsSlideIt', events.onGetter).
-                        unbind('setter.rsSlideIt', events.onSetter).
-                        unbind('create.rsSlideIt', events.onCreate).
-                        unbind('ajaxLoadBegin.rsSlideIt', events.onAjaxLoadBegin).
-                        unbind('ajaxLoadSlide.rsSlideIt', events.onAjaxLoadSlide).
-                        unbind('ajaxLoadEnd.rsSlideIt', events.onAjaxLoadEnd).
-                        unbind('changeZoom.rsSlideIt', events.onChangeZoom).
-                        unbind('selectSlide.rsSlideIt', events.onSelectSlide).
-                        unbind('unselectSlide.rsSlideIt', events.onUnselectSlide).
-                        unbind('clickSlide.rsSlideIt', events.onClickSlide).
-                        unbind('dblClickSlide.rsSlideIt', events.onDblClickSlide).
-                        unbind('beginPan.rsSlideIt', events.onBeginPan).
-                        unbind('endPan.rsSlideIt', events.onEndPan).
-                        unbind('beginTrans.rsSlideIt', events.onBeginTrans).
-                        unbind('endTrans.rsSlideIt', events.onEndTrans).
-                        unbind('beginDelay.rsSlideIt', events.onBeginDelay).
-                        unbind('endDelay.rsSlideIt', events.onEndDelay).
-                        unbind('userMousewheel.rsSlideIt', events.onUserMouseWheel);
+                    $viewport.unbind('.rsSlideIt');
 
-                    viewport.world.$slides.
-                        unbind('dblclick.rsSlideIt', events.onDblClick).
-                        unbind('mouseup.rsSlideIt', events.onMouseupClick);
+                    viewport.world.$slides.unbind('.rsSlideIt');
 
                     if (data.supportsCSSAnimation) {
                         if (transData.cssAnim.$styleObj) {
@@ -1638,22 +1616,8 @@
                             '-moz-animation': '',
                             '-o-animation': '',
                             'animation': ''
-                        }).
-                        unbind('animationstart.rsSlideIt', events.onCssAnimationStart).
-                        unbind('webkitAnimationStart.rsSlideIt', events.onCssAnimationStart).
-                        unbind('oanimationstart.rsSlideIt', events.onCssAnimationStart).
-                        unbind('MSAnimationStart.rsSlideIt', events.onCssAnimationStart).
-                        unbind('animationend.rsSlideIt', events.onCssAnimationEnd).
-                        unbind('webkitAnimationEnd.rsSlideIt', events.onCssAnimationEnd).
-                        unbind('oanimationend.rsSlideIt', events.onCssAnimationEnd).
-                        unbind('MSAnimationEnd.rsSlideIt', events.onCssAnimationEnd);
+                        }).unbind('.rsSlideIt');
                     }
-                    $viewport.
-                        unbind('mousemove.rsSlideIt', panUtil.mousemove).
-                        unbind('mousedown.rsSlideIt', this.onMousedown).
-                        unbind('mouseup.rsSlideIt', this.onMouseup).
-                        unbind('mouseleave.rsSlideIt', this.onMouseleave).
-                        unbind('DOMMouseScroll.rsSlideIt mousewheel.rsSlideIt', events.onMouseWheel);
 
                     if (data.isIE8orBelow) {
                         viewport.world.$elem.css({
