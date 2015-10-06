@@ -1,10 +1,11 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <title>3D transformations</title>
     <script src="jquery.2.0.0.min.js"></script>
     <script src="modernizr.js"></script>
     <script src="jQuery.rsSlideIt.js"></script>
+    <script src="jQuery.easing.1.3.js"></script>
     <style>
         #viewport {
             position: absolute;
@@ -134,25 +135,27 @@
             $("#prev").click(function() {
                 $("#viewport").rsSlideIt('transition', {
                     slide: 'prev',
-                    duration: 3000
+                    duration: 3000,
+                    easing: 'easeInOutBack'
                 });
             });
             $("#next").click(function() {
                 $("#viewport").rsSlideIt('transition', {
                     slide: 'next',
                     zoom: 1,
-                    duration: 1000,
-                    zoomVertex: .5
+                    duration: 10000,
+                    zoomVertex: .5,
+                    easing: 'linear'
                 });
             });
             $("#playPause").click(function() {
                 $("#viewport").rsSlideIt('playPause', {
                     sequence: 'next',       // Type: array of positive integers or a string 'prev' or a string 'next'
-                    delayOnSlide: [200, 500],    // positive integer or string or array of positive integers/strings.
+                    delayOnSlide: [1200, 1500],    // positive integer or string or array of positive integers/strings.
                     zoom: [1,.3],            // positive real number or 'current' or 'fit' or 'fill' or an array of positive real numbers and strings
                     zoomVertex: 'out',   // positive real number or 'out' or 'in' or 'linear' or an array of positive real numbers and strings
-                    easing: 'swing',        // Easing function used in transitions (@see http://api.jquery.com/animate/#easing). Type: string or array of strings.
-                    duration: 600,          // positive integer or string or array of positive integers/strings.
+                    easing: 'linear',        // Easing function used in transitions (@see http://api.jquery.com/animate/#easing). Type: string or array of strings.
+                    duration: 6000,          // positive integer or string or array of positive integers/strings.
                     repeat: 'forever',      // positive integer or 'forever'
                     userInteract: true,     // true: user can zoom and pan while slideshow is standing still; false: otherwise 
                     onPlay: null,           // Fired when the sequence starts to run

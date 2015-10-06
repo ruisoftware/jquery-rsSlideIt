@@ -10,11 +10,13 @@
 * For info, please scroll to the bottom.
 */
 (function($, undefined) {
+    'use strict';
+    /* global Modernizr */
     var SlideItClass = function($viewport, opts) {
         var data = {
                 slideData: [],
                 qtSlides: 0,
-                supportsCSSAnimation: (typeof Modernizr !== 'undefined') && Modernizr.cssanimations,
+                supportsCSSAnimation: true, //(typeof Modernizr !== 'undefined') && Modernizr.cssanimations,
                 supportsCSSTransforms3D: (typeof Modernizr !== 'undefined') && Modernizr.csstransforms3d,
                 isIE8orBelow: false,
                 isIE9: false,
@@ -114,11 +116,11 @@
                     transData.onBegin = optsSequence.onBeginTrans;
                     transData.onEnd = optsSequence.onEndTrans;
                     transData.inputOpts = optsSequence;
-                    transData.isPrevOrNext = (typeof optsSequence.sequence === 'string') && (optsSequence.sequence == 'prev' || optsSequence.sequence == 'next');
+                    transData.isPrevOrNext = (typeof optsSequence.sequence === 'string') && (optsSequence.sequence === 'prev' || optsSequence.sequence === 'next');
                     this.onBeginDelay = optsSequence.onBeginDelay;
                     this.onEndDelay = optsSequence.onEndDelay;
                     this.userInteract = optsSequence.userInteract;
-                    this.repeat = optsSequence.repeat == 'forever' ? -1 : optsSequence.repeat;
+                    this.repeat = optsSequence.repeat === 'forever' ? -1 : optsSequence.repeat;
                     this.qt = {
                         sequences: (typeof optsSequence.sequence === 'object') ? optsSequence.sequence.length : (transData.isPrevOrNext ? data.qtSlides : 0),
                         delays: (typeof optsSequence.delayOnSlide === 'object') ? optsSequence.delayOnSlide.length : 0,
@@ -133,7 +135,7 @@
                     var runTransition = function() {
                         transData.onEndTransSlideShow = function() {
                             if (seqData.state === $.fn.rsSlideIt.state.PAUSE ||
-                                seqData.state === $.fn.rsSlideIt.state.PLAY && (seqData.repeat == -1 || seqData.idx % seqData.qt.sequences > 0 || seqData.repeat-- > 0)) {
+                                seqData.state === $.fn.rsSlideIt.state.PLAY && (seqData.repeat === -1 || seqData.idx % seqData.qt.sequences > 0 || seqData.repeat-- > 0)) {
 
                                 if (seqData.state !== $.fn.rsSlideIt.state.PAUSE || seqData.pauseOnSlide) {
                                     transData.setupNextTrans();
@@ -144,7 +146,8 @@
                             } else {
                                 switch (seqData.state) {
                                     case $.fn.rsSlideIt.state.PLAY:
-                                        seqData.state = $.fn.rsSlideIt.state.STOP; // no break here
+                                        seqData.state = $.fn.rsSlideIt.state.STOP;
+                                        /* falls through */
                                     case $.fn.rsSlideIt.state.STOP:
                                         if (transData.inputOpts.onStop) {
                                             transData.inputOpts.onStop();
@@ -230,7 +233,7 @@
                     interrupt: function() {
                         // stops js request frame animation
                         if (this.requestIdAnimationFrame !== null) {
-                            var cancelAnimationFrame = window.cancelAnimationFrame || window.mozCancelAnimationFrame || window.webkitCancelAnimationFrame || window.msCancelAnimationFrame
+                            var cancelAnimationFrame = window.cancelAnimationFrame || window.mozCancelAnimationFrame || window.webkitCancelAnimationFrame || window.msCancelAnimationFrame;
                             if (cancelAnimationFrame) {
                                 cancelAnimationFrame(this.requestIdAnimationFrame);
                             }
@@ -253,7 +256,7 @@
                             transUtil.cache.refresh();
                             transUtil.adjustTransIE(transUtil.orig);
                         }
-                        if (seqData.state == $.fn.rsSlideIt.state.STOP) {
+                        if (seqData.state === $.fn.rsSlideIt.state.STOP) {
                             transUtil.activeSlideIndex = this.gotoSlideIdx;
                         }
                         transData.finished(true, true);
@@ -280,7 +283,7 @@
                                     default:
                                         value = util.interpolate(transformation.valueIdent, transformation.valueInv, interpolate); 
                                 }
-                                if (transformation.id == transUtil.transID.ROTATE3D) {
+                                if (transformation.id === transUtil.transID.ROTATE3D) {
                                     util.multiplyMatrices(transUtil.getMatrix(transformation.id, {x: transformation.valueInv.x, y: transformation.valueInv.y, z: transformation.valueInv.z, rad: value}), transUtil.cache.matrixCTM);
                                 } else {
                                     util.multiplyMatrices(transUtil.getMatrix(transformation.id, value), transUtil.cache.matrixCTM);
@@ -325,20 +328,20 @@
                     getFrames: function(fromCenterTrans, toCenterTrans, toTransformations, easing, durationMs) {
                         var css = '', animEasingFunc, animValue,
                             addMatrix = function(orig) {
-                                            return 'XXtransform:translate(50%, 50%) matrix('
-                                                + transUtil.cache.matrixCTM.slice(0, 2) + ','
-                                                + transUtil.cache.matrixCTM.slice(3, 5) + ','
-                                                + (- orig.x).toFixed(0) + ','
-                                                + (- orig.y).toFixed(0) + ') translate3d(0,0,0);}\n';
+                                            return 'XXtransform:translate(50%, 50%) matrix(' +
+                                                transUtil.cache.matrixCTM.slice(0, 2) + ',' +
+                                                transUtil.cache.matrixCTM.slice(3, 5) + ',' +
+                                                (- orig.x).toFixed(0) + ',' +
+                                                (- orig.y).toFixed(0) + ') translate3d(0,0,0);}\n';
                                         },
                             addMatrix3D = function(orig) {
-                                            return 'XXtransform:translate(50%, 50%) matrix3d('
-                                                + transUtil.cache.matrixCTM.slice(0, 3) + ',0,'
-                                                + transUtil.cache.matrixCTM.slice(3, 6) + ',0,'
-                                                + transUtil.cache.matrixCTM.slice(6, 9) + ',0,'
-                                                + (- orig.x).toFixed(0) + ','
-                                                + (- orig.y).toFixed(0) + ','
-                                                + (- orig.z).toFixed(0) + ',1);}\n';
+                                            return 'XXtransform:translate(50%, 50%) matrix3d(' +
+                                                transUtil.cache.matrixCTM.slice(0, 3) + ',0,' +
+                                                transUtil.cache.matrixCTM.slice(3, 6) + ',0,' +
+                                                transUtil.cache.matrixCTM.slice(6, 9) + ',0,' +
+                                                (- orig.x).toFixed(0) + ',' +
+                                                (- orig.y).toFixed(0) + ',' +
+                                                (- orig.z).toFixed(0) + ',1);}\n';
                                           },
                             doAddMatrix = data.supportsCSSTransforms3D ? addMatrix3D : addMatrix;
 
@@ -357,8 +360,7 @@
                     },
                     interrupt: function() {
                         this.totalTime += +new Date() - this.startTime;
-                        transData.anim.progress = this.totalTime / transData.prevDuration;
-                        transData.anim.progress = transData.anim.progress > 1 ? 1 : transData.anim.progress;
+                        transData.anim.progress = Math.min(1, this.totalTime / transData.prevDuration);
                         zoomUtil.zoom = util.getQuadraticValue(transData.anim.zoomCoefs, transData.anim.progress);
                         events.cssEndZoomEvents();
                         transData.anim.computeIntermediateMatrix(transData.anim.progress, true, data.slideData[transData.anim.gotoSlideIdx].cssTransforms.transformations);
@@ -375,18 +377,13 @@
                         if (transData.isThisPartOfSlideShow()) {
                             this.resetCSSanimation();
                         }
-                        if (seqData.state == $.fn.rsSlideIt.state.STOP) {
+                        if (seqData.state === $.fn.rsSlideIt.state.STOP) {
                             transUtil.activeSlideIndex = transData.anim.gotoSlideIdx;
                         }
                         transData.finished(true, true);
                     },
                     resetCSSanimation: function() {
-                        viewport.world.$elem.css(transUtil.getTransformCSSstyle()).css({
-                            '-webkit-animation': '',
-                            '-moz-animation': '',
-                            '-o-animation': '',
-                            'animation': ''
-                       });
+                        viewport.world.$elem.css(transUtil.getTransformCSSstyle()).css('animation', '');
                     }
                 },
                 slide: null,
@@ -414,13 +411,14 @@
                 
                 setupNextTrans: function() {
                     this.slide = this.isPrevOrNext ? this.inputOpts.sequence : this.inputOpts.sequence[seqData.idx % seqData.qt.sequences];
-                    this.prevDuration = this.duration = util.getSpeedMs(seqData.qt.durations == 0 ? this.inputOpts.duration : this.inputOpts.duration[seqData.idx % seqData.qt.durations]);
-                    this.zoom = seqData.qt.zooms == 0 ? this.inputOpts.zoom : this.inputOpts.zoom[seqData.idx % seqData.qt.zooms];
-                    this.zoomVertex = seqData.qt.zoomVertexes == 0 ? this.inputOpts.zoomVertex : this.inputOpts.zoomVertex[seqData.idx % seqData.qt.zoomVertexes];
-                    this.prevEasing = this.easing = seqData.qt.easings == 0 ? this.inputOpts.easing : this.inputOpts.easing[seqData.idx % seqData.qt.easings];
+                    this.prevDuration = this.duration = util.getSpeedMs(seqData.qt.durations === 0 ? this.inputOpts.duration : this.inputOpts.duration[seqData.idx % seqData.qt.durations]);
+                    this.zoom = seqData.qt.zooms === 0 ? this.inputOpts.zoom : this.inputOpts.zoom[seqData.idx % seqData.qt.zooms];
+                    this.zoomVertex = seqData.qt.zoomVertexes === 0 ? this.inputOpts.zoomVertex : this.inputOpts.zoomVertex[seqData.idx % seqData.qt.zoomVertexes];
+                    this.prevEasing = this.easing = seqData.qt.easings === 0 ? this.inputOpts.easing : this.inputOpts.easing[seqData.idx % seqData.qt.easings];
                 },
                 
                 interrupt: function() {
+                    /*jshint -W030 */
                     data.supportsCSSAnimation ? this.cssAnim.interrupt() : this.anim.interrupt();
                 },
                 
@@ -444,7 +442,7 @@
                                 seqData.timeoutId = null;
                                 done();
                             } else {
-                                var delay = seqData.qt.delays == 0 ? this.inputOpts.delayOnSlide : this.inputOpts.delayOnSlide[seqData.idx % seqData.qt.delays];
+                                var delay = seqData.qt.delays === 0 ? this.inputOpts.delayOnSlide : this.inputOpts.delayOnSlide[seqData.idx % seqData.qt.delays];
                                 $viewport.triggerHandler('beginDelay.rsSlideIt', [this.anim.gotoSlideIdx, delay]);
                                 seqData.timeoutId = setTimeout(done, delay);
                             }
@@ -463,6 +461,7 @@
                 },
                 
                 doTransition: function(event, optsTrans) {
+                    /*jshint -W030 */
                     data.supportsCSSAnimation ? this.doTransitionCSS(event, optsTrans) : this.doTransitionJS(event, optsTrans);
                 },
 
@@ -490,7 +489,7 @@
                             prevGotoSlideIdx = this.anim.gotoSlideIdx;
                             this.anim.pushTransformations(data.slideData[prevGotoSlideIdx].cssTransforms.transformations, true);
                             this.anim.gotoSlideIdx = util.getSlideIdx(optsTrans.slide, this.anim.gotoSlideIdx);
-                            sameDestSlideIdx = prevGotoSlideIdx == this.anim.gotoSlideIdx;
+                            sameDestSlideIdx = prevGotoSlideIdx === this.anim.gotoSlideIdx;
                         }
                     } else {
                         // single transition (or slideshow) was stopped and now it is going to start
@@ -528,7 +527,7 @@
                     var sameDestSlideIdx = this.prepareTransition(optsTrans),
                         toTransformations = data.slideData[this.anim.gotoSlideIdx].cssTransforms.transformations,
                         zoom = zoomUtil.checkZoomBounds(zoomUtil.getZoom(optsTrans.zoom, this.anim.gotoSlideIdx)),
-                        isLinearZoom = typeof optsTrans.zoomVertex === 'string' && optsTrans.zoomVertex == 'linear';
+                        isLinearZoom = typeof optsTrans.zoomVertex === 'string' && optsTrans.zoomVertex === 'linear';
 
                     if (this.animationWillRun(this.anim.centerPnt, data.slideData[this.anim.gotoSlideIdx].centerTrans, zoom)) {
                         // medium (x, y) = (x=unknown for now, y=optsTrans.zoomVertex= min or max zoom represented by y-coordinate 
@@ -547,30 +546,21 @@
                             seqData.state = $.fn.rsSlideIt.state.PLAY;
                         }
 
-                        if (this.cssAnim.$styleObj) {
-                            this.cssAnim.$styleObj.remove();
-                        }
-                        
                         animData = this.cssAnim.getFrames(this.anim.centerPnt, data.slideData[this.anim.gotoSlideIdx].centerTrans, toTransformations, optsTrans.easing, durationMs);
-
-                        this.cssAnim.$styleObj = $('<style> ' + 
-                            '@-webkit-keyframes ' + animationName + ' {\n' + animData.replace(/XX/g, '-webkit-') + '}\n' + 
-                            '@-moz-keyframes ' + animationName + ' {\n' + animData.replace(/XX/g, '-moz-') + '}\n' + 
-                            '@-o-keyframes ' + animationName + ' {\n' + animData.replace(/XX/g, '-o-') + '}\n' + 
-                            '@keyframes ' + animationName + ' {\n' + animData.replace(/XX/g, '') + '}\n' + 
-                        '</style>');
 
                         // for some complex css3 animations, Chrome does not flush the whole animation data, hence the need for a timeout to fix this issue 
                         setTimeout(function() {
                             var animTrigger = animationName + ' ' + durationMs + 'ms linear forwards';
-                            viewport.world.$elem.css({
-                                '-webkit-animation': animTrigger,
-                                '-moz-animation': animTrigger,
-                                '-o-animation': animTrigger,
-                                'animation': animTrigger
-                            });
+                            viewport.world.$elem.css('animation', animTrigger);
+
+                            if (transData.cssAnim.$styleObj) {
+                                transData.cssAnim.$styleObj.remove();
+                            }
+                            transData.cssAnim.$styleObj = $('<style> ' + 
+                                '@keyframes ' + animationName + ' {\n' + animData.replace(/XX/g, '') + '}\n' + 
+                            '</style>');
                             $('head').append(transData.cssAnim.$styleObj);
-                        }, 1);
+                        });
 
                     } else {
                         if (this.isThisPartOfSlideShow()) {
@@ -586,7 +576,7 @@
                         toCenterTrans = data.slideData[this.anim.gotoSlideIdx].centerTrans,
                         toTransformations = data.slideData[this.anim.gotoSlideIdx].cssTransforms.transformations,
                         zoom = zoomUtil.checkZoomBounds(zoomUtil.getZoom(optsTrans.zoom, this.anim.gotoSlideIdx)),
-                        isLinearZoom = typeof optsTrans.zoomVertex === 'string' && optsTrans.zoomVertex == 'linear',
+                        isLinearZoom = typeof optsTrans.zoomVertex === 'string' && optsTrans.zoomVertex === 'linear',
                         durationMs = optsTrans.duration * (sameDestSlideIdx ? 1 - this.anim.progress : 1),
                         requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame,
                         startTimeStamp = null,
@@ -694,7 +684,7 @@
                         window.console.warn(msg);
                     } else {
                         if (alertIfWarnNoSupported) {
-                            alert(msg);
+                            window.alert(msg);
                         }
                     }
                 },
@@ -716,11 +706,11 @@
                     }
                 },
                 toInt: function(str) {
-                    var value = !str || str == 'auto' || str == '' ? 0 : parseInt(str, 10);
+                    var value = !str || str === 'auto' || str === '' ? 0 : parseInt(str, 10);
                     return isNaN(value) ? 0 : value;
                 },
                 toFloat: function(str) {
-                    var value = !str || str == 'auto' || str == '' ? 0.0 : parseFloat(str);
+                    var value = !str || str === 'auto' || str === '' ? 0.0 : parseFloat(str);
                     return isNaN(value) ? 0.0 : value;
                 },
                 interpolate: function(from, to, percent) {
@@ -793,7 +783,7 @@
                 // this function interpolates a quadratic function.
                 // It might need to make further approximations for the resulting f(x) reach the targeted p2yVertex
                 getQuadratic2PntsVertex: function(p1, p3, p2yVertex) {
-                    if (typeof p2yVertex === 'string' && p2yVertex == 'linear') {
+                    if (typeof p2yVertex === 'string' && p2yVertex === 'linear') {
                         return this.getLinear(p1, p3);
                     } else {
                         return this.getQuadraticAprox(p1, { x: (p1.x + p3.x) / 2, y: p2yVertex }, p3);
@@ -858,7 +848,7 @@
                     ];
                 },
                 isDefined: function(value) {
-                    return value && value != "" && value != "none";
+                    return value && value !== '' && value !== 'none';
                 },
                 getAngleRadians: function(value) {
                     var toRad = 0; // conversion rate to radians
@@ -897,7 +887,7 @@
                     if (typeof speed === 'string') {
                         ms = $.fx.speeds[speed];
                         if (ms === undefined) {
-                            ms = $.fx.speeds['_default'];
+                            ms = $.fx.speeds._default;
                         }
                     }
                     if (ms === undefined) {
@@ -1044,7 +1034,7 @@
                 },
                 mousedown: function(event) {
                     event.preventDefault();
-                    if (event.which == 1) {
+                    if (event.which === 1) {
                         $viewport.bind('mousemove.rsSlideIt', panUtil.mousemove);
                         panUtil.isPanning = false;
                     }
@@ -1061,7 +1051,7 @@
                         transUtil.activeSlideCenterTrans.y -= offset.y;
                         transUtil.activeSlideCenterTrans.z -= offset.z;
                     }
-                    if (event.which == 1) {
+                    if (event.which === 1) {
                         panUtil.stopImmediately();
                     }
                 },
@@ -1266,38 +1256,25 @@
                         var matrixCss, origCss;
                         if (data.supportsCSSTransforms3D) {
                             origCss = this.orig.x.toFixed(0) + 'px ' + this.orig.y.toFixed(0) + 'px ' + this.orig.z.toFixed(0) + 'px';
-                            matrixCss = 'translate(50%,50%) matrix3d(' + m.slice(0, 3) + ',0, '
-                                                    + m.slice(3, 6) + ',0, '
-                                                    + m.slice(6, 9) + ',0, '
-                                                    + (this.trans.x - viewport.center.x).toFixed(0) + ','
-                                                    + (this.trans.y - viewport.center.y).toFixed(0) + ','
-                                                    + (this.trans.z).toFixed(0) + ',1)';
+                            matrixCss = 'translate(50%,50%) matrix3d(' + m.slice(0, 3) + ',0, ' +
+                                                    m.slice(3, 6) + ',0, ' +
+                                                    m.slice(6, 9) + ',0, ' +
+                                                    (this.trans.x - viewport.center.x).toFixed(0) + ',' +
+                                                    (this.trans.y - viewport.center.y).toFixed(0) + ',' +
+                                                    (this.trans.z).toFixed(0) + ',1)';
                         } else {
                             origCss = this.orig.x.toFixed(0) + 'px ' + this.orig.y.toFixed(0) + 'px';
-                            matrixCss = 'translate(50%,50%) matrix(' + m.slice(0, 2) + ',' + m.slice(3, 5) + ','
-                                      + (this.trans.x - viewport.center.x).toFixed(0) + ','
-                                      + (this.trans.y - viewport.center.y).toFixed(0) + ')';
+                            matrixCss = 'translate(50%,50%) matrix(' + m.slice(0, 2) + ',' + m.slice(3, 5) + ',' +
+                                      (this.trans.x - viewport.center.x).toFixed(0) + ',' +
+                                      (this.trans.y - viewport.center.y).toFixed(0) + ')';
                         }
                         return {
                             // prevents some flickering effect even in 2D css animations
-                            '-webkit-backface-visibility': 'hidden',
-                            '-moz-backface-visibility': 'hidden',
-                            '-ms-backface-visibility': 'hidden',
                             'backface-visibility': 'hidden',
-                            '-webkit-transform-style': 'preserve-3d',
-                            '-moz-transform-style': 'preserve-3d',
                             'transform-style': 'preserve-3d',
 
-                            '-webkit-transform': matrixCss,
-                            '-moz-transform': matrixCss,
-                            '-o-transform': matrixCss,
-                            'msTransform': matrixCss,
                             'transform': matrixCss,
 
-                            '-webkit-transform-origin': origCss,
-                            '-moz-transform-origin': origCss,
-                            '-o-transform-origin': origCss,
-                            'msTransformOrigin': origCss,
                             'transform-origin': origCss
                         };
                     }
@@ -1342,11 +1319,12 @@
                     return this.getTransformCSSstyle();
                 },
                 getTransformOriginCss: function($elem, outerSize) {
+                    var value;
                     if (data.isIE8orBelow) {
                         // TODO check if in IE8 and below, the transform origin correctly maps to the margins
                         return { x: util.toFloat($elem.css('margin-left')), y: util.toFloat($elem.css('margin-top')), z: 0 };
                     } else {
-                        var value = $elem.css('-webkit-transform-origin');
+                        value = $elem.css('-webkit-transform-origin');
                         if (!util.isDefined(value)) {
                             value = $elem.css('-moz-transform-origin');
                             if (!util.isDefined(value)) {
@@ -1364,12 +1342,17 @@
                             }
                         }
                     }
-                    var values = value.split(" "),
+                    var values = value.split(' '),
                         origin = { x: 0, y: 0, z: 0 };
                     switch (values.length) {
-                        case 3: origin.z = util.toFloat(values[2]); // yeah, no need for break here
-                        case 2: origin.y = util.toFloat(values[1]); // and here
-                        case 1: origin.x = util.toFloat(values[0]);
+                        case 3:
+                            origin.z = util.toFloat(values[2]);
+                            /* falls through */
+                        case 2:
+                            origin.y = util.toFloat(values[1]);
+                            /* falls through */
+                        case 1:
+                            origin.x = util.toFloat(values[0]);
                     }
                     return origin;
                 },
@@ -1416,6 +1399,7 @@
                         delta.x = - evt.wheelDeltaX / 120;
                     }
                     if (opts.mouseZoom && seqData.userInteract || opts.events.onMouseWheel) {
+                        /*jshint -W030 */
                         evt.preventDefault ? evt.preventDefault() : evt.returnValue = false;
                     }
                     if (opts.mouseZoom && seqData.userInteract) {
@@ -1487,7 +1471,7 @@
                         }
                     }
                 },
-                onStop: function(event) {
+                onStop: function() {
                     // if "stop" is invoked when no playback is running, then transData.inputOpts is null
                     if (transData.inputOpts) {
                         if (seqData.timeoutId) {
@@ -1558,7 +1542,7 @@
                                 opts.zoomMax = value;
                             }
                             value = zoomUtil.zoom;
-                            // note that 'zoomMin' does not have break here
+                            /* falls through */
                         case 'zoom':
                             zoomUtil.setterZoom(value);
                             break;
@@ -1575,7 +1559,7 @@
                     }
                     return events.onGetter(event, field);
                 },
-                onMouseupClick: function(event) {
+                onMouseupClick: function() {
                     // onClick is implemented as mouseUp, because a genuine click event is fired when users finishes to pan around with mouse.
                     // So, the workaroud is to catch the mouseup and fire the user onClickSlide
                     if (!panUtil.isPanning && opts.events.onClickSlide) {
@@ -1595,7 +1579,7 @@
                         opts.events.onCreate(event);
                     }
                 },
-                onDestroy: function(event) {
+                onDestroy: function() {
                     if (transData.inputOpts) {
                         $viewport.trigger('stop.rsSlideIt'); // stop slideshow
                     } else {
@@ -1611,12 +1595,7 @@
                         if (transData.cssAnim.$styleObj) {
                             transData.cssAnim.$styleObj.remove();
                         }
-                        viewport.world.$elem.css({
-                            '-webkit-animation': '',
-                            '-moz-animation': '',
-                            '-o-animation': '',
-                            'animation': ''
-                        }).unbind('.rsSlideIt');
+                        viewport.world.$elem.css('animation', '').unbind('.rsSlideIt');
                     }
 
                     if (data.isIE8orBelow) {
@@ -1627,31 +1606,14 @@
                         });
                     } else {
                         viewport.world.$elem.css({
-                            '-webkit-transform-origin': '',
-                            '-moz-transform-origin': '',
-                            '-o-transform-origin': '',
-                            'msTransformOrigin': '',
                             'transform-origin': '',
-                            '-webkit-transform': '',
-                            '-moz-transform': '',
-                            '-o-transform': '',
-                            'msTransform': '',
                             'transform': '',
-                            '-webkit-backface-visibility': '',
-                            '-moz-backface-visibility': '',
-                            '-ms-backface-visibility': '',
                             'backface-visibility': '',
-                            '-webkit-transform-style': '',
-                            '-moz-transform-style': '',
                             'transform-style': ''
                         });
                     }
                     if (data.supportsCSSTransforms3D) {
-                        $viewport.css({
-                            '-webkit-perspective': '',
-                            '-moz-perspective': '',
-                            'perspective': ''
-                        });
+                        $viewport.css('perspective', '');
                     } else {
                         if (opts.transf3D.no3DFallbackClass) {
                             $viewport.removeClass(opts.transf3D.no3DFallbackClass);
@@ -1847,11 +1809,7 @@
 
                     opts.initialZoom = opts.initialZoom < opts.Min ? opts.Min : (opts.initialZoom > opts.Max ? opts.Max : opts.initialZoom);
                     if (data.supportsCSSTransforms3D) {
-                        $viewport.css({
-                            '-webkit-perspective': opts.transf3D.perspective + 'px',
-                            '-moz-perspective': opts.transf3D.perspective + 'px',
-                            'perspective': opts.transf3D.perspective + 'px'
-                        });
+                        $viewport.css('perspective', opts.transf3D.perspective + 'px');
                     } else {
                         if (opts.transf3D.no3DFallbackClass) {
                             $viewport.addClass(opts.transf3D.no3DFallbackClass);
@@ -1866,7 +1824,7 @@
                 getTransformFromCss: function($slide) {
                     var value,
                         getTransformFromCSSie = function(msFilter) {
-                            var lookup = "progid:dximagetransform.microsoft.matrix(",
+                            var lookup = 'progid:dximagetransform.microsoft.matrix(',
                                 pos = msFilter.toLowerCase().indexOf(lookup);
                             if (pos > -1) {
                                 msFilter = msFilter.substring(pos + lookup.length).toLowerCase().replace(/(m11=|m12=|m21=|m22=| )/g, '');
@@ -1878,7 +1836,7 @@
                         };
                     if (data.isIE8orBelow) {
                         value = $slide.css('filter');
-                        if (value === "auto" || !util.isDefined(value)) {
+                        if (value === 'auto' || !util.isDefined(value)) {
                             value = $slide.css('-ms-filter');
                             if (!util.isDefined(value)) {
                                 return null;
@@ -1904,7 +1862,7 @@
                 },
                 getMatrixCoefs: function(value) {
                     value = value.replace(/matrix(3d)?\(/gi, ''); // remove occurences of "matrix(" and "matrix3d("
-                    var coefs = value.split(','), is3D = coefs.length == 16;
+                    var coefs = value.split(','), is3D = coefs.length === 16;
                     // 3D:
                     // matrix3d(m11, m12, m13, 0, m21, m22, m23, 0, m31, m32, m33, 0, tx, ty, tz, 1)
                     // | m11 m12 m13 0 |
@@ -1945,11 +1903,12 @@
                             return !util.isDefined(value) ? null : value;
                         },
                         getTransformRotate = function(value) {
-                            var found = value.match(/rotate\([-|+]?[\d.]+(deg|rad|grad|turn)\)/i);
+                            var found = value.match(/rotate\([-|+]?[\d.]+(deg|rad|grad|turn)\)/i),
+                                angle;
                             // try rotate(a)
                             if (found && util.isDefined(found[0])) {
-                                var angle = util.getAngleRadians(value.replace(/rotate\(|\)/gi, '')),
-                                    sine = Math.sin(angle),
+                                angle = util.getAngleRadians(value.replace(/rotate\(|\)/gi, ''));
+                                var sine = Math.sin(angle),
                                     cosine = Math.cos(angle);
                                 return { 
                                     id:         transUtil.transID.ROTATE,
@@ -1962,7 +1921,7 @@
                             found = value.match(/rotateX\([-|+]?[\d.]+(deg|rad|grad|turn)\)/i);
                             // try rotateX(a) (3D)
                             if (found && util.isDefined(found[0])) {
-                                var angle = util.getAngleRadians(value.replace(/rotateX\(|\)/gi, ''));
+                                angle = util.getAngleRadians(value.replace(/rotateX\(|\)/gi, ''));
                                 return { 
                                     id:         transUtil.transID.ROTATEX,
                                     valueIdent: 0,
@@ -1974,7 +1933,7 @@
                             found = value.match(/rotateY\([-|+]?[\d.]+(deg|rad|grad|turn)\)/i);
                             // try rotateY(a) (3D)
                             if (found && util.isDefined(found[0])) {
-                                var angle = util.getAngleRadians(value.replace(/rotateY\(|\)/gi, ''));
+                                angle = util.getAngleRadians(value.replace(/rotateY\(|\)/gi, ''));
                                 return { 
                                     id:         transUtil.transID.ROTATEY,
                                     valueIdent: 0,
@@ -1986,7 +1945,7 @@
                             found = value.match(/rotateZ\([-|+]?[\d.]+(deg|rad|grad|turn)\)/i);
                             // try rotateZ(a) (3D)
                             if (found && util.isDefined(found[0])) {
-                                var angle = util.getAngleRadians(value.replace(/rotateZ\(|\)/gi, ''));
+                                angle = util.getAngleRadians(value.replace(/rotateZ\(|\)/gi, ''));
                                 return { 
                                     id:         transUtil.transID.ROTATEZ,
                                     valueIdent: 0,
@@ -1998,9 +1957,9 @@
                             found = value.match(/rotate3d\([-|+]?[\d.]+,[-|+]?[\d.]+,[-|+]?[\d.]+,[-|+]?[\d.]+(deg|rad|grad|turn)\)/i);
                             // try rotate3d(x,y,z,a) (3D)
                             if (found && util.isDefined(found[0])) {
-                                found = found[0].replace(/rotate3d\(|\)/gi, '').split(",");
-                                var angle = util.getAngleRadians(found[3]),
-                                    valInv = {
+                                found = found[0].replace(/rotate3d\(|\)/gi, '').split(',');
+                                angle = util.getAngleRadians(found[3]);
+                                var valInv = {
                                         x: util.toFloat(found[0]),
                                         y: util.toFloat(found[1]),
                                         z: util.toFloat(found[2]),
@@ -2061,7 +2020,7 @@
                             return util.isAlmostZero(scale) ? 20000 : (1.0 / scale);
                         },
                         getTransformScale = function(value) {
-                            var scaleX, scaleY, scaleZ, scaleXInv, scaleYInv, scaleZInv,
+                            var scaleX, scaleY, scaleZ, scaleXInv, scaleYInv, scaleZInv, scales,
                                 found = value.match(/scale\([-|+]?[\d.]+\)/i);
                             // try scale(s)
                             if (found && util.isDefined(found[0])) {
@@ -2078,7 +2037,7 @@
                             // try scale(x,y)
                             found = value.match(/scale\([-|+]?[\d.]+,[-|+]?[\d.]+\)/i);
                             if (found && util.isDefined(found[0])) {
-                                var scales = value.replace(/scale\(|\)/gi, '').split(",");
+                                scales = value.replace(/scale\(|\)/gi, '').split(',');
                                 scaleX = util.toFloat(scales[0]);
                                 scaleY = util.toFloat(scales[1]);
                                 scaleXInv = getInvertedScale(scaleX);
@@ -2133,7 +2092,7 @@
                             // try scale3d(x,y,z)
                             found = value.match(/scale3d\([-|+]?[\d.]+,[-|+]?[\d.]+,[-|+]?[\d.]+\)/i);
                             if (found && util.isDefined(found[0])) {
-                                var scales = value.replace(/scale3d\(|\)/gi, '').split(",");
+                                scales = value.replace(/scale3d\(|\)/gi, '').split(',');
                                 scaleX = util.toFloat(scales[0]);
                                 scaleY = util.toFloat(scales[1]);
                                 scaleZ = util.toFloat(scales[2]);
@@ -2228,13 +2187,13 @@
                         value = getTransformFromDataAttr(),
                         origin = transUtil.getTransformOriginCss($slide, outerSize);
 
-                    if (value == null) {
+                    if (value === null) {
                         value = load.getTransformFromCss($slide);
-                        if (value == null) {
+                        if (value === null) {
                             return getTransformDefault(origin);
                         }
                     }
-                    if (value.indexOf('matrix(') == 0 || value.indexOf('matrix3d(') == 0) {
+                    if (value.indexOf('matrix(') === 0 || value.indexOf('matrix3d(') === 0) {
                         return decomposeMatrix(value, origin);
                     }
                     return getTransformFromData(value, origin);
@@ -2245,7 +2204,7 @@
                             loadSuccessExternal(this.complete, this.naturalWidth, this.naturalHeight);
                         },
                         loadSuccessExternal = function(complete, naturalWidth, naturalHeight) {
-                            if (complete && typeof naturalWidth != "undefined" && naturalWidth > 0) {
+                            if (complete && typeof naturalWidth !== 'undefined' && naturalWidth > 0) {
                                 load.getOtherSizes(slideSizes, $slide, naturalWidth, naturalHeight);
                                 load.processSlide($slide, slideSizes);
                             } else {
@@ -2259,13 +2218,13 @@
                         };
                     
                     // IE9 renders a black block, when both -ms-transform and filter are defined. To work around this, need to remove filter
-                    if (data.isIE9 && $slide.css('msTransform') != '' && $slide.css('filter') != '') {
+                    if (data.isIE9 && $slide.css('msTransform') !== '' && $slide.css('filter') !== '') {
                         $slide.css('filter', '');
                     }
                     var isImg = $slide.is('img'),
                         isImgAjax = $slide.is('img[data-src]'),
                         slideSizes = load.getSlideSizes($slide);
-                    if (slideSizes.size.x === 0 || slideSizes.size.y === 0 || isImgAjax && (util.toInt($slide.attr('width')) == 0 || util.toInt($slide.attr('height')) == 0)) { // size is unknown and slide does not contain any valid width/height attribute
+                    if (slideSizes.size.x === 0 || slideSizes.size.y === 0 || isImgAjax && (util.toInt($slide.attr('width')) === 0 || util.toInt($slide.attr('height')) === 0)) { // size is unknown and slide does not contain any valid width/height attribute
                         if (isImg) {
                             if (isImgAjax) { // ajax img without width/height attribute defined
                                 load.ajax.doLoad($slide, loadSuccessExternal, loadFailure);
@@ -2319,7 +2278,7 @@
                         outerSizeAll: { x: $slide.outerWidth(true), y: $slide.outerHeight(true) },
                         size: { x: $slide.width(), y: $slide.height() }
                     };
-                    if (sizes.size.x == 0 || sizes.size.y == 0) {
+                    if (sizes.size.x === 0 || sizes.size.y === 0) {
                         // $slide.width() does not return width for ajax images in some browsers. Get the width from the img attribute, if available.
                         this.getOtherSizes(sizes, $slide, util.toInt($slide.attr('width')), util.toInt($slide.attr('height')));
                     }
@@ -2430,7 +2389,7 @@
                         },
                         getOffset = function($slide) {
                             var matrixCssStr = load.getTransformFromCss($slide);
-                            if (matrixCssStr !== null && (matrixCssStr.indexOf('matrix(') == 0 || matrixCssStr.indexOf('matrix3d(') == 0)) {
+                            if (matrixCssStr !== null && (matrixCssStr.indexOf('matrix(') === 0 || matrixCssStr.indexOf('matrix3d(') === 0)) {
                                 var coefs = load.getMatrixCoefs(matrixCssStr);
                                 return { x: coefs.tx, y: coefs.ty, z: coefs.tz };
                             }
@@ -2457,20 +2416,20 @@
 
                         if (slideData.firstChild > -1) {
                             $slide.css({
-                                '-webkit-transform-style': 'flat'
+                                'transform-style': 'flat'
                             });
                         }
                         if (parents.length > 0) {
                             $slide.css({
-                                '-webkit-transform': 'none'
+                                'transform': 'none'
                             });
                         }
                         slidePos = getPositionFunc($slide);
 
                         if (slideData.firstChild > -1) {
                             $slide.css({
-                                '-webkit-transform': 'none',
-                                '-webkit-transform-style': ''
+                                'transform': 'none',
+                                'transform-style': ''
                             });
                         }
 
@@ -2532,8 +2491,8 @@
                             parents.pop();
                         }
                         $slide.css({
-                            '-webkit-transform': '',
-                            '-webkit-transform-style': ''
+                            'transform': '',
+                            'transform-style': ''
                         });
                         index = slideData.nextSibling;
                     } while (index > -1);
@@ -2550,9 +2509,9 @@
                     doLoad: function($loadThisSlide, successEvent, failureEvent) {
                         var doAjax = function($slide) {
                             $slide.load(function() {
-                                var success = this.complete && typeof this.naturalWidth != "undefined" && this.naturalWidth > 0;
+                                var success = this.complete && typeof this.naturalWidth !== 'undefined' && this.naturalWidth > 0;
                                 $viewport.triggerHandler('ajaxLoadSlide.rsSlideIt', [$slide, load.ajax.quant - load.ajax.toProcess + 1, success]);
-                                if (--load.ajax.toProcess == 0) {
+                                if (--load.ajax.toProcess === 0) {
                                     $viewport.triggerHandler('ajaxLoadEnd.rsSlideIt');
                                 }
                                 if (successEvent) {
@@ -2560,7 +2519,7 @@
                                 }
                             }).error(function() {
                                 $viewport.triggerHandler('ajaxLoadSlide.rsSlideIt', [$slide, load.ajax.quant - load.ajax.toProcess + 1, false]);
-                                if (--load.ajax.toProcess == 0) {
+                                if (--load.ajax.toProcess === 0) {
                                     $viewport.triggerHandler('ajaxLoadEnd.rsSlideIt');
                                 }
                                 if (failureEvent) {
@@ -2570,7 +2529,7 @@
                         };
                         
                         if (this.quant > 0) {
-                            if (this.toProcess == this.quant) {
+                            if (this.toProcess === this.quant) {
                                 $viewport.triggerHandler('ajaxLoadBegin.rsSlideIt', [this.quant]);
                             }
                             if ($loadThisSlide) {
@@ -2608,9 +2567,9 @@
         stop = function() {
             return this.trigger('stop.rsSlideIt');
         },
-        option = function(options) {
+        option = function() {
             if (typeof arguments[0] === 'string') {
-                var op = arguments.length == 1 ? 'getter' : (arguments.length == 2 ? 'setter' : null);
+                var op = arguments.length === 1 ? 'getter' : (arguments.length === 2 ? 'setter' : null);
                 if (op) {
                     return this.eq(0).triggerHandler(op + '.rsSlideIt', arguments);
                 }
