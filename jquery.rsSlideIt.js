@@ -426,7 +426,7 @@
                     var done = function() {
                         if (seqData.timeoutId) {
                             $viewport.triggerHandler('endDelay.rsSlideIt', [transData.anim.gotoSlideIdx]);
-                        }                            
+                        }
                         seqData.timeoutId = null;
                         transData.animating = false;
                         if (!interrupted && transData.isThisPartOfSlideShow()) {
