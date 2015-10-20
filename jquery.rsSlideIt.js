@@ -1269,12 +1269,9 @@
                                       (this.trans.y - viewport.center.y).toFixed(0) + ')';
                         }
                         return {
-                            // prevents some flickering effect even in 2D css animations
-                            'backface-visibility': 'hidden',
+                            'backface-visibility': opts.transf3D.backfaceVisibility,
                             'transform-style': 'preserve-3d',
-
                             'transform': matrixCss,
-
                             'transform-origin': origCss
                         };
                     }
@@ -2618,8 +2615,9 @@
                                 // To reverse direction, use negative zoomStep. To disable zoom on mouse wheel, do not set zoomStep to zero, but set mouseZoom to false instead. Type: floating point number.
         zoomMax: 30,            // Maximun zoom possible. Type: floating point number.
         transf3D: {
-            no3DFallbackClass: 'no3D', // Class(es) added to the viewport when 3D transformations are not supported (requires Modernizr lib with "CSS 3D Transforms" detection feature). Type: string.
-            perspective: 500           // CSS perspective property set to the viewport when 3D transformations are supported. Type: integer.
+            no3DFallbackClass: 'no3D',   // Class(es) added to the viewport when 3D transformations are not supported (requires Modernizr lib with "CSS 3D Transforms" detection feature). Type: string.
+            perspective: 500,            // CSS perspective property set to the viewport when 3D transformations are supported. Type: integer.
+            backfaceVisibility: 'hidden' // CSS property 'backface-visibility'
         },
         events: {
             onCreate: null,                 // Fired when plug-in has been initialized. Type: function (event).
