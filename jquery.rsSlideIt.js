@@ -16,11 +16,10 @@
         var data = {
                 slideData: [],
                 qtSlides: 0,
-                supportsCSSAnimation: true, //(typeof Modernizr !== 'undefined') && Modernizr.cssanimations,
+                supportsCSSAnimation: (typeof Modernizr !== 'undefined') && Modernizr.cssanimations,
                 supportsCSSTransforms3D: (typeof Modernizr !== 'undefined') && Modernizr.csstransforms3d,
                 isIE8orBelow: false,
                 isIE9: false,
-                isMozilla11orBelow: false,
                 activeSlide: {
                     $slide: null,
                     index: -1
@@ -40,11 +39,6 @@
                         var version = util.toInt(matches[1]);
                         this.isIE8orBelow = version < 9;
                         this.isIE9 = version === 9;
-                    } else {
-                        matches = navigator.userAgent.match(/Firefox[\/\s](\d+\.\d+)/);
-                        if (matches && matches.length === 2) {
-                            this.isMozilla11orBelow = util.toInt(matches[1]) < 12;
-                        }
                     }
                 },
                 checkSlideBounds: function(slideIdx) {
@@ -2615,9 +2609,9 @@
                                 // To reverse direction, use negative zoomStep. To disable zoom on mouse wheel, do not set zoomStep to zero, but set mouseZoom to false instead. Type: floating point number.
         zoomMax: 30,            // Maximun zoom possible. Type: floating point number.
         transf3D: {
-            no3DFallbackClass: 'no3D',   // Class(es) added to the viewport when 3D transformations are not supported (requires Modernizr lib with "CSS 3D Transforms" detection feature). Type: string.
-            perspective: 500,            // CSS perspective property set to the viewport when 3D transformations are supported. Type: integer.
-            backfaceVisibility: 'hidden' // CSS property 'backface-visibility'
+            no3DFallbackClass: 'no3D',    // Class(es) added to the viewport when 3D transformations are not supported (requires Modernizr lib with "CSS 3D Transforms" detection feature). Type: string.
+            perspective: 500,             // CSS perspective property set to the viewport when 3D transformations are supported. Type: integer.
+            backfaceVisibility: 'visible' // CSS property 'backface-visibility'
         },
         events: {
             onCreate: null,                 // Fired when plug-in has been initialized. Type: function (event).
