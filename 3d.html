@@ -89,6 +89,49 @@
             transform: rotateY(-460deg);
         }
 
+        #fallback {
+            display: none;
+        }
+        .no3D + #fallback {
+            display: block;
+            position: fixed;
+            bottom: 0;
+            font-weight: bold;
+            color: red;
+        }
+        .no3D #s2 {
+            top: 95px;
+            left: -110px;
+            transform: rotate(100deg) skew(30deg);
+        }
+        .no3D #s3 {
+            top: 228px;
+            left: -266px;
+            transform: rotate(-80deg);
+        }
+        .no3D #s4 {
+            top: 295px;
+            transform: rotate(130deg);
+        }
+        .no3D #s5 {
+            top: 532px;
+            transform: rotate(230deg) scale(-3);
+        }
+        .no3D #s6 {
+            left: -1415px;
+            top: 310px;
+            transform: rotate(380deg);
+        }
+        .no3D #s7 {
+            transform: none;
+        }
+        .no3D #s8 {
+            position: relative;
+            transform: skew(45deg);
+            top: 100px;
+            left: 100px;
+        }
+
         button {
             position: absolute;
             left: 0;
@@ -114,14 +157,14 @@
                 $("#viewport").rsSlideIt('transition', {
                     slide: 'prev',
                     duration: 1000,
-                    easing: 'easeInOutBack'
+                    easing: 'easeOutBounce'
                 });
             });
             $("#next").click(function() {
                 $("#viewport").rsSlideIt('transition', {
                     slide: 'next',
                     duration: 1000,
-                    easing: 'linear'
+                    easing: 'easeInOutBack'
                 });
             });
             $("#playPause").click(function() {
@@ -149,13 +192,14 @@
     <div id="viewport">
         <span id="s1">
         Just set the</span><span id="s2">
-        style you want</span><span id="s3" data-transform="rotateY(90deg) rotateZ(-90deg)">
-        for each slide</span><span id="s4" data-transform="rotateZ(-180deg) rotateX(-90deg)">
+        style you want</span><span id="s3" data-transform="rotateY(90deg) rotateZ(-90deg)" data-transform2D="rotate(-80deg)">
+        for each slide</span><span id="s4" data-transform="rotateZ(-180deg) rotateX(-90deg)" data-transform2D="rotate(130deg)">
         and let</span><span id="s5">
-        rsSlideIt take</span><span id="s6" data-transform="rotateY(180deg) translateZ(30px)">
+        rsSlideIt take</span><span id="s6" data-transform="rotateY(180deg) translateZ(30px)" data-transform2D="rotate(380deg)">
         care of the rest.</span><span id="s7">
         With your imagination</span><span id="s8">
         the sky is the limit</span>
     </div>
+    <footer id="fallback">Seems your browser does not support 3D transformations. Falling back to 2D transformations.</footer>
   </body>
 </html>
