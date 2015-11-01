@@ -120,7 +120,7 @@ then when a transition is done:
 **[Back to top](#table-of-contents)**
 
 ## Fallbacks
-The plugin uses [Modernizr](https://modernizr.com/) for CSS3 feature detection. If Modernizr is not loaded (see [Add Script](#installation-and-usage)), the plugin assumes your browser does not support the latest CSS3 features and resorts to Javascript fallbacks, even on modern browsers. Thus it is highly recomended to include Modernizr. Specifically, the Modernizr properties that required by the plugin are [cssanimations and csstransforms3d](https://modernizr.com/download?cssanimations-csstransforms3d-setclasses).
+The plugin uses [Modernizr](https://modernizr.com/) for CSS3 feature detection. If Modernizr is not loaded (see [Add Script](#installation-and-usage)), the plugin assumes your browser does not support the latest CSS3 features and resorts to Javascript fallbacks, even on modern browsers. Thus it is highly recommended to include Modernizr. Specifically, the Modernizr properties required by the plugin are [cssanimations and csstransforms3d](https://modernizr.com/download?cssanimations-csstransforms3d-setclasses).
 
 ### 3D transformations
 If 3D transformations are not supported by the browser, the plugin adds a fallback class to the container element, which is by default `no3D`.
