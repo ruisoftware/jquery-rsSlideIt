@@ -130,6 +130,7 @@ So, if you 3D slide is `rotateX(45deg) rotateZ(5deg)` you can fallback it to 2D,
 .no3D #mySlide { transform: rotate(5deg); }             /* 2D fallback for older browsers */
 ````
 Please note, that if Modernizr is not loaded on browsers that support 3D transformations, and no 2D CSS fallback is defined, the 3D transformations will still render correctly, but the plugin will make 2D transitions, because the plugin relies on what is returned by Modernizr.csstransforms3d, and if Modernizr is missing, it means returning false.
+
 Here is one [3D demo](http://codepen.io/ruisoftware/pen/avEJMR "on CodePen") with a fallback to 2D on older browsers.
 
 ### CSS animations
