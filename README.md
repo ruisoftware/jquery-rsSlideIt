@@ -3,13 +3,20 @@ Performs a smooth 2D/3D transition from one HTML element A to another element B.
 The transition works be progressively morphing A's transform into B's [transform](https://developer.mozilla.org/en-US/docs/Web/CSS/transform "Transform documentation").
 
 Check out a [2D demo](http://codepen.io/ruisoftware/pen/GpyEyG "on CodePen") on CodePen, and also one
-[3D demo](http://codepen.io/ruisoftware/pen/avEJMR "on CodePen") with fallback to 2D for older browsers.
+[3D demo](http://codepen.io/ruisoftware/pen/xwNrqM "on CodePen") with fallback to 2D for older browsers.
 
 #Key Features
- * Runs a single transition or a sequence of transitions.
- * Fallbacks to browsers that do not support 3D transformations and CSS3 animations.
- * Highly customizable;
- * Responsive design, suitable for any window sizes.
+ - Runs a single transition or a sequence of transitions;
+ - Transition effect is automatically computed between two slides;
+ - Fallbacks to browsers that do not support 3D transformations and CSS3 animations;
+ - Highly customizable:
+ 	- Any markup you want. Only restriction is sliders to be contained in a parent blocked element;
+ 	- Strong event driven support;
+ 	- Single transition or a sequence of transitions (movie mode);
+ 	- Transition duration, easing function animation and zoom vertexes;
+ 	- Optional user zoomming and panning between each transition.
+ * Responsive design, suitable for any window sizes;
+ * Optionally loads images asynchronously to save page load times, when slides are images.
  
 #Table of Contents
 - [jquery-rsSlideIt](#jquery-rsslideit)
@@ -120,7 +127,7 @@ then when a transition is done:
 **[Back to top](#table-of-contents)**
 
 ## Fallbacks
-The plugin uses [Modernizr](https://modernizr.com/) for CSS3 feature detection. If Modernizr is not loaded (see [Add Script](#installation-and-usage)), the plugin assumes your browser does not support the latest CSS3 features and resorts to Javascript fallbacks, even on modern browsers. Thus it is highly recommended to include Modernizr. Specifically, the Modernizr properties required by the plugin are [cssanimations and csstransforms3d](https://modernizr.com/download?cssanimations-csstransforms3d-setclasses).
+The plugin uses [Modernizr](https://modernizr.com/) for CSS3 feature detection. If Modernizr is not loaded (see [Add Script](#installation-and-usage)), the plugin assumes that your browser does not support the latest CSS3 features and resorts to Javascript fallbacks, even on modern browsers. Thus it is highly recommended to include Modernizr. Specifically, the Modernizr properties required by the plugin are [cssanimations and csstransforms3d](https://modernizr.com/download?cssanimations-csstransforms3d-setclasses).
 
 ### 3D transformations
 If 3D transformations are not supported by the browser, the plugin adds a fallback class to the container element, which is by default `no3D`.
@@ -131,7 +138,7 @@ So, if you 3D slide is `rotateX(45deg) rotateZ(5deg)` you can fallback it to 2D,
 ````
 Please note, that if Modernizr is not loaded on browsers that support 3D transformations, and no 2D CSS fallback is defined, the 3D transformations will still render correctly, but the plugin will make 2D transitions, because the plugin relies on what is returned by Modernizr.csstransforms3d, and if Modernizr is missing, it means returning false.
 
-Here is one [3D demo](http://codepen.io/ruisoftware/pen/avEJMR "on CodePen") with a fallback to 2D on older browsers.
+Here is one [3D demo](http://codepen.io/ruisoftware/pen/xwNrqM "on CodePen") with a fallback to 2D on older browsers. You can see a preview [here](http://codepen.io/ruisoftware/pen/avrwLX) on how the 3D demo looks like in older browsers.
 
 ### CSS animations
 If [CSS animations](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Animations/Using_CSS_animations) are not supported by the browser, the plugin gracefully degradates to javascript animation using [requestAnimationFrame()](https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame).
