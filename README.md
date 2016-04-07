@@ -1,4 +1,4 @@
-#jquery-rsSlideIt
+#jquery-rsSlideIt [![Build Status](https://travis-ci.org/ruisoftware/jquery-rsSlideIt.svg?branch=master)](https://travis-ci.org/ruisoftware/jquery-rsSlideIt)
 Performs a smooth 2D/3D transition from one HTML element A to another element B.<br>
 The transition works be progressively morphing A's transform into B's [transform](https://developer.mozilla.org/en-US/docs/Web/CSS/transform "Transform documentation").
 
