@@ -135,7 +135,7 @@ Still, if requestAnimationFrame() is not supported by the browser, then a [jQuer
 This project is licensed under the terms of the [MIT license](https://opensource.org/licenses/mit-license.php)
 
 # Bug Reports & Feature Requests
-Please use the [issue tracker](https://github.com/ruisoftware/jquery-rsSliteIt/issues) to report any bugs or file feature requests.
+Please use the [issue tracker](https://github.com/ruisoftware/jquery-rsSlideIt/issues) to report any bugs or file feature requests.
 
 # Contributing
-Please refer to the [Contribution page](https://github.com/ruisoftware/jquery-rsSliteIt/blob/master/CONTRIBUTING.md) from more information.
+Please refer to the [Contribution page](https://github.com/ruisoftware/jquery-rsSlideIt/blob/master/CONTRIBUTING.md) from more information.
