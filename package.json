@@ -1,0 +1,38 @@
+{
+  "name": "jquery-rsSlideIt",
+  "title": "Slideshow/Presentation tool that uses 2D/3D CSS3 transformations",
+  "description": "Performs a smooth interpolation between two geometric transformations.",
+  "version": "1.0.0",
+  "homepage": "https://github.com/ruisoftware/jquery-rsSlideIt",
+  "author": {
+    "name": "Jose Rui Santos",
+    "email": "ruisoftware@gmail.com",
+    "url": "http://www.ruisoftware.com/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ruisoftware/jquery-rsSlideIt.git"
+  },
+  "bugs": "https://github.com/ruisoftware/jquery-rsSlideIt/issues",
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://opensource.org/licenses/mit-license.php"
+    }
+  ],
+  "dependencies": {
+    "jquery": "*"
+  },
+  "scripts": {
+    "test": "grunt travis --verbose"
+  },
+  "devDependencies": {
+    "grunt-contrib-jshint": "~0.10.0",
+    "grunt-contrib-qunit": "~0.2.0",
+    "grunt-contrib-concat": "~0.3.0",
+    "grunt-contrib-uglify": "~0.2.0",
+    "grunt-contrib-watch": "~0.4.0",
+    "grunt-contrib-clean": "~0.4.0",
+    "grunt": "~0.4.5"
+  }
+}

@@ -18,15 +18,6 @@ Check out a [2D demo](http://codepen.io/ruisoftware/pen/GpyEyG "on CodePen") on 
  * Responsive design, suitable for any window sizes;
  * Optionally loads images asynchronously to save page load times, when slides are images.
  
-#Table of Contents
-- [jquery-rsSlideIt](#jquery-rsslideit)
-- [Key Features](#key-features)
-- [Installation and Usage](#installation-and-usage)
-- [How it works](#how-it-works)
-- [Fallbacks](#fallbacks)
-
-**[Back to top](#table-of-contents)**
-
 ##Installation and Usage
 
 ### 1. Add script
@@ -83,8 +74,6 @@ $(function () {
 	}
 ````
 
-**[Back to top](#table-of-contents)**
-
 ## How it works
 During the plugin initialization, the plugin performs two tasks:
  1. Loads the CSS transform property of each slide into an internal data structure.
@@ -124,8 +113,6 @@ then when a transition is done:
  * from slide4 to slide1, the *world* transform changes from `skew(15deg)` to `skew(0)`.
 
 
-**[Back to top](#table-of-contents)**
-
 ## Fallbacks
 The plugin uses [Modernizr](https://modernizr.com/) for CSS3 feature detection. If Modernizr is not loaded (see [Add Script](#installation-and-usage)), the plugin assumes that your browser does not support the latest CSS3 features and resorts to Javascript fallbacks, even on modern browsers. Thus it is highly recommended to include Modernizr. Specifically, the Modernizr properties required by the plugin are [cssanimations and csstransforms3d](https://modernizr.com/download?cssanimations-csstransforms3d-setclasses).
 
@@ -144,5 +131,11 @@ Here is one [3D demo](http://codepen.io/ruisoftware/pen/xwNrqM "on CodePen") wit
 If [CSS animations](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Animations/Using_CSS_animations) are not supported by the browser, the plugin gracefully degradates to javascript animation using [requestAnimationFrame()](https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame).
 Still, if requestAnimationFrame() is not supported by the browser, then a [jQuery.animate()](http://api.jquery.com/animate/) based animation is used instead.
 
+# License
+This project is licensed under the terms of the [MIT license](https://opensource.org/licenses/mit-license.php)
 
-**[Back to top](#table-of-contents)**
+# Bug Reports & Feature Requests
+Please use the [issue tracker](https://github.com/ruisoftware/jquery-rsSliteIt/issues) to report any bugs or file feature requests.
+
+# Contributing
+Please refer to the [Contribution page](https://github.com/ruisoftware/jquery-rsSliteIt/blob/master/CONTRIBUTING.md) from more information.
