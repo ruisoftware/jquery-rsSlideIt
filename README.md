@@ -18,13 +18,27 @@ Check out a [2D demo](http://codepen.io/ruisoftware/pen/GpyEyG "on CodePen") on 
  * Responsive design, suitable for any window sizes;
  * Optionally loads images asynchronously to save page load times, when slides are images.
  
-##Installation and Usage
+#Installation
 
-### 1. Add script
+You can install from [npm](https://www.npmjs.com/):
+````bash
+npm install jquery-rsSlideIt --save
+````
+or directly from git:
+````javascript
+<script src="http://rawgit.com/ruisoftware/jquery-rsSlideIt/master/src/jquery.rsSlideIt.js"></script>
+````
+or you can download the Zip archive from github, clone or fork this repository and include `jquery.rsSlideIt.js` from your local machine.
+
+You also need to download jQuery. In the example below, jQuery is downloaded from Google cdn.
+
+#Usage
+
+## 1. Add script
 ````javascript
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
-<script src="http://rawgit.com/ruisoftware/jquery-rsSlideIt/master/modernizr.js"></script>
-<script src="http://rawgit.com/ruisoftware/jquery-rsSlideIt/master/jquery.rsSlideIt.js"></script>
+<script src="http://rawgit.com/ruisoftware/jquery-rsSlideIt/master/libs/modernizr.js"></script>
+<script src="http://rawgit.com/ruisoftware/jquery-rsSlideIt/master/src/jquery.rsSlideIt.js"></script>
 ````
 If you care about older browsers, primarily versions of IE prior to IE9, then replace the jQuery `2.1.4` by `1.11.3`.
 
@@ -32,7 +46,7 @@ The [Modernizr](#fallbacks) library should be loaded before the plugin.
 
 jquery.rsSlideIt.js should be loaded after the jQuery and Modernizr libraries. In production environment, it is recommended the use of the minimized version `jquery.rsSlideIt.min.js`.
 
-### 2. HTML
+## 2. HTML
 Create a blocked element with slide elements inside.
 ````html
 <div id="container">
@@ -47,7 +61,7 @@ Create a blocked element with slide elements inside.
 The above markup represents a viewport with 4 slides.
 Any markup can be used. Your container does not have to be a `div` and your slides do not have to `img`.
 
-### 3. Javascript
+## 3. Javascript
 Create plugin instance and set previous/next events
 ````javascript
 $(function () {
@@ -64,7 +78,7 @@ $(function () {
 });
 ````
 
-### 4. CSS (optional)
+## 4. CSS (optional)
 ````css
 	#slide1 {
 		transform: rotate(30deg);
@@ -74,7 +88,7 @@ $(function () {
 	}
 ````
 
-## How it works
+# How it works
 During the plugin initialization, the plugin performs two tasks:
  1. Loads the CSS transform property of each slide into an internal data structure.
  2. Inserts a `div` element between your container and the slides, i.e., it changes the DOM from
@@ -113,10 +127,10 @@ then when a transition is done:
  * from slide4 to slide1, the *world* transform changes from `skew(15deg)` to `skew(0)`.
 
 
-## Fallbacks
+# Fallbacks
 The plugin uses [Modernizr](https://modernizr.com/) for CSS3 feature detection. If Modernizr is not loaded (see [Add Script](#installation-and-usage)), the plugin assumes that your browser does not support the latest CSS3 features and resorts to Javascript fallbacks, even on modern browsers. Thus it is highly recommended to include Modernizr. Specifically, the Modernizr properties required by the plugin are [cssanimations and csstransforms3d](https://modernizr.com/download?cssanimations-csstransforms3d-setclasses).
 
-### 3D transformations
+## 3D transformations
 If 3D transformations are not supported by the browser, the plugin adds a fallback class to the container element, which is by default `no3D`.
 So, if you 3D slide is `rotateX(45deg) rotateZ(5deg)` you can fallback it to 2D, by adding another CSS rule:
 ````css
@@ -127,7 +141,7 @@ Please note, that if Modernizr is not loaded on browsers that support 3D transfo
 
 Here is one [3D demo](http://codepen.io/ruisoftware/pen/xwNrqM "on CodePen") with a fallback to 2D on older browsers. You can see a preview [here](http://codepen.io/ruisoftware/pen/avrwLX) on how the 3D demo looks like in older browsers.
 
-### CSS animations
+## CSS animations
 If [CSS animations](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Animations/Using_CSS_animations) are not supported by the browser, the plugin gracefully degradates to javascript animation using [requestAnimationFrame()](https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame).
 Still, if requestAnimationFrame() is not supported by the browser, then a [jQuery.animate()](http://api.jquery.com/animate/) based animation is used instead.
 
