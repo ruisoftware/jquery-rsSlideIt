@@ -24,7 +24,9 @@
     "presentation",
     "slider",
     "transition",
-    "CCS"
+    "CSS",
+    "CSS3",
+    "cross-browser"
   ],
   "bugs": "https://github.com/ruisoftware/jquery-rsSlideIt/issues",
   "licenses": [
