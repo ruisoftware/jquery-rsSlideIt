@@ -1,5 +1,5 @@
 {
-  "name": "jquery-rsSlideIt",
+  "name": "jquery.rsSlideIt",
   "title": "Slideshow/Presentation tool that uses 2D/3D CSS3 transformations",
   "description": "Performs a smooth interpolation between two geometric transformations.",
   "version": "1.0.3",
