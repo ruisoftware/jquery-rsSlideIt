@@ -22,7 +22,7 @@ Check out a [2D demo](http://codepen.io/ruisoftware/pen/GpyEyG "on CodePen") on 
 
 You can install from [npm](https://www.npmjs.com/):
 ````bash
-npm install jquery-rsSlideIt --save
+npm install jquery.rsSlideIt --save
 ````
 or directly from git:
 ````javascript
