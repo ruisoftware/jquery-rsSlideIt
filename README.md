@@ -1,11 +1,11 @@
-#jquery-rsSlideIt [![Build Status](https://travis-ci.org/ruisoftware/jquery-rsSlideIt.svg?branch=master)](https://travis-ci.org/ruisoftware/jquery-rsSlideIt)
+# jquery-rsSlideIt [![Build Status](https://travis-ci.org/ruisoftware/jquery-rsSlideIt.svg?branch=master)](https://travis-ci.org/ruisoftware/jquery-rsSlideIt)
 Performs a smooth 2D/3D transition from one HTML element A to another element B.<br>
 The transition works be progressively morphing A's transform into B's [transform](https://developer.mozilla.org/en-US/docs/Web/CSS/transform "Transform documentation").
 
 Check out a [2D demo](http://codepen.io/ruisoftware/pen/GpyEyG "on CodePen") on CodePen, and also one
 [3D demo](http://codepen.io/ruisoftware/pen/xwNrqM "on CodePen") with fallback to 2D for older browsers.
 
-#Key Features
+# Key Features
  - Runs a single transition or a sequence of transitions;
  - Transition effect is automatically computed between two slides;
  - Fallbacks to browsers that do not support 3D transformations and CSS3 animations;
@@ -18,7 +18,7 @@ Check out a [2D demo](http://codepen.io/ruisoftware/pen/GpyEyG "on CodePen") on 
  * Responsive design, suitable for any window sizes;
  * Optionally loads images asynchronously to save page load times, when slides are images.
  
-#Installation
+# Installation
 
 You can install from [npm](https://www.npmjs.com/):
 ````bash
@@ -32,7 +32,7 @@ or you can download the Zip archive from github, clone or fork this repository a
 
 You also need to download jQuery. In the example below, jQuery is downloaded from Google cdn.
 
-#Usage
+# Usage
 
 ## 1. Add script
 ````javascript
